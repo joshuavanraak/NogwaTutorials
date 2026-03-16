@@ -595,6 +595,7 @@ export const tutorials: Tutorial[] = [
         id: "pong-s4",
         title: "Knoppen aansluiten & configureren",
         content: "We voegen twee knoppen toe — één voor elke speler. Met #define geven we de pinnummers namen. In de setup() stellen we de pinnen in als INPUT_PULLUP: de pin leest standaard HIGH (1). Als de knop ingedrukt is, wordt de pin verbonden met GND en leest LOW (0). Dit is betrouwbaarder dan een externe weerstand gebruiken.",
+        diagram: true,
         code: pong_s4,
         legend: [
           { term: "#define BUTTON_LEFT 2", desc: "Geef pin 2 de naam BUTTON_LEFT. Sluit hier de linker knop op aan." },

@@ -179,6 +179,9 @@ function buildDiagram(code: string): DiagramData {
       case "buzzer":
         gndRows.push({ arduinoPin: "GND", componentPin: "Buzzer − (negatief)", color: "slate" });
         break;
+      case "button":
+        gndRows.push({ arduinoPin: "GND", componentPin: "Knoppen (andere aansluitpen)", color: "slate" });
+        break;
     }
   }
 

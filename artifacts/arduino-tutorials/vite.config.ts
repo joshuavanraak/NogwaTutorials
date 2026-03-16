@@ -3,20 +3,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
-const isReplit = process.env.REPL_ID !== undefined;
-const rawPort = process.env.PORT;
+const port = Number(process.env.PORT ?? "3000");
 const basePath = process.env.BASE_PATH ?? "/";
-
-// Only enforce PORT in Replit dev environment
-if (isReplit && !rawPort) {
-  throw new Error("PORT environment variable is required but was not provided.");
-}
-
-const port = rawPort ? Number(rawPort) : 3000;
-
-if (rawPort && (Number.isNaN(port) || port <= 0)) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+const isReplit = !!process.env.REPL_ID;
 
 export default defineConfig({
   base: basePath,
@@ -40,7 +29,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
-      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
     },
     dedupe: ["react", "react-dom"],
   },

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { tutorials } from "../data/tutorials";
 import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, Clock, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, ListChecks, Zap } from "lucide-react";
 
 export default function Home() {
   return (
@@ -55,12 +55,16 @@ export default function Home() {
 
                 <div className="relative z-10">
                   <div className="flex gap-2 mb-6">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                      tutorial.difficulty === "Beginner" ? "bg-green-50 text-green-700 border-green-100" :
+                      tutorial.difficulty === "Gevorderd" ? "bg-amber-50 text-amber-700 border-amber-100" :
+                      "bg-red-50 text-red-700 border-red-100"
+                    }`}>
                       {tutorial.difficulty}
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                      <Clock className="w-3.5 h-3.5" />
-                      {tutorial.durationWeeks} Weken
+                      <ListChecks className="w-3.5 h-3.5" />
+                      {tutorial.steps.length} stappen
                     </span>
                   </div>
                   

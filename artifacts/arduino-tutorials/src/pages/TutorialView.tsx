@@ -144,9 +144,10 @@ export default function TutorialView() {
           <div className="flex gap-2 mb-4">
             <span className={cn(
               "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border",
-              tutorial.difficulty === "Beginner" && "bg-green-50 text-green-700 border-green-100",
+              tutorial.difficulty === "Beginner"  && "bg-green-50 text-green-700 border-green-100",
+              tutorial.difficulty === "Gemiddeld" && "bg-blue-50 text-blue-700 border-blue-100",
               tutorial.difficulty === "Gevorderd" && "bg-amber-50 text-amber-700 border-amber-100",
-              tutorial.difficulty === "Expert" && "bg-red-50 text-red-700 border-red-100",
+              tutorial.difficulty === "Expert"    && "bg-red-50 text-red-700 border-red-100",
             )}>
               {tutorial.difficulty}
             </span>
@@ -204,7 +205,7 @@ export default function TutorialView() {
               <p className="text-slate-600 leading-relaxed mb-6">{step.content}</p>
 
               {/* Wiring diagram */}
-              {step.diagram && <WiringDiagram />}
+              {step.diagram && <WiringDiagram code={step.code} />}
 
               {/* Legend */}
               {step.legend && step.legend.length > 0 && (

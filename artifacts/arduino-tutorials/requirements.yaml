@@ -1,0 +1,11 @@
+packages:
+  "prism-react-renderer": "For beautiful syntax highlighting of Arduino/C++ code"
+  "framer-motion": "For smooth scroll and reveal animations on the tutorial cards"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes safely"
+
+images: []
+
+notes:
+  - No backend is required, all tutorial content is stored locally in the frontend code
+  - Built specifically for progressive disclosure layout (split screen sticky code)

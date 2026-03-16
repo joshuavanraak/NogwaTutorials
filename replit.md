@@ -1,4 +1,12 @@
-# Workspace
+# Arduino Tutorials — School Tutorial Website
+
+## Project Overview
+
+A tutorial website for Arduino programming lessons taught at school. Features a home page with tutorial cards and an interactive tutorial page with a split-screen layout (code left, explanation right) inspired by generativeartistry.com.
+
+## Stack
+
+
 
 ## Overview
 

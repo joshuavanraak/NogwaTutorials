@@ -37,13 +37,13 @@ catalogs:
       specifier: ^0.7.1
       version: 0.7.1
     clsx:
-      specifier: ^2.1.1
+      specifier: 2.1.1
       version: 2.1.1
     drizzle-orm:
       specifier: ^0.45.1
       version: 0.45.1
     framer-motion:
-      specifier: ^12.23.24
+      specifier: 12.35.1
       version: 12.35.1
     lucide-react:
       specifier: ^0.545.0
@@ -55,7 +55,7 @@ catalogs:
       specifier: 19.1.0
       version: 19.1.0
     tailwind-merge:
-      specifier: ^3.3.1
+      specifier: 3.5.0
       version: 3.5.0
     tailwindcss:
       specifier: ^4.1.14
@@ -205,6 +205,10 @@ importers:
         version: 4.21.0
 
   artifacts/arduino-tutorials:
+    dependencies:
+      prism-react-renderer:
+        specifier: ^2.4.1
+        version: 2.4.1(react@19.1.0)
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
@@ -350,9 +354,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      prism-react-renderer:
-        specifier: ^2.4.1
-        version: 2.4.1(react@19.1.0)
       react:
         specifier: 'catalog:'
         version: 19.1.0

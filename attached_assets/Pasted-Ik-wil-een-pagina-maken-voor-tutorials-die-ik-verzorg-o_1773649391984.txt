@@ -1,0 +1,224 @@
+Ik wil een pagina maken voor tutorials die ik verzorg op een school (deze duren 3x 1 uur, dus over 3 weken verspreid 3 uur) maar leerlingen kunnen zelf verder werken aan tutorials.
+
+
+Hiervoor heb ik een library gevonden: https://github.com/tholman/tutorial-markdown
+dit wil ik graag gaan gebruiken voor deze pagina's. De pagina bestaat uit een voorpagina waar alle tutorials gelist zijn. daarna een pagina met de tutorial gebuik deze pagina als voorbeeld hoe de code links en rechts werken : https://generativeartistry.com/tutorials/tiled-lines/
+
+
+
+De tutorial die sowieso gemaakt moet worden is voor deze code:
+
+#include <FastLED.h>
+// ---------- DEFINITIES ----------
+#define NUM_LEDS 10
+#define DATA_PIN 6
+#define BUTTON_LEFT 2
+#define BUTTON_RIGHT 4
+// ---------- LED ARRAY ----------
+CRGB leds[NUM_LEDS];
+// ---------- VARIABELEN ----------
+int position = 0;
+int direction = 0;
+int speedDelay = 200;
+// ---------- SETUP ----------
+void setup() {
+  FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
+  pinMode(BUTTON_LEFT, INPUT_PULLUP);
+  pinMode(BUTTON_RIGHT, INPUT_PULLUP);
+}
+// ---------- LOOP ----------
+void loop() {
+  // spelers veranderen richting
+  if (digitalRead(BUTTON_RIGHT) == LOW) {
+    direction = 1;
+  }
+  if (digitalRead(BUTTON_LEFT) == LOW) {
+    direction = -1;
+  }
+  // bal bewegen
+  position = position + direction;
+  // ---------- WIN CONDITIES ----------
+
+  // speler 1 wint
+  if (position > 9) {
+    FastLED.clear();
+    for (int i = 0; i < NUM_LEDS; i++) {
+      leds[i] = CRGB::Blue;
+    }
+    FastLED.show();
+    while (true);
+  }
+
+  // speler 2 wint
+  if (position < 0) {
+    FastLED.clear();
+    for (int i = 0; i < NUM_LEDS; i++) {
+      leds[i] = CRGB::Green;
+    }
+    FastLED.show();
+    while (true);
+  }
+  // ---------- LED WEERGAVE ----------
+
+  FastLED.clear();
+  leds[position] = CRGB::Red;
+  FastLED.show();
+  delay(speedDelay);
+
+}
+
+De opmaak van de leskaarten zijn meestal zo probeer dit zo goed mogelijk met de tutorials te matchen.:
+
+Leskaart Week 1 – Intro NeoPixel & Basis Aansturing
+
+Leerdoel:
+ Ik kan een WS2812B-strip aansluiten en per LED een kleur zetten.
+Benodigdheden: 
+Arduino Uno, WS2812B strip (10 leds), 5V voeding, 330Ω weerstand, datalijn, GND.
+
+Code (basis aansturing 1 LED):
+
+#include <Adafruit_NeoPixel.h> // library toevoegen aan Arduino
+
+int ledAantal = 10;      // totaal aantal leds
+int dataPin = 6;         // datapin voor neopixel strip
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(ledAantal, dataPin, NEO_GRB + NEO_KHZ800);
+
+void setup() {
+  strip.begin();         // strip starten
+  strip.show();          // alle leds uit
+}
+
+void loop() {
+  int rood = 100;        // waarde aanpasbaar (0–255)
+  int groen = 20;
+  int blauw = 200;
+
+  strip.setPixelColor(0, strip.Color(rood, groen, blauw)); // pixel 0 instellen
+  strip.show();      // kleuren uitvoeren
+}
+
+Opdracht:
+Zet LED 0, LED 5 en LED 9 in verschillende kleuren. 
+
+Uitdaging:
+Maak een variabele kleur (int rood, int groen, int blauw) die je verandert en zie het effect.
+
+Reflectievraag:
+Waarom werkt een WS2812B anders dan een gewone LED?
+
+Legenda (aanvulling NeoPixel):
+adafruit_NeoPixel → bibliotheek voor het aansturen van WS2812B.
+setPixelColor() → stel kleur per pixel in.
+show() → stuurt alle ingestelde waardes tegelijk naar de strip.
+strip.Color(r, g, b) → maakt een kleur aan.
+
+Leskaart Week 2 – For-Loops & Alle Pixels Aansturen
+
+Leerdoel: Ik kan meerdere pixels tegelijk aansturen met een for-loop.
+Benodigdheden: Arduino Uno + NeoPixel setup.
+
+Code (alle pixels dezelfde kleur):
+
+
+#include <Adafruit_NeoPixel.h>
+
+int ledAantal = 10;
+int dataPin = 6;
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(ledAantal, dataPin, NEO_GRB + NEO_KHZ800);
+
+void setup() {
+  strip.begin();
+  strip.show();
+}
+
+void loop() {
+
+  int rood = 0;
+  int groen = 150;
+  int blauw = 50;
+
+  for (int i = 0; i < ledAantal; i++) {         // herhaal voor elke led
+    strip.setPixelColor(i, strip.Color(rood, groen, blauw));
+  }
+
+  strip.show();
+}
+
+Opdracht:
+Laat elke LED in volgorde aangaan door de for-loop een delay(100) te geven binnen de loop.
+
+Uitdaging:
+Gebruik een modulus (%) zodat elke tweede LED aangaat:
+if (i % 2 == 0) { ... }
+
+Reflectievraag:
+Waarom is een loop handig bij langere LED-strips?
+
+Legenda (aanvulling):
+for (int i = 0; i < ledAantal; i++) → herhaling voor elke pixel.
+i % 2 == 0 → true bij 0,2,4,6…   (om-de-led patroon).
+
+
+
+Leskaart Week 3 – Arrays & Dynamische Kleurovergangen
+
+Leerdoel: 
+Ik kan pixel volgordes bepalen met arrays en kleuren laten veranderen over tijd.
+Benodigdheden:
+Arduino Uno + NeoPixel setup.
+
+Code (eigen pixelvolgorde + kleurverandering):
+
+
+#include <Adafruit_NeoPixel.h>
+#define NUM_LEDS 10
+#define DATA_PIN 6
+
+Adafruit_NeoPixel strip(NUM_LEDS, DATA_PIN, NEO_GRB + NEO_KHZ800);
+uint16_t kleurShift = 20;
+int segmenten = 20; // aantal kleursegmenten
+int snelheid = 20;
+int volgorde[NUM_LEDS] = {0,1,2,3,4,5,6,7,8,9};
+
+void setup() {
+  strip.begin();
+  strip.show();
+}
+
+void loop() {
+  for(int i = 0; i < NUM_LEDS; i++) {
+    // verdeel het spectrum over 'segmenten' voor vloeiend kleurverloop
+    uint16_t hue = (kleurShift + i * (65535 / segmenten)) % 65536;
+    strip.setPixelColor(volgorde[i], strip.ColorHSV(hue, 255, 25));
+  }
+
+  strip.show();
+  kleurShift += 256; // verschuif het spectrum
+  delay(snelheid);
+}
+Opdracht:
+Verander de array volgorde[] zodat de animatie een andere volgorde volgt.
+Bijvoorbeeld: {9,8,7,6,5,4,3,2,1,0} → animatie loopt nu in omgekeerde volgorde.
+
+Experimenteer met willekeurige volgordes om creatieve patronen te maken.
+
+Uitdaging:
+vouw de led strip dubbel en probeer de ledstrip aan beide kanten gelijke kleuren te geven (met verloop)
+
+Reflectievraag:
+Welke toepassingen bestaan er in de echte wereld voor kleuranimaties?
+
+Legenda:
+int naamInt[ ] 		→	[ ] geeft array aan (een lijst van waardes) 
+naamInt[i] 
+65535 / segmenten 		→	 bepaalt hoe groot het kleurverschil is per LED.
+strip.ColorHSV(hue, 255, 25))	→	 ColorHSV is de setting voor library
+					1e hue = voor ingestelde integer. ( bepaald kleur uit kleurenwiel)
+					2e waarde saturatie (hoog = vol kleur, 0 = wit)
+					3e waarde helderheid
+ kleurShift += 256; 		→	hoogt elke loop van kleurShift 256 op 
+					+= is het zelfde als kleurShift = kleurShift + 256
+Leerlingen moeten vooral zelf aan de slag gaan en informatie lezen over welke kleine code stukjes ze toe voegen om iets te bereiken, laat ze vooral tussendoor de code testen. Een plus is als er ook nog een vakje te zien is hoe ze de arduino moeten aansluiten. Het gaat hoofdzakelijk nu over arduino tutorials maar wil het later uitbereiden naar andere tutorials waarbij je aan de linkerkant de code ziet en aan de rechterkant de uitleg en de stukjes code. Die je bij scrollen dan toegevoegd ziet worden aan de linkerkant. Voor nu hoeft er nog geen database of frameworks gekoppeld te worden. Ik wil het makkelijk kunnen toevoegen aan vercel en een domein. Gewoon iets makkelijks maar overzichtelijk voor leren waarbij we dit later uit kunnen bereiden. Maak hiervoor ook een makkelijke uitleg voor mij zodat ik tutorials op een makkelijke mannier toe kan voegen (of met ai kan maken, dus een duidelijke prompt omschrijving als ik een document om wil zetten naar deze opmaak).

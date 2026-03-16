@@ -17,7 +17,7 @@ export default function Home() {
             <Zap className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-display font-bold text-slate-900 tracking-tight">
-            Arduino Lab
+            Nogwa arduino tutorials
           </h1>
         </div>
 

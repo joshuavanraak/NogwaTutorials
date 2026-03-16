@@ -19,7 +19,7 @@ export type Tutorial = {
   id: string;
   title: string;
   description: string;
-  difficulty: "Beginner" | "Gevorderd" | "Expert";
+  difficulty: "Beginner" | "Gemiddeld" | "Gevorderd" | "Expert";
   materials: string;
   learningGoal: string;
   steps: TutorialStep[];
@@ -310,6 +310,164 @@ void loop() {
   delay(speedDelay);
 }`;
 
+// ─────────────────────────────────────────────
+// TUTORIAL 3: Potmeter & LED
+// ─────────────────────────────────────────────
+
+const pot_s1 = `int potPin = A0;  // De analoge pin voor de potmeter
+int ledPin = 9;   // De pin voor de LED
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(ledPin, OUTPUT);
+}`;
+
+const pot_s2 = `int potPin = A0;  // De analoge pin voor de potmeter
+int ledPin = 9;   // De pin voor de LED
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  int waarde = analogRead(potPin);              // Uitlezen van analoge pin (0–1023)
+  int helderheid = map(waarde, 0, 1023, 0, 255); // Omzetten naar 0–255
+
+  analogWrite(ledPin, helderheid); // Helderheid op de LED instellen
+  Serial.println(waarde);          // Waarde zichtbaar maken in Serial Monitor
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 4: PIR Sensor
+// ─────────────────────────────────────────────
+
+const pir_s1 = `int pirPin = 2;   // PIR sensor pin
+int ledPin = 13;  // LED pin
+
+void setup() {
+  pinMode(pirPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+}`;
+
+const pir_s2 = `int pirPin = 2;   // PIR sensor pin
+int ledPin = 13;  // LED pin
+
+void setup() {
+  pinMode(pirPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  int beweging = digitalRead(pirPin); // Lees de sensorwaarde (HIGH of LOW)
+
+  if (beweging == HIGH) {      // Als er beweging is...
+    digitalWrite(ledPin, HIGH); // ...LED aan
+  } else {                     // Anders...
+    digitalWrite(ledPin, LOW);  // ...LED uit
+  }
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 5: LDR Sensor
+// ─────────────────────────────────────────────
+
+const ldr_s1 = `int ldrPin = A0; // LDR op analoge pin A0
+int ledPin = 9;  // LED op pin 9
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+}`;
+
+const ldr_s2 = `int ldrPin = A0; // LDR op analoge pin A0
+int ledPin = 9;  // LED op pin 9
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  int licht = analogRead(ldrPin); // Lees lichtwaarde (0 = donker, 1023 = fel)
+
+  if (licht < 500) {              // Als het donker is...
+    digitalWrite(ledPin, HIGH);   // ...LED aan
+  } else {                        // Als er voldoende licht is...
+    digitalWrite(ledPin, LOW);    // ...LED uit
+  }
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 6: DHT11 Sensor
+// ─────────────────────────────────────────────
+
+const dht_s1 = `#include "DHT.h"          // DHT bibliotheek
+#define DHTPIN 2          // De pin van de sensor
+#define DHTTYPE DHT11     // Type sensor: DHT11
+
+DHT dht(DHTPIN, DHTTYPE); // Maak een DHT-object aan
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin(); // Start de sensor
+}`;
+
+const dht_s2 = `#include "DHT.h"          // DHT bibliotheek
+#define DHTPIN 2          // De pin van de sensor
+#define DHTTYPE DHT11     // Type sensor: DHT11
+
+DHT dht(DHTPIN, DHTTYPE); // Maak een DHT-object aan
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+}
+
+void loop() {
+  float t = dht.readTemperature(); // Lees temperatuur (°C)
+  float h = dht.readHumidity();    // Lees luchtvochtigheid (%)
+
+  Serial.print("Temp: ");
+  Serial.print(t);
+  Serial.print(" °C  Vocht: ");
+  Serial.println(h);
+
+  delay(2000); // Wacht 2 seconden tussen metingen
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 7: Creatief Project – PIR + Buzzer
+// ─────────────────────────────────────────────
+
+const buzz_s1 = `int pirPin = 2;     // PIR sensor op pin 2
+int buzzerPin = 8;  // Buzzer op pin 8
+
+void setup() {
+  pinMode(pirPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+}`;
+
+const buzz_s2 = `int pirPin = 2;     // PIR sensor op pin 2
+int buzzerPin = 8;  // Buzzer op pin 8
+
+void setup() {
+  pinMode(pirPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+}
+
+void loop() {
+  int beweging = digitalRead(pirPin);
+
+  if (beweging == HIGH) {        // Beweging gedetecteerd?
+    tone(buzzerPin, 1000);       // Buzzer aan (1000 Hz)
+  } else {                       // Geen beweging?
+    noTone(buzzerPin);           // Buzzer uit
+  }
+}`;
+
+// ─────────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────────
+
 export const tutorials: Tutorial[] = [
   {
     id: "neopixel-basis",
@@ -438,7 +596,6 @@ export const tutorials: Tutorial[] = [
         title: "Knoppen aansluiten & configureren",
         content: "We voegen twee knoppen toe — één voor elke speler. Met #define geven we de pinnummers namen. In de setup() stellen we de pinnen in als INPUT_PULLUP: de pin leest standaard HIGH (1). Als de knop ingedrukt is, wordt de pin verbonden met GND en leest LOW (0). Dit is betrouwbaarder dan een externe weerstand gebruiken.",
         code: pong_s4,
-        diagram: false,
         legend: [
           { term: "#define BUTTON_LEFT 2", desc: "Geef pin 2 de naam BUTTON_LEFT. Sluit hier de linker knop op aan." },
           { term: "#define BUTTON_RIGHT 4", desc: "Geef pin 4 de naam BUTTON_RIGHT. Sluit hier de rechter knop op aan." },
@@ -484,6 +641,196 @@ export const tutorials: Tutorial[] = [
         assignment: "Verander speedDelay naar 100. En naar 50. Wat is de grens waarbij het spel nog speelbaar is?",
         challenge: "Kun je de snelheid laten toenemen naarmate de bal vaker teruggekaatst is? Je hebt daarvoor een teller-variabele nodig.",
         reflection: "Hoe zou je het spel kunnen uitbreiden? Denk aan geluid, een reset-knop of een scoreteller."
+      }
+    ]
+  },
+  {
+    id: "potmeter-led",
+    title: "Potmeter & LED",
+    description: "Gebruik een potmeter om de helderheid van een LED te regelen. Leer hoe je een analoge sensor uitleest en de waarde omzet naar een bruikbaar bereik.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een eenvoudige sensor uitlezen en een LED aansturen.",
+    materials: "Arduino Uno, breadboard, potmeter, LED, 220Ω weerstand, draden.",
+    steps: [
+      {
+        id: "pot-s1",
+        title: "Pinnen instellen & Serial starten",
+        content: "We beginnen met het vastleggen van de pinnummers in variabelen. Door namen te gebruiken (potPin, ledPin) hoef je het nummer maar op één plek te veranderen als je de bedrading aanpast. In setup() openen we de Serial Monitor zodat we straks de sensorwaarden kunnen zien, en we stellen de LED-pin in als uitgang.",
+        diagram: true,
+        code: pot_s1,
+        legend: [
+          { term: "int potPin = A0", desc: "De potmeter is aangesloten op analoge pin A0. Analoge pinnen kunnen waarden meten van 0 tot 1023." },
+          { term: "int ledPin = 9", desc: "De LED zit op pin 9. Dit is een PWM-pin (~), waardoor je de helderheid kunt regelen." },
+          { term: "Serial.begin(9600)", desc: "Start de verbinding met de computer op 9600 baud. Hiermee kun je waarden zien in de Serial Monitor." },
+          { term: "pinMode(ledPin, OUTPUT)", desc: "Zet pin 9 als uitgang — de Arduino stuurt hier stroom naar toe." },
+        ]
+      },
+      {
+        id: "pot-s2",
+        title: "Uitlezen, omzetten & aansturen",
+        content: "In de loop() lezen we de potmeterwaarde uit (0–1023) en zetten we deze om naar een LED-helderheid (0–255) met de map()-functie. Daarna schrijven we die waarde naar de LED met analogWrite(). Draai de potmeter en kijk hoe de helderheid mee verandert. De Serial Monitor laat live zien welke waarde de sensor teruggeeft.",
+        code: pot_s2,
+        legend: [
+          { term: "analogRead(potPin)", desc: "Leest de spanning op pin A0. Geeft een waarde tussen 0 (0V) en 1023 (5V)." },
+          { term: "map(waarde, 0, 1023, 0, 255)", desc: "Rekent de waarde lineair om van het bereik 0–1023 naar 0–255." },
+          { term: "analogWrite(ledPin, helderheid)", desc: "Stuurt een PWM-signaal naar de LED. 0 = uit, 255 = volledig aan." },
+          { term: "Serial.println(waarde)", desc: "Schrijft de ruwe sensorwaarde naar de Serial Monitor, inclusief een nieuwe regel." },
+        ],
+        assignment: "Draai de potmeter volledig links en rechts. Wat zijn de minimum en maximum waarden in de Serial Monitor?",
+        challenge: "Pas de code aan zodat de LED pas gaat branden als de potmeter verder dan de helft is gedraaid (waarde > 511).",
+        reflection: "Waar in het dagelijks leven werkt iets vergelijkbaars met een potmeter?"
+      }
+    ]
+  },
+  {
+    id: "pir-sensor",
+    title: "PIR Bewegingssensor",
+    description: "Sluit een PIR-sensor aan en laat een LED oplichten bij beweging. Leer het verschil tussen digitale en analoge invoer, en ontdek hoe de sensor werkt.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een digitale sensor uitlezen en een LED aansturen op basis van beweging.",
+    materials: "Arduino Uno, PIR sensor, LED, 220Ω weerstand, breadboard, draden.",
+    steps: [
+      {
+        id: "pir-s1",
+        title: "Pinnen instellen",
+        content: "Een PIR-sensor (Passieve Infrarood) detecteert warmtestraling van mensen en dieren. Hij geeft als uitvoer simpelweg HIGH (beweging) of LOW (geen beweging) — dit noemen we een digitaal signaal. We stellen de PIR-pin in als INPUT en de LED-pin als OUTPUT.",
+        diagram: true,
+        code: pir_s1,
+        legend: [
+          { term: "int pirPin = 2", desc: "De PIR sensor is aangesloten op digitale pin 2." },
+          { term: "int ledPin = 13", desc: "Pin 13 heeft een ingebouwde LED op de Arduino Uno — handig voor testen." },
+          { term: "pinMode(pirPin, INPUT)", desc: "Stel pin 2 in als ingang. De Arduino leest hier een waarde van de sensor." },
+          { term: "pinMode(ledPin, OUTPUT)", desc: "Stel pin 13 in als uitgang. De Arduino stuurt hier de LED mee aan." },
+        ]
+      },
+      {
+        id: "pir-s2",
+        title: "Beweging detecteren met if/else",
+        content: "We lezen elke loop de PIR-sensor uit met digitalRead(). De waarde is altijd HIGH of LOW. Met een if/else-statement reageren we op de twee mogelijke situaties: beweging gedetecteerd → LED aan, geen beweging → LED uit. Dit patroon — een sensor uitlezen en er iets mee doen — is de basis van de meeste Arduino-projecten.",
+        code: pir_s2,
+        legend: [
+          { term: "digitalRead(pirPin)", desc: "Lees de digitale waarde van de PIR-pin. Geeft HIGH (1) of LOW (0)." },
+          { term: "if (beweging == HIGH)", desc: "Als er beweging is (waarde is HIGH), voer dan het volgende blok uit." },
+          { term: "digitalWrite(ledPin, HIGH)", desc: "Stuur stroom naar de LED-pin zodat de LED aangaat." },
+          { term: "else { ... }", desc: "Als de conditie NIET waar is, voer dan dit alternatieve blok uit." },
+        ],
+        assignment: "Beweeg je hand voor de sensor en kijk of de LED reageert. Hoe lang blijft de LED nog aan na de beweging?",
+        challenge: "Pas de drempelgevoeligheid aan op de sensor zelf (er zit een draaiknopje op). Wat verandert er?",
+        reflection: "Waar zie jij PIR-sensoren terug in het dagelijks leven?"
+      }
+    ]
+  },
+  {
+    id: "ldr-sensor",
+    title: "LDR Lichtsensor",
+    description: "Laat een LED automatisch aan en uit gaan op basis van de lichtsterkte in de ruimte. Leer hoe een LDR werkt en hoe je een drempelwaarde instelt.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een analoge lichtsensor uitlezen en een LED aansturen op basis van de lichtwaarde.",
+    materials: "Arduino Uno, LDR, LED, 10kΩ weerstand, 220Ω weerstand, breadboard, draden.",
+    steps: [
+      {
+        id: "ldr-s1",
+        title: "Pinnen instellen",
+        content: "Een LDR (Light Dependent Resistor) is een weerstand die verandert met de hoeveelheid licht. Meer licht → lagere weerstand → hogere spanning op de analoge pin → hogere waarde. We lezen hem uit via een analoge pin, net als de potmeter. De LED stuurt we aan via een digitale outputpin.",
+        diagram: true,
+        code: ldr_s1,
+        legend: [
+          { term: "int ldrPin = A0", desc: "De LDR is aangesloten op analoge pin A0 via een spanningsdeler met een 10kΩ weerstand." },
+          { term: "int ledPin = 9", desc: "De LED zit op pin 9." },
+          { term: "pinMode(ledPin, OUTPUT)", desc: "Stel de LED-pin in als uitgang." },
+        ]
+      },
+      {
+        id: "ldr-s2",
+        title: "LED aansturen op basis van licht",
+        content: "We lezen de lichtwaarde elke loop. Als de waarde onder 500 valt (het is donker), gaat de LED aan. Is de waarde 500 of hoger, dan gaat de LED uit. De waarde 500 is onze drempel — die kun je aanpassen aan de ruimte waar je werkt. Probeer eens je hand over de LDR te houden en kijk wat er gebeurt.",
+        code: ldr_s2,
+        legend: [
+          { term: "analogRead(ldrPin)", desc: "Leest de spanning op de LDR-pin. 0 = volledig donker, 1023 = vol licht." },
+          { term: "if (licht < 500)", desc: "Als de gemeten lichtwaarde kleiner is dan 500, is het donker genoeg om de LED aan te zetten." },
+          { term: "digitalWrite(ledPin, HIGH)", desc: "Stuur stroom naar de LED → LED gaat aan." },
+          { term: "digitalWrite(ledPin, LOW)", desc: "Stop stroom naar de LED → LED gaat uit." },
+        ],
+        assignment: "Houd je hand boven de LDR en kijk wanneer de LED aangaat. Wat is de grenswaarde in jouw ruimte?",
+        challenge: "Verander de drempel van 500 naar een waarde die beter past bij de lichtomstandigheden in jouw klas.",
+        reflection: "Waar zie jij automatische verlichting op basis van licht in het dagelijks leven?"
+      }
+    ]
+  },
+  {
+    id: "dht11-sensor",
+    title: "DHT11 Temperatuur & Vocht",
+    description: "Meet de temperatuur en luchtvochtigheid met een DHT11 sensor en lees de waarden uit via de Serial Monitor. Leer werken met een externe bibliotheek.",
+    difficulty: "Gemiddeld",
+    learningGoal: "Ik kan een DHT11 sensor uitlezen en de meetwaarden weergeven via de Serial Monitor.",
+    materials: "Arduino Uno, DHT11 sensor, 10kΩ weerstand, breadboard, draden.",
+    steps: [
+      {
+        id: "dht-s1",
+        title: "Bibliotheek & sensor instellen",
+        content: "De DHT11 meet zowel temperatuur als luchtvochtigheid via één datapin. Om hem te gebruiken, moeten we eerst de DHT-bibliotheek installeren in de Arduino IDE. Via Sketch → Include Library → Manage Libraries zoek je op 'DHT sensor library' van Adafruit en installeer je deze. Met #define stellen we de pin en het sensortype in. Dan maken we een dht-object aan dat we straks gebruiken om de sensor aan te sturen.",
+        diagram: true,
+        code: dht_s1,
+        legend: [
+          { term: '#include "DHT.h"', desc: "Laad de DHT bibliotheek. Hiermee kun je de sensor aansturen zonder zelf het protocol te coderen." },
+          { term: "#define DHTPIN 2", desc: "De datapin van de sensor is aangesloten op pin 2." },
+          { term: "#define DHTTYPE DHT11", desc: "Geef aan welk type sensor je gebruikt. Er zijn ook DHT21 en DHT22 varianten." },
+          { term: "DHT dht(DHTPIN, DHTTYPE)", desc: "Maak een dht-object aan. Dit is de instantie waarmee je functies zoals readTemperature() aanroept." },
+          { term: "dht.begin()", desc: "Initialiseer de sensor zodat hij klaar is voor gebruik." },
+        ]
+      },
+      {
+        id: "dht-s2",
+        title: "Temperatuur en vocht uitlezen",
+        content: "In de loop() lezen we elke 2 seconden de temperatuur en luchtvochtigheid uit. We gebruiken float in plaats van int, omdat de sensor decimalen teruggeeft (bijv. 21.5°C). Met Serial.print() bouwen we een nette zin op in de Serial Monitor. Let op het verschil tussen print() (geen nieuwe regel) en println() (wél nieuwe regel aan het einde).",
+        code: dht_s2,
+        legend: [
+          { term: "float t = dht.readTemperature()", desc: "Lees de temperatuur in graden Celsius. float = een getal met decimalen." },
+          { term: "float h = dht.readHumidity()", desc: "Lees de luchtvochtigheid in procenten (0–100)." },
+          { term: "Serial.print()", desc: "Stuur tekst of een waarde naar de Serial Monitor, zonder nieuwe regel." },
+          { term: "Serial.println()", desc: "Stuur tekst of een waarde naar de Serial Monitor, mét nieuwe regel aan het einde." },
+          { term: "delay(2000)", desc: "Wacht 2000 milliseconden (= 2 seconden) voor de volgende meting. De DHT11 kan niet sneller dan 1x per seconde meten." },
+        ],
+        assignment: "Blaas zachtjes over de sensor. Wat zie je veranderen in de Serial Monitor?",
+        challenge: "Voeg een if-statement toe: als de temperatuur boven 25°C is, stuur dan een bericht 'Warm!' naar de Serial Monitor.",
+        reflection: "In welke toepassingen wordt temperatuur én vochtigheid tegelijk gemeten?"
+      }
+    ]
+  },
+  {
+    id: "pir-buzzer",
+    title: "Creatief Project: PIR + Buzzer",
+    description: "Combineer een PIR bewegingssensor met een buzzer. Als er beweging wordt gedetecteerd, gaat er een alarm af. De basis voor een zelfgemaakt beveiligingssysteem.",
+    difficulty: "Gemiddeld",
+    learningGoal: "Ik kan een toepassing bedenken en bouwen met een sensor en een output-component.",
+    materials: "Arduino Uno, PIR sensor, buzzer, breadboard, draden.",
+    steps: [
+      {
+        id: "buzz-s1",
+        title: "Pinnen instellen",
+        content: "We combineren twee componenten die we al kennen: de PIR sensor als invoer en een buzzer als uitvoer. Een buzzer maakt een geluid als je er een wisselend signaal naartoe stuurt — dit doet de tone()-functie voor ons. We stellen opnieuw de pinmodes in: de PIR als INPUT en de buzzer als OUTPUT.",
+        diagram: true,
+        code: buzz_s1,
+        legend: [
+          { term: "int pirPin = 2", desc: "PIR sensor aangesloten op digitale pin 2." },
+          { term: "int buzzerPin = 8", desc: "De buzzer is aangesloten op pin 8." },
+          { term: "pinMode(pirPin, INPUT)", desc: "Stel de PIR-pin in als ingang." },
+          { term: "pinMode(buzzerPin, OUTPUT)", desc: "Stel de buzzer-pin in als uitgang." },
+        ]
+      },
+      {
+        id: "buzz-s2",
+        title: "Alarm activeren bij beweging",
+        content: "De logica is dezelfde als bij de PIR + LED: we lezen de sensor uit en reageren met een if/else. Alleen sturen we nu geen LED aan, maar een buzzer. De tone()-functie stuurt een toon van een bepaalde frequentie naar de buzzer (1000 = 1000 Hz, een vrij hoge pieptoon). noTone() schakelt het geluid weer uit.",
+        code: buzz_s2,
+        legend: [
+          { term: "digitalRead(pirPin)", desc: "Lees de sensorwaarde: HIGH bij beweging, LOW bij rust." },
+          { term: "tone(buzzerPin, 1000)", desc: "Laat de buzzer piepen op 1000 Hz. Hoe hoger het getal, hoe hoger de toon." },
+          { term: "noTone(buzzerPin)", desc: "Stop het geluid van de buzzer." },
+        ],
+        assignment: "Upload de code en loop langs de sensor. Hoor je de buzzer afgaan?",
+        challenge: "Voeg een LED toe die ook aangaat bij beweging. Combineer de PIR + LED code met de buzzer-code.",
+        reflection: "Welke aanpassingen zou je maken om dit een echt bruikbaar alarmsysteem te maken?"
       }
     ]
   }

@@ -1,0 +1,213 @@
+Voeg deze tutorials toe aan de pagina, dit zijn afzonderlijk van elkaar lessen (kleine projectjes voor verschillende sensoren.) maak voor elke code 1 tutorial:
+
+Leskaart Week 1 - Potmeter & LED
+
+Leerdoel: Ik kan een eenvoudige sensor uitlezen en een LED aansturen. 
+Benodigdheden: Arduino Uno, breadboard, potmeter, LED, 220Ω weerstand, draden. 
+
+Code: 
+
+int potPin = A0;    	// De analoge pin die gebruikt wordt voor de potmeter.
+int ledPin = 9;		// De pin die gebruikt wordt voor led.
+
+ void setup() { 			// Eenmalig uitvoering (Setup)
+Serial.begin(9600); 	// Het openen van een connectie met computer
+pinMode(ledPin, OUTPUT);  // Zet de led pinmode als een Output
+ }
+
+ void loop() {
+ 	int waarde = analogRead(potPin);			// Uitlezen van analoge Pin
+int helderheid = map(waarde, 0, 1023, 0, 255);// Waarde 0 tot 1023 omzetten
+								// Naar waarde van 0 tot 255
+analogWrite(ledPin, helderheid); 	// deze waarde op de led zetten
+Serial.println(waarde); 			// Serial waarde uitlezen op 
+// Arduino Programma
+}
+
+Opdracht: Draai de potmeter en zie hoe de LED verandert. 
+
+Uitdaging: LED alleen laten branden boven de helft. 
+
+Reflectievraag: Waar in het dagelijks leven werkt iets vergelijkbaars
+
+legenda:
+
+int → betekent integer, een geheel getal (0, 1, 2, …).
+potPin → naam (variabele) die verwijst naar de pin waar de potmeter is aangesloten (A0).
+ledPin → naam (variabele) voor de pin waar de LED op zit (pin 9).
+void setup() → dit stuk code draait één keer bij het starten. Hier zet je klaar wat nodig is.
+Serial.begin(9600) → start de seriële communicatie, zodat je waarden kunt zien op de computer pinMode(ledPin, OUTPUT) → zegt tegen Arduino dat pin 9 gebruikt wordt als uitgang ( LED aan te sturen).
+void loop() → dit stuk code herhaalt zich voortdurend (oneindige lus).
+analogRead(potPin) → leest de waarde van de potmeter (tussen 0 en 1023).
+waarde → variabele waarin de gemeten waarde wordt opgeslagen.
+map(waarde, 0, 1023, 0, 255) → rekent de waarde om van het bereik 0–1023 naar 0–255 
+(het bereik dat een LED kan gebruiken).
+helderheid → variabele waarin de omgerekende waarde staat.
+analogWrite(ledPin, helderheid) → stuurt de LED aan met de berekende helderheid.
+Serial.println(waarde) → schrijft de waarde in de seriële monitor, zodat je kan zien wat de potmeter meet.
+Week 2 – Sensoren in Actie
+
+Leerdoel: Ik kan verschillende sensoren gebruiken om data te meten.
+Benodigdheden: Arduino Uno, PIR sensor, DHT11 sensor, LDR, LED, weerstand.
+
+Opdracht Basis: Laat de sensor een LED besturen.
+
+Schema’s voor verschillende Sensoren:
+
+PIR Sensor: 
+"PIR" staat voor Passieve Infrarood . De term "passief" betekent dat de sensor geen eigen energie of straling uitzendt om een ​​object te detecteren; in plaats daarvan vertrouwt hij op passieve detectie van de infrarode (warmte)straling die alle objecten van nature afgeven. Hij meet veranderingen in deze omgevingsinfrarode energie om beweging te detecteren.
+
+
+
+PIR op pin 2 + LED op pin 13.
+
+LDR Sensor: 
+Een LDR, voluit Light Dependent Resistor, is een elektronisch component waarvan de elektrische weerstand verandert afhankelijk van de hoeveelheid licht die erop valt. Dit betekent dat de weerstand lager is bij veel licht en hoger bij weinig of geen licht. LDR's worden gebruikt als lichtsensoren in toepassingen zoals automatische straatlantaarns, camera's en alarmsystemen. 
+
+
+LDR op A0 + LED op pin 9.
+
+DHT11 Sensor:
+Een DHT11 sensor is een eenvoudige en goedkope digitale sensor die zowel de temperatuur als de luchtvochtigheid van een omgeving kan meten en deze metingen via een digitaal signaal doorstuurt. Het maakt gebruik van een thermistor en een capacitieve vochtsensor en is populair bij hobbyisten en voor projecten met microcontrollers zoals de Arduino en Raspberry Pi vanwege zijn lage kosten en gebruiksgemak, hoewel het minder nauwkeurig en langzaam is dan duurdere alternatieven.
+
+
+DHT11 op pin 2 (met library).
+
+Uitdaging: Pas de drempel aan (bij LDR/PIR) of gebruik een andere output.
+Reflectie: Waar zie jij dit principe terug?
+PIR SENSOR
+
+Code PIR(sensor): 
+				// variabelen 
+int pirPin = 2;		// pir Sensor pin (naam koppelen aan pir pin nummer)
+int ledPin = 13;		// led sensor pin (naam koppelen aan led pin nummer)
+
+void setup() {			// voert een keer uit
+pinMode(pirPin, INPUT);	// pinmode zetten voor een INPUT (pir sensor)
+pinMode(ledPin, OUTPUT);	// pinmode zetten voor een OUTPUT (lampje)
+}
+
+void loop() {					// voert herhaaldelijk uit (in loop)
+int beweging = digitalRead(pirPin);	// naam geven zodat je niet steeds
+						// digitalRead(pirPin); hoeft te typen
+if (beweging == HIGH) {			// als de digital read is hoog (1)
+digitalWrite(ledPin, HIGH);	// voer deze actie uit (ledpin aan)
+} 	else {					// anders? voer deze actie uit
+digitalWrite(ledPin, LOW);		// voer deze actie uit (ledpin uit)
+  	}					// else sluiten
+}						// loop sluiten
+
+
+
+Pir sensor meet alleen:  
+
+0 of 1  || HIGH of LOW || true of false
+beweging of geen beweging.
+
+Gevoeligheid is in te stellen op de sensor zelf.
+
+Vertraging (hoelang blijft de waarde op beweging gedetecteerd) in te stellen op sensor zelf
+
+DHT11 SENSOR
+
+Voor we deze code gaan maken moeten we de library toevoegen:
+
+
+
+
+
+
+
+
+					
+				    👉
+
+
+
+
+
+
+
+
+
+Code DHT11:
+
+#include "DHT.h"				// de library die we gaan gebruiken	
+#define DHTPIN 2				// de pin die we gaan gebruiken
+#define DHTTYPE DHT11			// Welk type DHT sensor
+DHT dht (DHTPIN, DHTTYPE);			// DHT (vanuit library instellingen. 
+// 	 niet verder uitgelegd)
+
+void setup() {				// voert een keer uit
+Serial.begin(9600);			// comm starten met computer met snelheid
+dht.begin();				// Sensor starten vanuit library
+}						// setup sluiten 
+
+void loop() {					// voert herhaaldelijk uit
+float t = dht.readTemperature();		// omzetten naar alleen letter “t” 
+// voor makkelijk gebruik temp waard
+float h = dht.readHumidity();		// omzetten naar alleen letter “h”
+					// voor makkelijk gebruik humid waarde
+Serial.print("Temp: ");			// eerst een woord “Temp: ” 
+Serial.print(t);				// dan de waarde van sensor temp
+Serial.print(" °C  Vocht: "); 		// Eerst woord “Vocht: “
+Serial.println(h); 				// dan de waarde van sensor hum
+delay(2000);					// 2 seconden (2000 milliseconden) wachten
+}						// loop sluiten
+
+“float” is een waarde met decimalen. (“int” is nummer zonder decimalen)
+LDR SENSOR
+
+Code LDR:
+			
+int ldrPin = A0; // ldr Sensor pin (naam koppelen aan ldrPin Analoge pin nummer)
+int ledPin = 9;  // led Pin naam (naam koppelen aan gebruikt pin nummer)
+
+void setup() {				// Setup voert een keer uit
+pinMode(ledPin, OUTPUT);		// pinMode zetten op een uitput voor led
+}						// Setup sluiten
+
+void loop() {					// Loop blijft herhalen
+  int licht = analogRead(ldrPin); 	// naam geven zodat je niet steeds
+						// analogRead(ldrPin); hoeft te typen
+
+  if (licht < 500) {			// als licht onder waarde 500 is
+    digitalWrite(ledPin, HIGH);		// led gaat aan (high dus krijgt stroom)
+  } else {					// anders doet het dit:
+    digitalWrite(ledPin, LOW);		// led gaat uit (krijgt geen stroom meer)
+  }						// else sluiten
+}						// loop sluiten
+						// terug naar boven code en voert loop uit
+
+
+Leskaart Week 3 - Creatief Project 
+
+Leerdoel: Ik kan een toepassing bedenken en bouwen met een sensor en output. 
+
+Benodigdheden: Arduino Uno, keuze uit sensoren (PIR, DHT11, LDR, potmeter), LED of buzzer. 
+
+Code voorbeeld: 
+
+int pirPin = 2; 		// PirSensor naam voor pin 2 (naam = nummer)
+int buzzerPin = 8; 	// buzzer Pin op pin 8 (naam = nummer)
+
+void setup() { 				// setup voert maar 1 keer uit
+pinMode(pirPin, INPUT);		// pinmode instellen voor PIRSensor
+pinMode(buzzerPin, OUTPUT);	// pinMode instellen voor Buzzer
+} 						// Setup sluiten
+void loop() {				// loop blijft herhalen.
+int beweging = digitalRead(pirPin); // digitalRead omzetten in 
+// enkel woord vooral om 
+// gemakkelijk her te gebruiken
+if (beweging == HIGH) { 			//als beweging gedetecteerd is
+tone(buzzerPin, 1000); 			// gaat er een buzzer af
+} else { 					// anders gaat er:
+noTone(buzzerPin);			// geen buzzer af
+}						// else sluiten
+ }							//loop sluiten
+
+Opdracht: Bouw een werkende demo met sensor + output. 
+
+Uitdaging: combineer 2 sensoren.
+
+Maak ook een filter van beginner gemiddeld en gevorderd zodat het later makkelijk is om tussen tutorials te filteren. 

@@ -234,6 +234,20 @@ export default function TutorialView() {
                 </div>
               )}
 
+              {/* Optional Code */}
+              {step.optionalCode && (
+                <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-4 shadow-sm mt-6">
+                  <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-2 text-sm">
+                    <Code2 className="w-4 h-4 text-indigo-500" />
+                    {step.optionalCodeTitle || "Optionele code"}
+                  </h4>
+                  <p className="text-indigo-800/80 text-xs mb-3">Experimenteer met deze optionele uitbreiding door het hieronder in je loop() in te voegen.</p>
+                  <div className="bg-[#0d1117] rounded-lg p-3 font-mono text-xs text-slate-200 overflow-x-auto">
+                    <pre className="leading-relaxed whitespace-pre-wrap break-words">{step.optionalCode}</pre>
+                  </div>
+                </div>
+              )}
+
               {/* Assignment / Challenge / Reflection */}
               <div className="space-y-3 mt-6">
                 {step.assignment && (

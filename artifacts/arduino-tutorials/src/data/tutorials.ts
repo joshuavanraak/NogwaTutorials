@@ -13,6 +13,8 @@ export type TutorialStep = {
   assignment?: string;
   challenge?: string;
   reflection?: string;
+  optionalCode?: string;
+  optionalCodeTitle?: string;
 };
 
 export type Tutorial = {
@@ -641,7 +643,27 @@ export const tutorials: Tutorial[] = [
         ],
         assignment: "Verander speedDelay naar 100. En naar 50. Wat is de grens waarbij het spel nog speelbaar is?",
         challenge: "Kun je de snelheid laten toenemen naarmate de bal vaker teruggekaatst is? Je hebt daarvoor een teller-variabele nodig.",
-        reflection: "Hoe zou je het spel kunnen uitbreiden? Denk aan geluid, een reset-knop of een scoreteller."
+        reflection: "Hoe zou je het spel kunnen uitbreiden? Denk aan geluid, een reset-knop of een scoreteller.",
+        optionalCodeTitle: "Optioneel: Reflectie-mechanica",
+        optionalCode: `// LINKS (bal komt naar links)
+if (digitalRead(BUTTON_LEFT) == LOW && direction == -1) {
+  if (position <= 3) { // je mag slaan
+    direction = 1;
+    if (position <= 2) { // laatste 3 pixels (0,1,2)
+      speedDelay -= 20; // sneller
+    }
+  }
+}
+
+// RECHTS (bal komt naar rechts)
+if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
+  if (position >= 6) { // je mag slaan
+    direction = -1;
+    if (position >= 7) { // laatste 3 pixels (7,8,9)
+      speedDelay -= 20; // sneller
+    }
+  }
+}`
       }
     ]
   },

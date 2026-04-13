@@ -11,7 +11,9 @@ type ComponentType =
   | "ldr"
   | "dht"
   | "buzzer"
-  | "button";
+  | "button"
+  | "servo"
+  | "joystick";
 
 type ColorKey = "teal" | "yellow" | "amber" | "blue" | "rose" | "violet" | "orange" | "slate" | "green";
 
@@ -51,15 +53,18 @@ function parsePins(code: string): ParsedPin[] {
   const result: ParsedPin[] = [];
   const seen = new Set<string>();
 
-  // int vars: only match if name contains "pin" (avoids ledAantal, kleurShift, snelheid etc.)
+  // int vars: match if name contains "pin", "joystick" or "joy"
   const intPattern = /int\s+(\w+)\s*=\s*(A?\d+)\s*;/g;
   // #define: match pure numeric / A+numeric values
   const definePattern = /#define\s+(\w+)\s+(A?\d+)\b/g;
+  // servo.attach(N): matches servo1.attach(9), servo2.attach(10), etc.
+  const servoPattern = /(servo\w*)\.attach\((\d+)\)/gi;
 
   let m: RegExpExecArray | null;
   while ((m = intPattern.exec(code)) !== null) {
     const name = m[1];
-    if (name.toLowerCase().includes("pin") && !seen.has(name)) {
+    const n = name.toLowerCase();
+    if ((n.includes("pin") || n.includes("joystick") || n.includes("joy")) && !seen.has(name)) {
       seen.add(name);
       result.push({ name, pin: m[2] });
     }
@@ -67,10 +72,18 @@ function parsePins(code: string): ParsedPin[] {
   while ((m = definePattern.exec(code)) !== null) {
     const name = m[1];
     const n = name.toLowerCase();
-    // Include if name signals a pin or a button
     if ((n.includes("pin") || n.includes("button") || n.includes("btn")) && !seen.has(name)) {
       seen.add(name);
       result.push({ name, pin: m[2] });
+    }
+  }
+  while ((m = servoPattern.exec(code)) !== null) {
+    const servoName = m[1].toLowerCase();
+    const pin = m[2];
+    const syntheticName = `${servoName}_pin${pin}`;
+    if (!seen.has(syntheticName)) {
+      seen.add(syntheticName);
+      result.push({ name: syntheticName, pin });
     }
   }
   return result;
@@ -86,6 +99,8 @@ function classifyName(name: string): ComponentType | null {
   if (n === "dhtpin" || n.includes("dht")) return "dht";
   if (n.includes("buzz")) return "buzzer";
   if (n.includes("button") || n.includes("btn")) return "button";
+  if (n.startsWith("servo")) return "servo";
+  if (n.includes("joystick") || n.includes("joy")) return "joystick";
   return null;
 }
 
@@ -140,6 +155,20 @@ function buildDiagram(code: string): DiagramData {
         signalRows.push({ from: pinLabel, to: label, color: "slate", direction: "in" });
         break;
       }
+      case "servo": {
+        const servoLabel = name.toLowerCase().includes("servo2") || name.toLowerCase().includes("_2")
+          ? "Servo 2 Signaal (Oranje)"
+          : "Servo 1 Signaal (Oranje)";
+        signalRows.push({ from: pinLabel, to: servoLabel, color: "green", direction: "out" });
+        break;
+      }
+      case "joystick": {
+        const axisLabel = name.toLowerCase().includes("y")
+          ? "Joystick VRY (Y-as)"
+          : "Joystick VRX (X-as)";
+        signalRows.push({ from: pinLabel, to: axisLabel, color: "violet", direction: "in" });
+        break;
+      }
     }
   }
 
@@ -181,6 +210,14 @@ function buildDiagram(code: string): DiagramData {
         break;
       case "button":
         gndRows.push({ arduinoPin: "GND", componentPin: "Knoppen (andere aansluitpen)", color: "slate" });
+        break;
+      case "servo":
+        powerRows.push({ arduinoPin: "5V", componentPin: "Servo(s) VCC (Rood)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "Servo(s) GND (Bruin)", color: "slate" });
+        break;
+      case "joystick":
+        powerRows.push({ arduinoPin: "5V", componentPin: "Joystick VCC", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "Joystick GND", color: "slate" });
         break;
     }
   }

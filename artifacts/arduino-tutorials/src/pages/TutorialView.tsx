@@ -4,8 +4,16 @@ import { tutorials } from "../data/tutorials";
 import { CodeBlock } from "../components/CodeBlock";
 import { WiringDiagram } from "../components/WiringDiagram";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, CheckCircle2, ChevronRight, Code2, Lightbulb, PlayCircle, Terminal, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, Code2, Lightbulb, PlayCircle, Sparkles, Terminal, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
+
+function isNew(dateAdded?: string): boolean {
+  if (!dateAdded) return false;
+  const added = new Date(dateAdded);
+  const now = new Date();
+  const diffDays = (now.getTime() - added.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays < 14;
+}
 
 export default function TutorialView() {
   const [, params] = useRoute("/tutorial/:id");
@@ -141,7 +149,7 @@ export default function TutorialView() {
 
         {/* Tutorial intro header */}
         <div className="px-8 pt-12 pb-8 md:px-12 max-w-2xl">
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-4 flex-wrap">
             <span className={cn(
               "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border",
               tutorial.difficulty === "Beginner"  && "bg-green-50 text-green-700 border-green-100",
@@ -154,6 +162,16 @@ export default function TutorialView() {
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
               {tutorial.steps.length} stappen
             </span>
+            {isNew(tutorial.dateAdded) && (
+              <motion.span
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-sm shadow-violet-200"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Nieuw toegevoegd
+              </motion.span>
+            )}
           </div>
 
           <h1 className="text-4xl md:text-5xl font-display font-extrabold text-slate-900 mb-4 leading-tight">

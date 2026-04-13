@@ -25,7 +25,81 @@ export type Tutorial = {
   materials: string;
   learningGoal: string;
   steps: TutorialStep[];
+  dateAdded?: string;
 };
+
+// ─────────────────────────────────────────────
+// TUTORIAL 8: Servo Motor
+// ─────────────────────────────────────────────
+
+const servo_s1 = `#include <Servo.h>
+
+Servo servo1;
+
+void setup() {
+  servo1.attach(9);
+}
+
+void loop() {
+  // Van 0 naar 180 graden
+  for (int pos = 0; pos <= 180; pos++) {
+    servo1.write(pos);
+    delay(10);
+  }
+
+  // Van 180 naar 0 graden
+  for (int pos = 180; pos >= 0; pos--) {
+    servo1.write(pos);
+    delay(10);
+  }
+}`;
+
+const servo_s2 = `#include <Servo.h>
+
+Servo servo1;
+
+int joystickX = A0;
+
+void setup() {
+  servo1.attach(9);
+}
+
+void loop() {
+  int waarde = analogRead(joystickX);
+
+  // Omzetten naar graden (0–180)
+  int hoek = map(waarde, 0, 1023, 0, 180);
+
+  servo1.write(hoek);
+
+  delay(15);
+}`;
+
+const servo_s3 = `#include <Servo.h>
+
+Servo servo1;
+Servo servo2;
+
+int joystickX = A0;
+int joystickY = A1;
+
+void setup() {
+  servo1.attach(9);
+  servo2.attach(10);
+}
+
+void loop() {
+  int x = analogRead(joystickX);
+  int y = analogRead(joystickY);
+
+  int hoekX = map(x, 0, 1023, 0, 180);
+  int hoekY = map(y, 0, 1023, 0, 180);
+
+  servo1.write(hoekX);
+  servo2.write(hoekY);
+
+  delay(15);
+}`;
 
 // ─────────────────────────────────────────────
 // TUTORIAL 1: NeoPixel Basis
@@ -854,6 +928,80 @@ if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
         assignment: "Upload de code en loop langs de sensor. Hoor je de buzzer afgaan?",
         challenge: "Voeg een LED toe die ook aangaat bij beweging. Combineer de PIR + LED code met de buzzer-code.",
         reflection: "Welke aanpassingen zou je maken om dit een echt bruikbaar alarmsysteem te maken?"
+      }
+    ]
+  },
+  {
+    id: "servo-motor",
+    title: "Servo Motor",
+    description: "Leer een servomotor aansturen: eerst automatisch heen en weer, daarna met een joystick. Als uitbreiding stuur je twee servo's tegelijk aan met beide assen van de joystick.",
+    difficulty: "Gemiddeld",
+    learningGoal: "Ik kan een servomotor aansturen met code én met een joystick, en begrijp hoe ik een analoge waarde omzet naar een hoek.",
+    materials: "Arduino Uno, servomotor (SG90 of vergelijkbaar), joystick module, breadboard, draden.",
+    dateAdded: "2026-04-13",
+    steps: [
+      {
+        id: "servo-s1",
+        title: "Servo aansluiten & sweep test",
+        content: "Een servomotor draait naar een specifieke hoek (0–180°) op basis van een signaal. De Servo-bibliotheek is al ingebouwd in de Arduino IDE — je hoeft niks te installeren. Met attach() koppel je de servo aan een pin. De for-lus laat de servo automatisch heen en weer bewegen: dit noem je een 'sweep'. Een mooie eerste test: je ziet direct beweging zonder extra input.",
+        diagram: true,
+        code: servo_s1,
+        legend: [
+          { term: "#include <Servo.h>", desc: "Laad de ingebouwde Servo-bibliotheek. Geen installatie nodig." },
+          { term: "Servo servo1", desc: "Maak een servo-object aan. Via dit object stuur je de motor aan." },
+          { term: "servo1.attach(9)", desc: "Koppel de servo aan pin 9 (het oranje signaaldraadje)." },
+          { term: "for (int pos = 0; pos <= 180; pos++)", desc: "Verhoog de hoek stap voor stap van 0 naar 180 graden." },
+          { term: "servo1.write(pos)", desc: "Stuur de servo naar de opgegeven hoek in graden." },
+          { term: "delay(10)", desc: "Wacht 10ms tussen elke stap zodat de motor kan bijhouden." },
+        ],
+        assignment: "Upload de code en kijk hoe de servo heen en weer draait. Verander delay(10) naar delay(50) — wat valt je op?",
+        reflection: "Hoe gebruik je een servo in een echt project? Denk aan een robotarm of een automatisch raam."
+      },
+      {
+        id: "servo-s2",
+        title: "Servo besturen met joystick",
+        content: "Nu voegen we interactie toe: de X-as van de joystick bepaalt de hoek van de servo. Een joystick geeft een analoge waarde (0–1023) terug. Met de map()-functie vertalen we die naar graden (0–180). Zo kun je de servo precies sturen door de joystick te bewegen.",
+        diagram: true,
+        code: servo_s2,
+        legend: [
+          { term: "int joystickX = A0", desc: "De X-as van de joystick is aangesloten op analoge pin A0." },
+          { term: "analogRead(joystickX)", desc: "Leest de positie van de joystick: 0 = volledig links, 1023 = volledig rechts." },
+          { term: "map(waarde, 0, 1023, 0, 180)", desc: "Zet de joystickwaarde (0–1023) om naar een hoek (0–180). map() schaalt automatisch." },
+          { term: "servo1.write(hoek)", desc: "Stuur de servo naar de berekende hoek." },
+          { term: "delay(15)", desc: "Korte pauze om de servo de tijd te geven de positie te bereiken." },
+        ],
+        assignment: "Beweeg de joystick langzaam van links naar rechts. Volgt de servo mee?",
+        challenge: "Verander de map()-waarden zodat de servo alleen tussen 30° en 150° beweegt (dus niet meer naar de uiterste posities).",
+        reflection: "Waarom gebruiken we map() in plaats van de waarde direct aan servo1.write() te geven?"
+      },
+      {
+        id: "servo-s3",
+        title: "Uitbreiding: twee servo's met beide assen",
+        content: "Voor leerlingen die sneller gaan: voeg een tweede servo toe op pin 10 en gebruik ook de Y-as van de joystick (A1). Zo kan elke as van de joystick een eigen servo aansturen — de basis van een 2D-robotarm of pan-tilt systeem. Sluit de tweede servo aan met hetzelfde patroon: oranje naar pin 10, rood naar 5V, bruin naar GND.",
+        diagram: true,
+        code: servo_s3,
+        legend: [
+          { term: "Servo servo2", desc: "Tweede servo-object voor de extra motor." },
+          { term: "int joystickY = A1", desc: "De Y-as van de joystick op analoge pin A1." },
+          { term: "servo2.attach(10)", desc: "Koppel de tweede servo aan pin 10." },
+          { term: "int y = analogRead(joystickY)", desc: "Lees de Y-positie van de joystick uit." },
+          { term: "servo2.write(hoekY)", desc: "Stuur de tweede servo op basis van de Y-as." },
+        ],
+        assignment: "Sluit de tweede servo aan en test of elke joystick-as een eigen servo aanstuurt.",
+        challenge: "Voeg een knop toe die beide servo's tegelijk terugzet naar 90° (middenpositie).",
+        reflection: "Welk project kun je bouwen met twee servo's die je via een joystick bestuurt? Denk aan een camera-mount of speelgoedrobot.",
+        optionalCodeTitle: "Snippet: alleen de toevoegingen voor servo 2",
+        optionalCode: `// Bovenaan toevoegen:
+Servo servo2;
+int joystickY = A1;
+
+// In setup() toevoegen:
+servo2.attach(10);
+
+// In loop() toevoegen:
+int y = analogRead(joystickY);
+int hoekY = map(y, 0, 1023, 0, 180);
+servo2.write(hoekY);`
       }
     ]
   }

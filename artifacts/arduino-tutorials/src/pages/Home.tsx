@@ -2,7 +2,15 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { tutorials } from "../data/tutorials";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, BookOpen, ListChecks, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, ListChecks, Sparkles, Zap } from "lucide-react";
+
+function isNew(dateAdded?: string): boolean {
+  if (!dateAdded) return false;
+  const added = new Date(dateAdded);
+  const now = new Date();
+  const diffDays = (now.getTime() - added.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays < 14;
+}
 
 type Difficulty = "Alle" | "Beginner" | "Gemiddeld" | "Gevorderd" | "Expert";
 
@@ -126,6 +134,16 @@ export default function Home() {
                           <ListChecks className="w-3.5 h-3.5" />
                           {tutorial.steps.length} stappen
                         </span>
+                        {isNew(tutorial.dateAdded) && (
+                          <motion.span
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-sm shadow-violet-200"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            Nieuw
+                          </motion.span>
+                        )}
                       </div>
 
                       <h3 className="text-2xl font-display font-bold text-slate-900 mb-3 group-hover:text-primary transition-colors">

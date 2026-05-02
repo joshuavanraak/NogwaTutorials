@@ -17,6 +17,17 @@ export type TutorialStep = {
   optionalCodeTitle?: string;
 };
 
+export type Board = "arduino" | "esp32";
+
+export type TutorialTag =
+  | "basis"
+  | "sensor"
+  | "display"
+  | "motor"
+  | "game"
+  | "domotica"
+  | "internet";
+
 export type Tutorial = {
   id: string;
   title: string;
@@ -26,6 +37,8 @@ export type Tutorial = {
   learningGoal: string;
   steps: TutorialStep[];
   dateAdded?: string;
+  board?: Board;
+  tags?: TutorialTag[];
 };
 
 // ─────────────────────────────────────────────
@@ -5530,6 +5543,8 @@ export const tutorials: Tutorial[] = [
     difficulty: "Beginner",
     learningGoal: "Ik kan een WS2812B-strip aansluiten en LEDs aansturen met loops, kleuren en animaties.",
     materials: "Arduino Uno, WS2812B strip (10 leds), 5V voeding, 330Ω weerstand, jumper draden.",
+    board: "arduino",
+    tags: ["basis"],
     steps: [
       {
         id: "np-s1",
@@ -5608,6 +5623,8 @@ export const tutorials: Tutorial[] = [
     difficulty: "Gevorderd",
     learningGoal: "Ik kan een interactief spel bouwen met knoppen, een LED strip en win-condities.",
     materials: "Arduino Uno, WS2812B strip (10 leds), 2 drukknopjes, 330Ω weerstand, jumper draden.",
+    board: "arduino",
+    tags: ["game"],
     steps: [
       {
         id: "pong-s1",
@@ -5726,6 +5743,8 @@ if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
     difficulty: "Beginner",
     learningGoal: "Ik kan een eenvoudige sensor uitlezen en een LED aansturen.",
     materials: "Arduino Uno, breadboard, potmeter, LED, 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis", "sensor"],
     steps: [
       {
         id: "pot-s1",
@@ -5764,6 +5783,8 @@ if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
     difficulty: "Beginner",
     learningGoal: "Ik kan een digitale sensor uitlezen en een LED aansturen op basis van beweging.",
     materials: "Arduino Uno, PIR sensor, LED, 220Ω weerstand, breadboard, draden.",
+    board: "arduino",
+    tags: ["sensor"],
     steps: [
       {
         id: "pir-s1",
@@ -5802,6 +5823,8 @@ if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
     difficulty: "Beginner",
     learningGoal: "Ik kan een analoge lichtsensor uitlezen en een LED aansturen op basis van de lichtwaarde.",
     materials: "Arduino Uno, LDR, LED, 10kΩ weerstand, 220Ω weerstand, breadboard, draden.",
+    board: "arduino",
+    tags: ["sensor"],
     steps: [
       {
         id: "ldr-s1",
@@ -5839,6 +5862,8 @@ if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
     difficulty: "Gemiddeld",
     learningGoal: "Ik kan een DHT11 sensor uitlezen en de meetwaarden weergeven via de Serial Monitor.",
     materials: "Arduino Uno, DHT11 sensor, 10kΩ weerstand, breadboard, draden.",
+    board: "arduino",
+    tags: ["sensor"],
     steps: [
       {
         id: "dht-s1",
@@ -5879,6 +5904,8 @@ if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
     difficulty: "Gemiddeld",
     learningGoal: "Ik kan een toepassing bedenken en bouwen met een sensor en een output-component.",
     materials: "Arduino Uno, PIR sensor, buzzer, breadboard, draden.",
+    board: "arduino",
+    tags: ["sensor"],
     steps: [
       {
         id: "buzz-s1",
@@ -5916,6 +5943,8 @@ if (digitalRead(BUTTON_RIGHT) == LOW && direction == 1) {
     difficulty: "Gemiddeld",
     learningGoal: "Ik kan een servomotor aansturen met code én met een joystick, en begrijp hoe ik een analoge waarde omzet naar een hoek.",
     materials: "Arduino Uno, servomotor (SG90 of vergelijkbaar), joystick module, breadboard, draden.",
+    board: "arduino",
+    tags: ["motor"],
     dateAdded: "2026-04-13",
     steps: [
       {
@@ -5990,6 +6019,8 @@ servo2.write(hoekY);`
     difficulty: "Gemiddeld",
     learningGoal: "Ik kan een stappenmotor aansturen met een driver (A4988 / DRV8825) via STEP- en DIR-pinnen.",
     materials: "Arduino Uno, NEMA 17 stappenmotor, A4988 of DRV8825 driver, externe 12V voeding (8–35V), 100µF condensator, breadboard, draden.",
+    board: "arduino",
+    tags: ["motor"],
     dateAdded: "2026-05-02",
     steps: [
       {
@@ -6047,6 +6078,8 @@ servo2.write(hoekY);`
     difficulty: "Gevorderd",
     learningGoal: "Ik kan een rotary encoder uitlezen en de waarde gebruiken om een stappenmotor mee aan te sturen.",
     materials: "Arduino Uno, NEMA 17 stappenmotor, A4988/DRV8825 driver, KY-040 rotary encoder, externe 12V voeding, breadboard, draden.",
+    board: "arduino",
+    tags: ["motor"],
     dateAdded: "2026-05-02",
     steps: [
       {
@@ -6107,6 +6140,8 @@ servo2.write(hoekY);`
     difficulty: "Expert",
     learningGoal: "Ik begrijp hoe een 3D-printer of plotter G-code interpreteert en die vertaalt naar gecoördineerde bewegingen van meerdere stappenmotoren.",
     materials: "Arduino Uno (of Mega voor 3 motoren), 2–3x A4988/DRV8825 drivers, 2–3x NEMA 17 stappenmotoren, externe 12V voeding (5A+), condensatoren, breadboard, veel draden. Optioneel: complete CNC-shield.",
+    board: "arduino",
+    tags: ["motor"],
     dateAdded: "2026-05-02",
     steps: [
       {
@@ -6214,6 +6249,8 @@ void beweegLineair(long stappenX, long stappenY) {
     difficulty: "Gemiddeld",
     learningGoal: "Ik kan een I2C LCD-display aansturen, de cursor verplaatsen en live sensorwaarden van verschillende sensoren (potmeter, LDR, DHT11) en knop-inputs op het scherm tonen.",
     materials: "Arduino Uno, 16x2 LCD-display met I2C-backpack (PCF8574, vaak adres 0x27 of 0x3F), breadboard en draadjes. Voor de toepassingen: potmeter (stap 3), LDR + 10kΩ weerstand (stap 4), DHT11 temperatuur/vocht-sensor (stap 5), drukknop (stap 6). Bibliotheken: LiquidCrystal_I2C en DHT sensor library (beide via Schets → Bibliotheek beheren).",
+    board: "arduino",
+    tags: ["display", "sensor"],
     dateAdded: "2026-05-02",
     steps: [
       {
@@ -6387,6 +6424,8 @@ void loop() {
     description: "Laat je ESP32 een eigen webpagina serveren met een live grafiek van een sensorwaarde. Geen tussenservers — de chip is zelf de webserver.",
     difficulty: "Gemiddeld",
     materials: "ESP32 DevKit V1 (of NodeMCU-ESP32), USB-kabel, breadboard + jumpers, 1× potmeter (10kΩ).",
+    board: "esp32",
+    tags: ["internet"],
     learningGoal: "Begrijpen hoe een ESP32 verbinding maakt met WiFi, hoe je routes serveert met de WebServer-bibliotheek, en hoe je een JSON-endpoint koppelt aan een grafiek in de browser.",
     dateAdded: "2026-05-02",
     steps: [
@@ -6467,6 +6506,8 @@ void loop() {
     description: "Schakel een lamp, LED of relais aan en uit vanaf je telefoon — via een mooie webpagina die de ESP32 zelf serveert. De basis voor je eigen domotica.",
     difficulty: "Gemiddeld",
     materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× LED + 220Ω weerstand (of 5V relais-module). Voor tutorial-veiligheid alleen 5V/12V — geen 230V.",
+    board: "esp32",
+    tags: ["internet", "domotica"],
     learningGoal: "Een ESP32 via een webpagina laten reageren op gebruikers-input. Leer over GET-routes, page redirects (303), en het scheiden van logica (toggle) en weergave (HTML-bouwer).",
     dateAdded: "2026-05-02",
     steps: [
@@ -6526,6 +6567,8 @@ void loop() {
     description: "Een PIR-sensor en je ESP32 → een push-bericht in je Discord-server zodra er iemand voor de sensor langsloopt. Klassieke 'Internet of Things' in 30 regels code.",
     difficulty: "Gemiddeld",
     materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× PIR bewegingssensor (HC-SR501), Discord-account met een eigen server.",
+    board: "esp32",
+    tags: ["internet", "sensor"],
     learningGoal: "HTTPS-requests sturen vanaf een ESP32 naar een externe service (Discord-webhook) en die koppelen aan een fysieke trigger (PIR). Plus: het cooldown-patroon dat voorkomt dat je 100 berichten in een seconde stuurt.",
     dateAdded: "2026-05-02",
     steps: [
@@ -6589,6 +6632,8 @@ void loop() {
     description: "Een mini-display dat live de Bitcoin-koers in euro toont met een pijltje dat aangeeft of de prijs gestegen of gedaald is in de laatste 24 uur. Data wordt rechtstreeks van de gratis CoinGecko-API gehaald.",
     difficulty: "Gemiddeld",
     materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× I2C 16x2 LCD-display (met PCF8574 backpack). Library: ArduinoJson v6.",
+    board: "esp32",
+    tags: ["internet", "display"],
     learningGoal: "HTTPS GET-requests doen vanaf de ESP32, JSON-antwoord parsen met de ArduinoJson-bibliotheek, en data in real-time op een LCD weergeven met directionele indicator.",
     dateAdded: "2026-05-02",
     steps: [
@@ -6653,6 +6698,8 @@ void loop() {
     description: "Toon live de eerstvolgende treinvertrekken vanaf jouw station op een LCD — perfect voor naast de voordeur. Gebruikt de officiële NS Reisinformatie API.",
     difficulty: "Gevorderd",
     materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× I2C 16x2 LCD-display, gratis NS-developer API-key (apiportal.ns.nl). Library: ArduinoJson v6.",
+    board: "esp32",
+    tags: ["internet", "display"],
     learningGoal: "Werken met een API die authenticatie via een header vereist, een grote JSON-response parsen met DynamicJsonDocument, gegevens roteren op een display, en non-blocking timing met `millis()`.",
     dateAdded: "2026-05-02",
     steps: [
@@ -6732,6 +6779,8 @@ void loop() {
     description: "Laat een ring van 24 NeoPixels de regen-voorspelling van Buienradar zien — elke LED is 5 minuten in de toekomst, kleur loopt van groen (droog) naar rood (stortregen).",
     difficulty: "Gevorderd",
     materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× NeoPixel-ring of -strip met 24 WS2812B LEDs, externe 5V-voeding (1A+) aanbevolen voor full brightness.",
+    board: "esp32",
+    tags: ["internet"],
     learningGoal: "Een open HTTP-API uitlezen en parsen, sensorwaarden mappen op een visuele schaal (kleurgradient), en NeoPixels veilig aansturen vanaf een ESP32 (3.3V signaal, 5V power).",
     dateAdded: "2026-05-02",
     steps: [
@@ -6796,6 +6845,8 @@ void loop() {
     description: "Bouw een mini-webcam die live MJPEG streamt naar je browser, en in stap 4 automatisch een snapshot beschikbaar maakt zodra de PIR-sensor beweging detecteert.",
     difficulty: "Gevorderd",
     materials: "ESP32-CAM (AI Thinker), FTDI USB-naar-Serial-adapter (3.3V/5V), breadboard + jumpers, 1× PIR bewegingssensor (HC-SR501) voor stap 4. Optioneel: externe 5V-voeding (de USB van de FTDI is soms te zwak).",
+    board: "esp32",
+    tags: ["internet", "sensor"],
     learningGoal: "Werken met een bord zonder USB (FTDI-programmeren), de OV2640-camera initialiseren, een MJPEG-stream serveren via WebServer, en een fysieke trigger (PIR) koppelen aan een snapshot-endpoint.",
     dateAdded: "2026-05-02",
     steps: [
@@ -6878,6 +6929,8 @@ void loop() {
     description: "Maak van je ESP32 een echt Bluetooth-toetsenbord. Verbind met je laptop of telefoon en laat een fysieke knop een wachtwoord intypen, een sneltoets sturen of media bedienen.",
     difficulty: "Gevorderd",
     materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× drukknop (geen weerstand nodig dankzij INPUT_PULLUP).",
+    board: "esp32",
+    tags: ["internet"],
     learningGoal: "Een Bluetooth Low Energy HID (Human Interface Device) profiel implementeren, edge-detectie gebruiken om dubbele triggers te voorkomen, en het verschil tussen `print()` (typen) en `write()` (één-toets-press) op een BLE-keyboard begrijpen.",
     dateAdded: "2026-05-02",
     steps: [
@@ -6941,6 +6994,8 @@ void loop() {
     description: "Een batterij-aangedreven brievenbus-sensor: zodra het klepje opengaat, sluipt de ESP32 uit deep-sleep, stuurt 'Post is er!' naar Discord, en gaat weer slapen. Maandenlang op één lading.",
     difficulty: "Gemiddeld",
     materials: "ESP32 DevKit V1, USB-kabel of LiPo-batterij, breadboard + jumpers, 1× reed-schakelaar (NO-type, met magneet), Discord-account met eigen server (voor de webhook).",
+    board: "esp32",
+    tags: ["internet", "domotica", "sensor"],
     learningGoal: "Een reed-schakelaar uitlezen als digitale input, edge-detectie correct toepassen, een Discord-webhook aanroepen, en deep sleep gebruiken voor jaren-lange batterijduur door alleen op een externe trigger wakker te worden.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7004,6 +7059,8 @@ void loop() {
     description: "Een klassiek arcade-spelletje: een willekeurig moment licht een LED op, jij drukt zo snel mogelijk een knop. Het LCD toont je reactietijd in milliseconden — en houdt je beste score bij.",
     difficulty: "Beginner",
     materials: "Arduino Uno, USB-kabel, breadboard + jumpers, 1× I2C 16x2 LCD-display (PCF8574 backpack), 1× LED, 1× 220Ω weerstand, 1× drukknop.",
+    board: "arduino",
+    tags: ["game", "display"],
     learningGoal: "`millis()` gebruiken om duur te meten, `random()` voor onvoorspelbare timing, een knop met edge/blocking-detectie uitlezen, een I2C LCD aansturen, en een 'best score'-variabele bijhouden tussen rondes.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7068,6 +7125,8 @@ void loop() {
     description: "Een echte arcade-klassieker: 4 gekleurde LEDs lichten op in een reeks die elke ronde langer wordt — kan jij hem foutloos naspelen? Met buzzer-tonen per kleur en oplopende moeilijkheid.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, breadboard + jumpers, 4× LED (rood, groen, blauw, geel), 4× 220Ω weerstand, 4× drukknop, 1× passieve buzzer.",
+    board: "arduino",
+    tags: ["game"],
     learningGoal: "Werken met arrays om een reeks op te slaan, `random()` met `randomSeed()` correct gebruiken, herbruikbare helper-functies schrijven, en spelers-input vergelijken met een verwachte sequentie.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7158,6 +7217,8 @@ void speler_aan_de_beurt() {
     description: "Een willekeurige LED licht op — druk de juiste knop voordat hij uit gaat. Score loopt op, tempo neemt toe, en na 5 missers ben je af. Klassiek kermis-spel met 5 LEDs en een LCD-scherm.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, breadboard + jumpers, 5× LED + 5× 220Ω weerstand, 5× drukknop, 1× I2C 16x2 LCD-display.",
+    board: "arduino",
+    tags: ["game", "display"],
     learningGoal: "Arrays gebruiken om identieke pinnen samen te beheren, een non-blocking timer met `millis()` toepassen, edge-detectie op meerdere knoppen tegelijk doen, en moeilijkheidsgraad dynamisch aanpassen.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7235,6 +7296,8 @@ void speler_aan_de_beurt() {
     description: "Een dobbelsteen die je nooit kwijtraakt: druk op de knop, 7 LEDs in dobbelsteen-patroon 'rollen' kort en stoppen op een willekeurig getal van 1 t/m 6. Perfect voor bordspellen.",
     difficulty: "Beginner",
     materials: "Arduino Uno, breadboard + jumpers, 7× LED + 7× 220Ω weerstand, 1× drukknop.",
+    board: "arduino",
+    tags: ["game"],
     learningGoal: "Een 2D-array gebruiken om patronen op te slaan, `random()` voor onvoorspelbare uitkomsten, knop-debounce met edge-detectie, en een 'shuffle'-animatie schrijven met `millis()`.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7316,6 +7379,8 @@ void toon2Dobbelstenen() {
     description: "Bouw een werkende schaakklok: 2 knoppen, 2 timers, mm:ss-display en alarm bij 0:00. Na de les meteen bruikbaar voor échte schaakpartijen — of voor andere bordspellen waar tijd telt.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, breadboard + jumpers, 1× I2C 16x2 LCD-display, 3× drukknop (2 spelers + reset), 1× passieve buzzer.",
+    board: "arduino",
+    tags: ["game", "display"],
     learningGoal: "`millis()` gebruiken voor non-blocking countdown, `unsigned long` correct hanteren tegen overflow, een state-machine bouwen (stopped/speler1/speler2/gameover), en delta-tijd correct aftrekken.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7395,6 +7460,8 @@ void toon2Dobbelstenen() {
     description: "Het klassieke 'Zeeslag' op een echte 8x8 LED-matrix. Joystick beweegt je richtkruis, knopdruk schiet, hit/miss-feedback met blink-patronen, en een win-animatie als alle schepen tot zinken zijn gebracht.",
     difficulty: "Gevorderd",
     materials: "Arduino Uno, breadboard + jumpers, 1× MAX7219 8x8 LED-matrix module, 1× analoge joystick-module (X+Y+SW), 1× extra drukknop (vuur), USB-voeding (matrix kan veel stroom trekken bij volle helderheid). Bibliotheek: 'LedControl' van Eberhard Fahle (via Bibliotheekbeheer).",
+    board: "arduino",
+    tags: ["game", "display"],
     learningGoal: "Werken met de LedControl-bibliotheek voor een MAX7219, een 2D-game-state in arrays beheren, joystick-input vertalen naar een rooster-cursor, en een complete spel-loop met state, feedback en win-conditie bouwen.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7515,6 +7582,8 @@ void sonarPuls() {
     description: "De klassieke schud-en-vraag 'orakel-bal' nagebouwd: druk op de knop, de servo schudt heen en weer, en het LCD toont een willekeurig antwoord. Perfect als gimmick op je bureau of als grappige opener voor een les.",
     difficulty: "Beginner",
     materials: "Arduino Uno, breadboard + jumpers, 1× I2C 16x2 LCD-display, 1× SG90 servo, 1× drukknop. Optioneel: een leuk balletje of doosje waarin de servo het 'antwoord' onthult.",
+    board: "arduino",
+    tags: ["game", "motor"],
     learningGoal: "Een array van strings gebruiken voor willekeurige antwoorden, `random()` met `randomSeed()` correct toepassen, een servo aansturen voor 'mechanische feedback', en edge-detectie op een knop doen.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7580,6 +7649,8 @@ void sonarPuls() {
     description: "Je plant water-geven vergeten? Niet meer! Een capacitieve bodemvocht-sensor meet de aarde, en bij te droog schakelt een relais een 5V-pompje aan voor exact 3 sec. Met max-runtime + cooldown — dus geen ondergelopen klaslokaal.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, breadboard + jumpers, 1× capacitieve bodemvocht-sensor (v1.2 — niet de roest-gevoelige resistieve!), 1× 5V-relais module (1-kanaals), 1× klein 5V-aquarium-pompje (~5W), 1× I2C 16x2 LCD-display, een waterreservoir + slangetje. **Veiligheid: ALLES op 5V/12V DC. Géén 230V in deze tutorial!**",
+    board: "arduino",
+    tags: ["domotica", "sensor"],
     learningGoal: "Een analoge sensor kalibreren en `map()` gebruiken om naar percentages te converteren, een relais correct ACTIVE-LOW aansturen, en kritische veiligheid (max-runtime + cooldown) in code afdwingen.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7668,6 +7739,8 @@ if (waterRuw > 800) {
     description: "Slechte lucht in het lokaal? Een MQ-135-sensor + NeoPixel-strip toont in één oogopslag: groen (frisse lucht), oranje (raam open!), rood (raam open NU + buzzer). Met snooze-knop voor als de leraar al weet dat het slecht is.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, breadboard + jumpers, 1× MQ-135 gas-sensor (budget), 1× WS2812B NeoPixel-strip (8 LEDs is genoeg), 1× passieve buzzer, 1× drukknop (snooze). Optioneel duurder alternatief: SCD30 met échte NDIR-meting (zie 'reflectie' in stap 1 voor uitleg).",
+    board: "arduino",
+    tags: ["sensor"],
     learningGoal: "Het verschil tussen een goedkope (MQ-135) en een precieze (SCD30) sensor begrijpen, een analoge waarde naar betekenisvolle eenheden mappen, een NeoPixel-strip gebruiken als zone-indicator, en een snooze-mechanisme implementeren met `millis()`.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7764,6 +7837,8 @@ void loop() {
     description: "Een RC522-lezer + servo = werkend RFID-slot. Bekende pas → groene LED + servo opent 5 sec. Onbekende pas → rode LED knippert 3x. Met uitleg hoe je je eigen pas-UID ontdekt en in de 'whitelist' zet.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, breadboard + jumpers, 1× RC522 RFID-module + 1 RFID-tag/kaart (vaak 2 stuks meegeleverd), 1× SG90 servo, 1× groene LED + 220Ω, 1× rode LED + 220Ω. **Demo/leerproject — niet voor échte huisdeuren!** Een SG90 + UID-vergelijking is niet veilig genoeg voor een woning.",
+    board: "arduino",
+    tags: ["domotica", "sensor"],
     learningGoal: "Een SPI-module aansluiten en initialiseren, ruwe byte-arrays vergelijken, een 'whitelist' van toegestane UIDs hard-coderen, en de **veiligheidsbeperkingen** van simpele RFID begrijpen.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7859,6 +7934,8 @@ void logToegang(int tagIndex, bool ok) {
     description: "WC binnenlopen = licht aan. 30 sec stilte = licht uit. Klassiek 'beweging-trigger'-systeem dat je in elk huis terugziet. Optioneel: een LDR-extensie zodat het licht overdag uitblijft.",
     difficulty: "Beginner",
     materials: "Arduino Uno, breadboard + jumpers, 1× PIR-sensor (HC-SR501), 1× 5V-relais module (1-kanaals) + 5V/12V LED-strip OF gewoon een Arduino-LED voor demo. Optioneel: 1× LDR + 10kΩ. **Veiligheid: alleen 5V/12V DC. Geen 230V-lampen!**",
+    board: "arduino",
+    tags: ["domotica", "sensor"],
     learningGoal: "Een PIR-sensor combineren met een relais voor 'doe-iets-bij-beweging'-projecten, een non-blocking timer met `millis()` schrijven, en relais correct ACTIVE-LOW initialiseren tegen 'reset-flikkering'.",
     dateAdded: "2026-05-02",
     steps: [
@@ -7920,6 +7997,8 @@ void logToegang(int tagIndex, bool ok) {
     description: "Plot een analoge sensor-waarde live als scrollende lijn op een 128x64 OLED. Inclusief assen en automatisch min/max-zoomen — eigen mini-scope op je bureau.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, SSD1306 OLED (128x64, I2C-versie met 4 pinnen), potmeter (10kΩ) of een willekeurige analoge sensor (LDR, MQ-, microfoon-module...), breadboard + jumpers. Bibliotheken: Adafruit_SSD1306 + Adafruit_GFX (Bibliotheekbeheer).",
+    board: "arduino",
+    tags: ["display", "sensor"],
     learningGoal: "Een SSD1306 OLED aansturen via I2C, een ringbuffer gebruiken om over tijd te verzamelen, en die data live tekenen als grafiek met dynamische assen-schaal.",
     dateAdded: "2026-05-02",
     steps: [
@@ -8022,6 +8101,8 @@ void loop() {
     description: "Bouw een 'kantel'-spel: een MPU6050-accelerometer voelt hoe je het bord houdt, en een balletje rolt mee over een 8×8 LED-matrix. Vang het knipperende doel om punten te scoren.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, MPU6050-module (ook bekend als GY-521), 8×8 LED-matrix met MAX7219-driver, breadboard + jumpers. Bibliotheken: MPU6050_light (van rfetick) + LedControl (Bibliotheekbeheer).",
+    board: "arduino",
+    tags: ["game", "sensor"],
     learningGoal: "Een I2C-accelerometer uitlezen, fysieke kanteling vertalen naar grid-coordinaten, en een simpele game-loop bouwen rond positie + doel + score.",
     dateAdded: "2026-05-02",
     steps: [
@@ -8128,6 +8209,8 @@ void gameOver() {
     description: "Lees codes uit van élke TV-afstandsbediening, sla ze op in code en speel ze terug via een IR-LED. Eigen mini-universele afstandsbediening op één Arduino.",
     difficulty: "Gemiddeld",
     materials: "Arduino Uno, VS1838B IR-receiver (3-pins module of los op breadboard), IR-LED (zendt 940nm — uitziet als gewone LED), 220Ω weerstand, 4 drukknoppen, breadboard + jumpers, een willekeurige TV/airco-afstandsbediening om uit te lezen. Bibliotheek: IRremote v3.x of v4.x (Bibliotheekbeheer → 'IRremote' van shirriff/Arduino-IRremote).",
+    board: "arduino",
+    tags: ["sensor"],
     learningGoal: "Werken met de IRremote-bibliotheek, IR-codes ontvangen en classificeren, ze opslaan in een struct-array, en ze later terug zenden via een IR-LED.",
     dateAdded: "2026-05-02",
     steps: [

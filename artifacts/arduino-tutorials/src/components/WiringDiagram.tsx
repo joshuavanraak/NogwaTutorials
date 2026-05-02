@@ -15,7 +15,8 @@ type ComponentType =
   | "servo"
   | "joystick"
   | "stepper"
-  | "encoder";
+  | "encoder"
+  | "lcd_i2c";
 
 type ColorKey = "teal" | "yellow" | "amber" | "blue" | "rose" | "violet" | "orange" | "slate" | "green";
 
@@ -120,6 +121,15 @@ function buildDiagram(code: string): DiagramData {
   const pins = parsePins(code);
   const signalRows: WiringRow[] = [];
   const detectedComponents = new Set<ComponentType>();
+
+  // Detect I2C LCD usage (no pin variables — uses fixed A4/A5).
+  // Match either the #include or the constructor call to avoid
+  // false positives on stray mentions in comments or strings.
+  if (/#include\s*<LiquidCrystal_I2C\.h>|LiquidCrystal_I2C\s+\w+\s*\(/.test(code)) {
+    detectedComponents.add("lcd_i2c");
+    signalRows.push({ from: "Pin A4 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
+    signalRows.push({ from: "Pin A5 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
+  }
 
   for (const { name, pin } of pins) {
     const type = classifyName(name);
@@ -251,6 +261,10 @@ function buildDiagram(code: string): DiagramData {
       case "encoder":
         powerRows.push({ arduinoPin: "5V", componentPin: "Encoder + (VCC)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Encoder GND", color: "slate" });
+        break;
+      case "lcd_i2c":
+        powerRows.push({ arduinoPin: "5V", componentPin: "LCD VCC (op I2C-backpack)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "LCD GND (op I2C-backpack)", color: "slate" });
         break;
     }
   }

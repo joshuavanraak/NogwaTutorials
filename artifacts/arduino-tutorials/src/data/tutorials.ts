@@ -29,6 +29,74 @@ export type Tutorial = {
 };
 
 // ─────────────────────────────────────────────
+// TUTORIAL 12: I2C LCD Display (16x2 met PCF8574 backpack)
+// ─────────────────────────────────────────────
+
+const lcd_s1 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// Adres 0x27 is het meest voorkomend; soms 0x3F.
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Hallo wereld!");
+}
+
+void loop() {
+  // Voor nu doet de loop niks - de tekst blijft staan.
+}`;
+
+const lcd_s2 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int teller = 0;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Teller:");
+}
+
+void loop() {
+  lcd.setCursor(0, 1);    // ga naar kolom 0, rij 1 (tweede regel)
+  lcd.print("        ");  // wis de oude waarde
+  lcd.setCursor(0, 1);
+  lcd.print(teller);
+
+  teller++;
+  delay(1000);
+}`;
+
+const lcd_s3 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int potPin = A0;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Potmeter:");
+}
+
+void loop() {
+  int waarde = analogRead(potPin);
+
+  lcd.setCursor(0, 1);
+  lcd.print("                ");   // wis hele regel (16 tekens)
+  lcd.setCursor(0, 1);
+  lcd.print(waarde);
+  lcd.print(" / 1023");
+
+  delay(100);
+}`;
+
+// ─────────────────────────────────────────────
 // TUTORIAL 9: Stappenmotor Basis (A4988 / DRV8825)
 // ─────────────────────────────────────────────
 
@@ -1642,6 +1710,80 @@ void beweegLineair(long stappenX, long stappenY) {
 
 // Hierdoor lijkt de beweging van afstand een rechte diagonaal,
 // terwijl de motoren in werkelijkheid getrapte stapjes maken.`
+      }
+    ]
+  },
+  {
+    id: "i2c-lcd",
+    title: "I2C LCD Display (16x2)",
+    description: "Toon tekst, getallen en sensorwaarden op een 16x2 LCD-display met I2C-backpack. Slechts 4 draadjes en je hebt een volwaardig scherm voor elk Arduino-project.",
+    difficulty: "Gemiddeld",
+    learningGoal: "Ik kan een I2C LCD-display aansturen, de cursor verplaatsen en live sensorwaarden tonen op het scherm.",
+    materials: "Arduino Uno, 16x2 LCD-display met I2C-backpack (PCF8574, vaak adres 0x27 of 0x3F), 4 draadjes, breadboard, potmeter (voor stap 3). Bibliotheek: LiquidCrystal_I2C (te installeren via de Library Manager).",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "lcd-s1",
+        title: "Hallo wereld op het scherm",
+        content: "Een gewone 16x2 LCD heeft 16 pinnen — een hoop bedrading. Met de I2C-backpack (een klein groen printplaatje achterop) wordt dat teruggebracht tot 4 draadjes: VCC, GND, SDA en SCL. SDA en SCL zijn de twee 'I2C-bus'-lijnen. Op een Arduino Uno zitten deze altijd op A4 (SDA) en A5 (SCL) — dat is een vaste afspraak van de hardware. We gebruiken de bibliotheek 'LiquidCrystal_I2C' (installeer via Schets → Bibliotheek beheren). Het adres is meestal 0x27, soms 0x3F — als je niets ziet, probeer dan 0x3F.",
+        diagram: true,
+        code: lcd_s1,
+        legend: [
+          { term: "#include <Wire.h>", desc: "Standaard Arduino-bibliotheek voor I2C-communicatie." },
+          { term: "#include <LiquidCrystal_I2C.h>", desc: "Bibliotheek die de LCD-commando's vertaalt naar I2C-signalen." },
+          { term: "LiquidCrystal_I2C lcd(0x27, 16, 2)", desc: "Maak een LCD-object op adres 0x27, met 16 kolommen en 2 rijen." },
+          { term: "lcd.init()", desc: "Initialiseer de LCD. Dit moet altijd in setup()." },
+          { term: "lcd.backlight()", desc: "Zet de achtergrondverlichting aan zodat je de tekst kunt zien." },
+          { term: "lcd.print(\"Hallo wereld!\")", desc: "Schrijf tekst op de huidige cursor-positie (standaard linksboven)." },
+        ],
+        assignment: "Sluit het scherm aan (4 draadjes), upload de code en kijk of je 'Hallo wereld!' ziet. Als je alleen blokjes ziet → draai aan de blauwe potmeter op de I2C-backpack om het contrast in te stellen.",
+        challenge: "Werkt 0x27 niet? Probeer 0x3F. Werkt geen van beide? Upload een 'I2C scanner'-schets (te vinden online) — die print het juiste adres in de Serial Monitor.",
+        reflection: "Waarom is het zo handig dat I2C maar 2 datalijnen gebruikt, ook als je meerdere apparaten aansluit?"
+      },
+      {
+        id: "lcd-s2",
+        title: "Een teller die elke seconde vernieuwt",
+        content: "Nu maken we het scherm dynamisch. We gebruiken setCursor(kolom, rij) om naar een specifieke positie te springen — bijvoorbeeld kolom 0 op de tweede rij. BELANGRIJK: lcd.print() overschrijft tekens NIET netjes — als je eerst '999' schrijft en daarna '5', zie je '599'. De truc: schrijf eerst een rij spaties op die plek om de oude waarde te wissen, en daarna pas het nieuwe getal.",
+        diagram: true,
+        code: lcd_s2,
+        legend: [
+          { term: "int teller = 0", desc: "Variabele die we elke loop met 1 verhogen." },
+          { term: "lcd.setCursor(0, 1)", desc: "Spring naar kolom 0 (helemaal links), rij 1 (de tweede regel — getallen beginnen vanaf 0)." },
+          { term: "lcd.print(\"        \")", desc: "Schrijf 8 spaties om de oude waarde te wissen. Anders blijven oude cijfers staan." },
+          { term: "lcd.print(teller)", desc: "Print de huidige tellerwaarde op het scherm." },
+          { term: "teller++", desc: "Verhoog de teller met 1." },
+          { term: "delay(1000)", desc: "Wacht 1 seconde voor de volgende update." },
+        ],
+        assignment: "Upload en kijk of je teller per seconde omhoog telt op de tweede regel.",
+        challenge: "Verander de teller zo dat hij na 100 weer terug naar 0 gaat. Tip: gebruik een if-statement of de modulo-operator (%).",
+        reflection: "Waarom moet je eerst spaties schrijven om de oude waarde te wissen? Wat zou er gebeuren als je dat niet doet en de teller van 100 naar 99 gaat?"
+      },
+      {
+        id: "lcd-s3",
+        title: "Toon een sensorwaarde live op het scherm",
+        content: "Tijd voor de echte kracht van een display: live sensorwaarden tonen zonder Serial Monitor. We sluiten een potmeter aan (zoals in de Potmeter & LED tutorial) en tonen de waarde 0–1023 op het scherm. De delay is nu maar 100 ms zodat het scherm soepel meebeweegt als je aan de potmeter draait. Dit is precies wat je nodig hebt voor een eigen meter, thermostaat, of CNC-controlpaneel.",
+        diagram: true,
+        code: lcd_s3,
+        legend: [
+          { term: "int potPin = A0", desc: "Analoge pin waar de potmeter (midden-pootje) op zit." },
+          { term: "int waarde = analogRead(potPin)", desc: "Lees de potmeter — geeft een getal tussen 0 en 1023." },
+          { term: "lcd.print(waarde)", desc: "Toon de waarde op het scherm." },
+          { term: "lcd.print(\" / 1023\")", desc: "Print extra tekst op dezelfde regel achter het getal." },
+          { term: "delay(100)", desc: "Vernieuw 10x per seconde — voelt soepel zonder dat het scherm flikkert." },
+        ],
+        assignment: "Sluit de potmeter aan zoals in de aansluitschema. Draai eraan en kijk of de waarde op het scherm verandert van 0 tot 1023.",
+        challenge: "Vervang de potmeter door een LDR (uit de LDR-tutorial) of een DHT11 (uit de temperatuur-tutorial) en toon de echte sensorwaarde — bijvoorbeeld de temperatuur in graden.",
+        reflection: "Bedenk een project waar dit display essentieel zou zijn: een mini-weerstation, een eigen game-score, een instelmenu voor je 3D-printer? Wat zou jij maken?",
+        optionalCodeTitle: "Snippet: een vaste tekst + dynamische waarde naast elkaar",
+        optionalCode: `// Voorbeeld: "Temp: 23 C" — vaste tekst + dynamisch getal
+lcd.setCursor(0, 0);
+lcd.print("Temp: ");
+lcd.print(temperatuur);
+lcd.print(" C");
+
+// De vaste tekst "Temp: " hoef je niet elke loop opnieuw te schrijven —
+// die kun je ook één keer in setup() printen, en dan in loop()
+// alleen de positie van het getal updaten met setCursor(6, 0).`
       }
     ]
   }

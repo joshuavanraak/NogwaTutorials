@@ -209,6 +209,901 @@ void loop() {
 }`;
 
 // ─────────────────────────────────────────────
+// TUTORIAL 13: ESP32 Web Dashboard met live grafiek
+// ─────────────────────────────────────────────
+
+const dash_s1 = `#include <WiFi.h>
+
+// Vul jouw WiFi-gegevens in:
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+void connectWifi() {
+  Serial.print("Verbinden met ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.print("Verbonden! IP-adres: ");
+  Serial.println(WiFi.localIP());
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+}
+
+void loop() {
+  // Open de Serial Monitor (115200 baud) en kijk welk IP je krijgt.
+}`;
+
+const dash_s2 = `#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+WebServer server(80);   // luister op poort 80 (standaard webpoort)
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.print("Open in je browser: http://");
+  Serial.println(WiFi.localIP());
+}
+
+void handleRoot() {
+  server.send(200, "text/html",
+    "<h1>Hallo vanuit ESP32!</h1>"
+    "<p>Deze pagina komt rechtstreeks van jouw chip.</p>");
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+  server.on("/", handleRoot);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}`;
+
+const dash_s3 = `#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+int potPin = 34;        // ESP32: GPIO 34 is alleen-input + analoog
+
+WebServer server(80);
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Open: http://");
+  Serial.println(WiFi.localIP());
+}
+
+void handleRoot() {
+  server.send(200, "text/html",
+    "<h1>Dashboard</h1>"
+    "<p>Bekijk de live data op <a href='/data'>/data</a></p>");
+}
+
+void handleData() {
+  int waarde = analogRead(potPin);   // 0..4095 op ESP32
+  // R"(...)" = raw string in C++, geen escapes nodig.
+  String json = R"({"waarde":)" + String(waarde) + "}";
+  server.send(200, "application/json", json);
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+  server.on("/", handleRoot);
+  server.on("/data", handleData);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}`;
+
+const dash_s4 = `#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+int potPin = 34;
+WebServer server(80);
+
+const char index_html[] PROGMEM = R"HTML(
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>ESP32 Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body{font-family:sans-serif;max-width:600px;margin:2em auto;padding:1em}
+  h1{color:#0a84ff} canvas{background:#fff;border-radius:8px;padding:1em}
+</style></head><body>
+<h1>ESP32 Live Dashboard</h1>
+<p>Sensor: <strong id="val">-</strong></p>
+<canvas id="c" width="600" height="300"></canvas>
+<script>
+const labels=[],data=[];
+const ch=new Chart(document.getElementById('c'),{
+  type:'line',
+  data:{labels,datasets:[{label:'Sensor',data,borderColor:'#0a84ff',tension:0.2}]},
+  options:{animation:false,scales:{y:{min:0,max:4095}}}
+});
+async function tick(){
+  const r=await fetch('/data');
+  const j=await r.json();
+  document.getElementById('val').textContent=j.waarde;
+  labels.push(new Date().toLocaleTimeString());
+  data.push(j.waarde);
+  if(labels.length>30){labels.shift();data.shift();}
+  ch.update();
+}
+setInterval(tick,1000);tick();
+</script></body></html>
+)HTML";
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Open: http://");
+  Serial.println(WiFi.localIP());
+}
+
+void handleRoot() { server.send_P(200, "text/html", index_html); }
+
+void handleData() {
+  int waarde = analogRead(potPin);
+  String json = R"({"waarde":)" + String(waarde) + "}";
+  server.send(200, "application/json", json);
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(potPin, INPUT);
+  connectWifi();
+  server.on("/", handleRoot);
+  server.on("/data", handleData);
+  server.begin();
+}
+
+void loop() { server.handleClient(); }`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 14: ESP32 Smart Switch
+// ─────────────────────────────────────────────
+
+const sw_s1 = `#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+int ledPin = 2;          // GPIO 2 = ingebouwde LED op de meeste ESP32-boards
+bool ledAan = false;
+WebServer server(80);
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Open: http://");
+  Serial.println(WiFi.localIP());
+}
+
+void schrijfLed() {
+  digitalWrite(ledPin, ledAan ? HIGH : LOW);
+}
+
+void handleRoot() {
+  String status = ledAan ? "AAN" : "UIT";
+  server.send(200, "text/html",
+    "<h1>Smart Switch</h1><p>LED is nu: " + status + "</p>"
+    "<p><a href='/aan'>AAN</a> | <a href='/uit'>UIT</a></p>");
+}
+
+void handleAan() {
+  ledAan = true; schrijfLed();
+  server.sendHeader("Location", "/");   // terug naar hoofdpagina
+  server.send(303);
+}
+
+void handleUit() {
+  ledAan = false; schrijfLed();
+  server.sendHeader("Location", "/");
+  server.send(303);
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);
+  schrijfLed();
+  connectWifi();
+  server.on("/", handleRoot);
+  server.on("/aan", handleAan);
+  server.on("/uit", handleUit);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}`;
+
+const sw_s2 = `#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+int ledPin = 2;
+bool ledAan = false;
+WebServer server(80);
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Open: http://");
+  Serial.println(WiFi.localIP());
+}
+
+void schrijfLed() { digitalWrite(ledPin, ledAan ? HIGH : LOW); }
+
+void handleRoot() {
+  String status = ledAan ? "AAN" : "UIT";
+  String label  = ledAan ? "Zet UIT" : "Zet AAN";
+  server.send(200, "text/html",
+    "<h1>Smart Switch</h1><p>Status: " + status + "</p>"
+    "<p><a href='/toggle'>" + label + "</a></p>");
+}
+
+void handleToggle() {
+  ledAan = !ledAan;        // wissel
+  schrijfLed();
+  server.sendHeader("Location", "/");
+  server.send(303);
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);
+  schrijfLed();
+  connectWifi();
+  server.on("/", handleRoot);
+  server.on("/toggle", handleToggle);
+  server.begin();
+}
+
+void loop() { server.handleClient(); }`;
+
+const sw_s3 = `#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+int ledPin = 2;
+bool ledAan = false;
+WebServer server(80);
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Open: http://");
+  Serial.println(WiFi.localIP());
+}
+
+void schrijfLed() { digitalWrite(ledPin, ledAan ? HIGH : LOW); }
+
+String maakPagina() {
+  String html = "<!DOCTYPE html><html><head><meta charset='utf-8'>";
+  html += "<meta name='viewport' content='width=device-width,initial-scale=1'>";
+  html += "<title>Smart Switch</title>";
+  html += "<style>body{font-family:sans-serif;text-align:center;padding:3em;background:#f1f5f9}";
+  html += ".card{background:#fff;padding:2em;border-radius:1em;max-width:300px;margin:auto;";
+  html += "box-shadow:0 4px 16px #0001}";
+  html += ".dot{width:80px;height:80px;border-radius:50%;margin:1em auto}";
+  html += ".aan{background:#22c55e}.uit{background:#94a3b8}";
+  html += ".btn{display:inline-block;padding:1em 2em;background:#0a84ff;color:#fff;";
+  html += "border-radius:0.5em;text-decoration:none;font-weight:bold}";
+  html += "</style></head><body><div class='card'><h1>Smart Switch</h1>";
+
+  if (ledAan) {
+    html += "<div class='dot aan'></div><p>Status: <strong>AAN</strong></p>";
+  } else {
+    html += "<div class='dot uit'></div><p>Status: <strong>UIT</strong></p>";
+  }
+  html += "<a class='btn' href='/toggle'>Wissel</a>";
+  html += "</div></body></html>";
+  return html;
+}
+
+void handleRoot() { server.send(200, "text/html", maakPagina()); }
+void handleToggle() {
+  ledAan = !ledAan; schrijfLed();
+  server.sendHeader("Location", "/");
+  server.send(303);
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT); schrijfLed();
+  connectWifi();
+  server.on("/", handleRoot);
+  server.on("/toggle", handleToggle);
+  server.begin();
+}
+
+void loop() { server.handleClient(); }`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 15: ESP32 Discord-melding bij beweging
+// ─────────────────────────────────────────────
+
+const ds_s1 = `#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+// Plak hier je webhook URL (Discord -> kanaal-instellingen -> Integraties -> Webhooks)
+const char* webhookUrl = "https://discord.com/api/webhooks/JOUW_ID/JOUW_TOKEN";
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Verbonden! IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void stuurDiscord(String bericht) {
+  HTTPClient http;
+  http.begin(webhookUrl);
+  http.addHeader("Content-Type", "application/json");
+
+  String json = R"({"content":")" + bericht + R"("})";
+  int code = http.POST(json);
+
+  Serial.print("HTTP-status: ");
+  Serial.println(code);   // 204 = succes (No Content)
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+  stuurDiscord("Hallo vanuit ESP32!");
+}
+
+void loop() {
+  // niks - dit was een eenmalig test-bericht
+}`;
+
+const ds_s2 = `#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+const char* webhookUrl = "https://discord.com/api/webhooks/JOUW_ID/JOUW_TOKEN";
+
+int pirPin = 13;
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Verbonden! IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void stuurDiscord(String bericht) {
+  HTTPClient http;
+  http.begin(webhookUrl);
+  http.addHeader("Content-Type", "application/json");
+  String json = R"({"content":")" + bericht + R"("})";
+  http.POST(json);
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(pirPin, INPUT);
+  connectWifi();
+}
+
+void loop() {
+  if (digitalRead(pirPin) == HIGH) {
+    Serial.println("Beweging gedetecteerd!");
+    stuurDiscord("Er was net iemand in mijn kamer.");
+    delay(3000);   // korte rust om spam te voorkomen
+  }
+}`;
+
+const ds_s3 = `#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+const char* webhookUrl = "https://discord.com/api/webhooks/JOUW_ID/JOUW_TOKEN";
+
+int pirPin = 13;
+
+unsigned long laatsteMelding = 0;
+const unsigned long cooldownMs = 60UL * 1000UL;   // 1 minuut
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Verbonden! IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void stuurDiscord(String bericht) {
+  HTTPClient http;
+  http.begin(webhookUrl);
+  http.addHeader("Content-Type", "application/json");
+  String json = R"({"content":")" + bericht + R"("})";
+  http.POST(json);
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(pirPin, INPUT);
+  connectWifi();
+}
+
+void loop() {
+  if (digitalRead(pirPin) == HIGH) {
+    unsigned long nu = millis();
+    if (nu - laatsteMelding >= cooldownMs) {
+      laatsteMelding = nu;
+      Serial.println("Beweging - melding verstuurd");
+      stuurDiscord("Er was net iemand in mijn kamer.");
+    } else {
+      Serial.println("Beweging - cooldown actief, geen melding");
+    }
+  }
+  delay(100);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 16: ESP32 Crypto-ticker
+// ─────────────────────────────────────────────
+
+const cr_s1 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+const char* coinUrl = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur";
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+String haalKoers() {
+  WiFiClientSecure client;
+  client.setInsecure();   // sla certificaat-check over (oké voor leerproject)
+
+  HTTPClient http;
+  http.begin(client, coinUrl);
+  int code = http.GET();
+  String body = (code == 200) ? http.getString() : "";
+  http.end();
+  return body;
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+  String body = haalKoers();
+  Serial.println("Antwoord van CoinGecko:");
+  Serial.println(body);
+}
+
+void loop() {}`;
+
+const cr_s2 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+const char* coinUrl = "https://api.coingecko.com/api/v3/simple/price"
+                      "?ids=bitcoin&vs_currencies=eur&include_24hr_change=true";
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void haalEnToon() {
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  HTTPClient http;
+  http.begin(client, coinUrl);
+
+  if (http.GET() == 200) {
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, http.getStream());
+
+    float prijs  = doc["bitcoin"]["eur"];
+    float change = doc["bitcoin"]["eur_24h_change"];
+
+    Serial.print("BTC: EUR ");
+    Serial.println(prijs, 2);
+    Serial.print("24u: ");
+    Serial.print(change, 2);
+    Serial.println(" %");
+  }
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+}
+
+void loop() {
+  haalEnToon();
+  delay(60000);   // elke minuut verversen
+}`;
+
+const cr_s3 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+const char* coinUrl = "https://api.coingecko.com/api/v3/simple/price"
+                      "?ids=bitcoin&vs_currencies=eur&include_24hr_change=true";
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void toon(float prijs, float change) {
+  // Pijl-symbool: kies op basis van richting
+  char pijl = (change > 0) ? '^' : (change < 0 ? 'v' : '-');
+
+  lcd.setCursor(0, 0);
+  lcd.print("BTC EUR ");
+  lcd.print(prijs, 0);
+  lcd.print("        ");
+
+  lcd.setCursor(0, 1);
+  lcd.print(pijl);
+  lcd.print(" ");
+  lcd.print(change, 2);
+  lcd.print(" %         ");
+}
+
+void haalEnToon() {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.begin(client, coinUrl);
+
+  if (http.GET() == 200) {
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, http.getStream());
+    float prijs  = doc["bitcoin"]["eur"];
+    float change = doc["bitcoin"]["eur_24h_change"];
+    toon(prijs, change);
+  }
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Verbinden...");
+  connectWifi();
+  lcd.clear();
+}
+
+void loop() {
+  haalEnToon();
+  delay(60000);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 17: ESP32 NS-vertrektijden display
+// ─────────────────────────────────────────────
+
+const ns_s1 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+// Maak een gratis dev-key op apiportal.ns.nl en plak hem hier
+const char* nsApiKey = "JOUW_API_SLEUTEL";
+const char* station  = "UT";   // Utrecht Centraal (zoek je eigen stationcode)
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void haalVertrektijden() {
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  HTTPClient http;
+  String url = String("https://gateway.apiportal.ns.nl/reisinformatie-api/api/v2/departures?station=") + station;
+  http.begin(client, url);
+  http.addHeader("Ocp-Apim-Subscription-Key", nsApiKey);
+
+  int code = http.GET();
+  Serial.print("Status: ");
+  Serial.println(code);
+  if (code == 200) {
+    Serial.println("Eerste 500 tekens van de respons:");
+    Serial.println(http.getString().substring(0, 500));
+  }
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+  haalVertrektijden();
+}
+
+void loop() {}`;
+
+const ns_s2 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+const char* nsApiKey = "JOUW_API_SLEUTEL";
+const char* station  = "UT";
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void haalEnPrint() {
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  HTTPClient http;
+  String url = String("https://gateway.apiportal.ns.nl/reisinformatie-api/api/v2/departures?station=") + station;
+  http.begin(client, url);
+  http.addHeader("Ocp-Apim-Subscription-Key", nsApiKey);
+
+  if (http.GET() == 200) {
+    DynamicJsonDocument doc(8192);
+    deserializeJson(doc, http.getStream());
+
+    JsonArray departures = doc["payload"]["departures"];
+    int n = min((int)departures.size(), 3);
+
+    for (int i = 0; i < n; i++) {
+      const char* tijd     = departures[i]["plannedDateTime"];   // ISO-string
+      const char* richting = departures[i]["direction"];
+      const char* spoor    = departures[i]["plannedTrack"];
+      Serial.print(String(tijd).substring(11, 16));   // HH:MM
+      Serial.print(" -> ");
+      Serial.print(richting);
+      Serial.print(" (spoor ");
+      Serial.print(spoor);
+      Serial.println(")");
+    }
+  }
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+}
+
+void loop() {
+  haalEnPrint();
+  delay(60000);
+}`;
+
+const ns_s3 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+const char* nsApiKey = "JOUW_API_SLEUTEL";
+const char* station  = "UT";
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void toonEersteVertrek() {
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  HTTPClient http;
+  String url = String("https://gateway.apiportal.ns.nl/reisinformatie-api/api/v2/departures?station=") + station;
+  http.begin(client, url);
+  http.addHeader("Ocp-Apim-Subscription-Key", nsApiKey);
+
+  if (http.GET() == 200) {
+    DynamicJsonDocument doc(8192);
+    deserializeJson(doc, http.getStream());
+
+    JsonObject eerste = doc["payload"]["departures"][0];
+    String tijd     = String((const char*)eerste["plannedDateTime"]).substring(11, 16);
+    String richting = (const char*)eerste["direction"];
+
+    if (richting.length() > 16) richting = richting.substring(0, 16);
+
+    lcd.setCursor(0, 0);
+    lcd.print(tijd);
+    lcd.print(" naar       ");
+    lcd.setCursor(0, 1);
+    lcd.print(richting);
+    for (int i = richting.length(); i < 16; i++) lcd.print(' ');
+  }
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  lcd.init(); lcd.backlight();
+  lcd.print("Verbinden...");
+  connectWifi();
+  lcd.clear();
+}
+
+void loop() {
+  toonEersteVertrek();
+  delay(60000);
+}`;
+
+const ns_s4 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+const char* nsApiKey = "JOUW_API_SLEUTEL";
+const char* station  = "UT";
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+struct Vertrek {
+  String tijd;
+  String richting;
+};
+
+Vertrek vertrekken[3];
+int aantal = 0;
+
+unsigned long laatsteFetch  = 0;
+unsigned long laatsteWissel = 0;
+int huidigeIdx = 0;
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void haalVertrekken() {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  String url = String("https://gateway.apiportal.ns.nl/reisinformatie-api/api/v2/departures?station=") + station;
+  http.begin(client, url);
+  http.addHeader("Ocp-Apim-Subscription-Key", nsApiKey);
+
+  if (http.GET() == 200) {
+    DynamicJsonDocument doc(8192);
+    deserializeJson(doc, http.getStream());
+    JsonArray dep = doc["payload"]["departures"];
+    aantal = min((int)dep.size(), 3);
+    for (int i = 0; i < aantal; i++) {
+      vertrekken[i].tijd     = String((const char*)dep[i]["plannedDateTime"]).substring(11, 16);
+      vertrekken[i].richting = (const char*)dep[i]["direction"];
+      if (vertrekken[i].richting.length() > 16) {
+        vertrekken[i].richting = vertrekken[i].richting.substring(0, 16);
+      }
+    }
+  }
+  http.end();
+}
+
+void toon(int idx) {
+  lcd.clear();
+  if (idx >= aantal) return;
+  lcd.setCursor(0, 0);
+  lcd.print(vertrekken[idx].tijd);
+  lcd.print(" -> ");
+  lcd.setCursor(0, 1);
+  lcd.print(vertrekken[idx].richting);
+}
+
+void setup() {
+  Serial.begin(115200);
+  lcd.init(); lcd.backlight();
+  lcd.print("Verbinden...");
+  connectWifi();
+  lcd.clear();
+  haalVertrekken();
+  toon(0);
+}
+
+void loop() {
+  unsigned long nu = millis();
+  if (nu - laatsteFetch > 60000UL) {           // elke 60 sec opnieuw ophalen
+    laatsteFetch = nu;
+    haalVertrekken();
+  }
+  if (nu - laatsteWissel > 5000UL && aantal > 0) {   // elke 5 sec wisselen
+    laatsteWissel = nu;
+    huidigeIdx = (huidigeIdx + 1) % aantal;
+    toon(huidigeIdx);
+  }
+}`;
+
+// ─────────────────────────────────────────────
 // TUTORIAL 9: Stappenmotor Basis (A4988 / DRV8825)
 // ─────────────────────────────────────────────
 
@@ -1993,6 +2888,351 @@ void loop() {
   // Als bevroren: niks doen → de oude waarde blijft staan
   delay(20);
 }`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 13: ESP32 Web Dashboard
+  // ─────────────────────────────────────────────
+  {
+    id: "esp32-dashboard",
+    title: "ESP32 Web Dashboard met live grafiek",
+    description: "Laat je ESP32 een eigen webpagina serveren met een live grafiek van een sensorwaarde. Geen tussenservers — de chip is zelf de webserver.",
+    difficulty: "Gemiddeld",
+    materials: "ESP32 DevKit V1 (of NodeMCU-ESP32), USB-kabel, breadboard + jumpers, 1× potmeter (10kΩ).",
+    learningGoal: "Begrijpen hoe een ESP32 verbinding maakt met WiFi, hoe je routes serveert met de WebServer-bibliotheek, en hoe je een JSON-endpoint koppelt aan een grafiek in de browser.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "dash-s1",
+        title: "Verbinding maken met WiFi",
+        content: "Een ESP32 is geen Arduino Uno: er zit naast de processor ook een WiFi- en Bluetooth-radio in. Deze eerste stap leert het standaard-patroon dat je in alle ESP32-tutorials terug zult zien: vul je SSID en wachtwoord in, roep `WiFi.begin()` aan en wacht tot `WiFi.status()` `WL_CONNECTED` zegt. **Belangrijk:** kies in de Arduino IDE eerst je bord onder *Tools → Board → ESP32 Dev Module*, anders compileert het niet.",
+        diagram: false,
+        code: dash_s1,
+        legend: [
+          { term: "#include <WiFi.h>", desc: "Bibliotheek voor de WiFi-radio van de ESP32 — al meegeleverd bij het ESP32-board-package." },
+          { term: "WiFi.begin(ssid, password)", desc: "Start de verbindingspoging met jouw netwerk." },
+          { term: "WiFi.status() != WL_CONNECTED", desc: "Blijft loopen tot de chip echt verbonden is. Punten in de Serial Monitor laten zien dat hij bezig is." },
+          { term: "WiFi.localIP()", desc: "Het IP-adres dat je router aan de ESP32 heeft toegekend. Dit heb je later nodig in je browser." },
+          { term: "Serial.begin(115200)", desc: "ESP32 gebruikt standaard 115200 baud (sneller dan Uno's 9600). Stel de Serial Monitor op hetzelfde in." },
+        ],
+        assignment: "Vul `ssid` en `password` in, upload, open de Serial Monitor op 115200 baud en noteer het IP-adres dat verschijnt.",
+        challenge: "Voeg een teller toe in `loop()` die elke 5 sec de WiFi-signaalsterkte (`WiFi.RSSI()`) print. Hoe verandert de waarde als je de ESP32 verder van je router weglegt?",
+        reflection: "Wat zou er gebeuren als je SSID of wachtwoord verkeerd is? Probeer het uit en kijk wat de loop dan doet.",
+      },
+      {
+        id: "dash-s2",
+        title: "Een eerste webpagina serveren",
+        content: "Nu de WiFi-verbinding staat, gaan we de ESP32 zelf een webpagina laten serveren. We gebruiken de `WebServer`-bibliotheek (ook al ingebouwd) en koppelen een functie aan de wortel-URL `/`. In de browser typ je dan `http://<IP-adres-uit-stap-1>` en je ziet de tekst van de chip.",
+        diagram: false,
+        code: dash_s2,
+        legend: [
+          { term: "WebServer server(80)", desc: "Maak een server-object dat luistert op poort 80 (de standaard webpoort)." },
+          { term: "server.on(\"/\", handleRoot)", desc: "Koppel de URL `/` aan een functie die het antwoord opbouwt." },
+          { term: "server.send(200, \"text/html\", ...)", desc: "Stuur een antwoord met statuscode 200 (OK) en HTML-inhoud terug naar de browser." },
+          { term: "server.handleClient()", desc: "**Cruciaal**: roep dit elke loop aan, anders worden binnenkomende requests niet afgehandeld." },
+        ],
+        assignment: "Upload, open in je browser het IP-adres van de chip en kijk of je de Hallo-pagina ziet.",
+        challenge: "Voeg een tweede route toe op `/info` die het IP-adres en de huidige tijd-sinds-opstart (`millis()`) terug geeft.",
+        reflection: "Waarom moet `server.handleClient()` zo vaak mogelijk worden aangeroepen? Wat gebeurt er als je een lange `delay(5000)` in de loop zet?",
+      },
+      {
+        id: "dash-s3",
+        title: "JSON-endpoint voor sensorwaarde",
+        content: "Een dashboard heeft data nodig. We sluiten een potmeter aan op GPIO 34 (de ESP32 leest analoog op pinnen 32–39, met 12-bits resolutie: 0–4095) en maken een tweede route `/data` die de waarde als JSON terug geeft. JSON is hét formaat om data uit te wisselen tussen je chip en een webpagina.",
+        diagram: true,
+        code: dash_s3,
+        legend: [
+          { term: "int potPin = 34", desc: "GPIO 34 is een input-only pin met ADC. Werkt perfect voor sensoren." },
+          { term: "analogRead(potPin)", desc: "Op ESP32 is dit 0–4095 (12 bits), niet 0–1023 zoals op Uno." },
+          { term: "R\"({\"waarde\":)\"", desc: "C++ raw string. Tussen `R\"(` en `)\"` mag je gewoon dubbele quotes en backslashes zetten zonder te escapen." },
+          { term: "server.on(\"/data\", handleData)", desc: "Tweede route. Bezoek `http://<IP>/data` in je browser om de JSON te zien." },
+        ],
+        assignment: "Sluit de potmeter aan (links → 3.3V, rechts → GND, midden → GPIO 34), upload, en bezoek `/data` in je browser. De waarde moet veranderen als je de potmeter draait.",
+        challenge: "Voeg een tweede sensor toe (LDR op GPIO 35) en geef beide waardes terug in dezelfde JSON: `{\"pot\":1234,\"licht\":567}`.",
+        reflection: "Waarom JSON en niet gewoon platte tekst? Bedenk hoe makkelijk JavaScript later `j.waarde` kan oppikken vergeleken met tekst-parsen.",
+      },
+      {
+        id: "dash-s4",
+        title: "Live grafiek met Chart.js",
+        content: "De finishing touch: een echte webpagina met een live-update grafiek. We laden Chart.js vanaf een CDN (gratis JavaScript-bibliotheek), polleren elke seconde `/data`, en pushen de waarde in een ringbuffer van 30 punten. Het volledige HTML-blok zit in een C++ raw-string met `R\"HTML(...)HTML\"` zodat we geen quote-hel hebben.",
+        diagram: true,
+        code: dash_s4,
+        legend: [
+          { term: "PROGMEM", desc: "Bewaar de HTML-string in flash i.p.v. RAM. Belangrijk omdat de pagina anders veel kostbaar werkgeheugen opslokt." },
+          { term: "R\"HTML(...)HTML\"", desc: "Raw string met aangepaste delimiter `HTML`. Handig voor lange teksten met `\"` erin." },
+          { term: "server.send_P", desc: "Variant van `server.send()` voor strings die in flash (PROGMEM) staan." },
+          { term: "fetch('/data')", desc: "JavaScript haalt de JSON op zonder de pagina te herladen." },
+          { term: "setInterval(tick,1000)", desc: "Roep de tick-functie elke 1000 ms aan voor live-update." },
+        ],
+        assignment: "Upload, open het IP-adres in je browser, en draai aan de potmeter. De grafiek moet meebewegen.",
+        challenge: "Verander de grafiek naar een 'gauge' (rond meter-achtig) met chart.js 'doughnut'-type, of voeg een tweede dataset toe voor het gemiddelde van de laatste 10 metingen.",
+        reflection: "Stel je voor dat je dit dashboard in een ander land wilt bekijken. Wat moet er dan veranderen aan je netwerk? (Hint: poort openzetten, dynamisch IP, ngrok, ...)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 14: ESP32 Smart Switch
+  // ─────────────────────────────────────────────
+  {
+    id: "esp32-smart-switch",
+    title: "ESP32 Smart Switch met webpagina",
+    description: "Schakel een lamp, LED of relais aan en uit vanaf je telefoon — via een mooie webpagina die de ESP32 zelf serveert. De basis voor je eigen domotica.",
+    difficulty: "Gemiddeld",
+    materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× LED + 220Ω weerstand (of 5V relais-module). Voor tutorial-veiligheid alleen 5V/12V — geen 230V.",
+    learningGoal: "Een ESP32 via een webpagina laten reageren op gebruikers-input. Leer over GET-routes, page redirects (303), en het scheiden van logica (toggle) en weergave (HTML-bouwer).",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "sw-s1",
+        title: "Aan- en uit-pagina met aparte routes",
+        content: "We beginnen functioneel-maar-lelijk: de wortel-route toont de huidige status, en twee aparte routes `/aan` en `/uit` schakelen de LED. Na elke schakel-actie sturen we de browser via een **HTTP 303-redirect** terug naar `/`, zodat de gebruiker de bijgewerkte pagina ziet. Het patroon hieronder (state-variabele + helper-functie + handlers) zul je in elke ESP32-server-tutorial zien terugkomen.",
+        diagram: true,
+        code: sw_s1,
+        legend: [
+          { term: "int ledPin = 2", desc: "GPIO 2 is op de meeste ESP32-boards verbonden met de ingebouwde blauwe LED — handig om eerst zonder breadboard te testen." },
+          { term: "bool ledAan = false", desc: "Globale state: onthoudt of de LED nu aan of uit moet zijn." },
+          { term: "server.sendHeader(\"Location\", \"/\")", desc: "Vertel de browser dat hij naar `/` moet gaan." },
+          { term: "server.send(303)", desc: "Status 303 = 'See Other'. Browser doet automatisch een nieuwe GET naar de Location-URL." },
+        ],
+        assignment: "Sluit een LED + 220Ω weerstand aan op GPIO 2 (of gebruik de ingebouwde LED). Upload, open het IP, en klik op AAN/UIT. Je moet de LED zien reageren.",
+        challenge: "Voeg een derde route `/knipper` toe die 5 keer aan/uit knippert (elke 200 ms) voordat hij terugredirect.",
+        reflection: "Waarom is een 303-redirect netter dan gewoon nog een keer dezelfde HTML-pagina terugsturen vanuit `/aan`?",
+      },
+      {
+        id: "sw-s2",
+        title: "Eén toggle-route in plaats van twee",
+        content: "Twee aparte routes zijn nogal omslachtig. Veel professionelere oplossing: één route `/toggle` die simpelweg de huidige state omdraait met `ledAan = !ledAan`. De pagina zelf laat zien wat de **volgende actie** wordt ('Zet AAN' of 'Zet UIT') — daarvoor gebruiken we de ternary operator `?:`.",
+        diagram: true,
+        code: sw_s2,
+        legend: [
+          { term: "ledAan = !ledAan", desc: "De `!` is logische NOT — wisselt true ↔ false." },
+          { term: "ledAan ? \"Zet UIT\" : \"Zet AAN\"", desc: "Ternary: als ledAan dan eerste, anders tweede. Compacter dan een hele if/else." },
+        ],
+        assignment: "Vervang de routes uit stap 1 door deze versie. Klik herhaaldelijk op de link en kijk of het label tussen 'Zet AAN' en 'Zet UIT' wisselt.",
+        challenge: "Voeg een tweede LED toe (GPIO 4) met een eigen `/toggle2` route, en toon beide statussen + beide knoppen op één pagina.",
+        reflection: "Wat is het voordeel van één toggle-route? Denk aan: minder code, makkelijker om later een derde state ('knipper') toe te voegen.",
+      },
+      {
+        id: "sw-s3",
+        title: "Mooie mobiele UI met status-indicator",
+        content: "Tijd voor de finishing touch: een echte design-pagina met een ronde indicator die groen of grijs kleurt afhankelijk van de status. We bouwen de HTML op met `String += ...` zodat we eenvoudig if/else kunnen mixen met HTML. De `<meta viewport>`-regel zorgt dat de pagina goed schaalt op je telefoon.",
+        diagram: true,
+        code: sw_s3,
+        legend: [
+          { term: "<meta name='viewport' ...>", desc: "Vertelt de telefoon-browser om geen mini-desktop-versie te tonen maar de pagina op je schermbreedte te schalen." },
+          { term: "String html = \"...\"; html += \"...\"", desc: "Bouw de HTML-string regel voor regel op. Werkt prima voor pagina's tot een paar kB." },
+          { term: "class='dot aan'", desc: "Twee CSS-klassen: 'dot' geeft de cirkel-vorm, 'aan'/'uit' kiest de kleur. Mooie scheiding van structuur en state." },
+        ],
+        assignment: "Upload, open het IP-adres op je telefoon (zorg dat je telefoon op hetzelfde WiFi-netwerk zit), en gebruik de Wissel-knop. Voelt al echt als een app.",
+        challenge: "Voeg AJAX toe: de pagina ververst zichzelf elke 2 sec via `fetch('/status')` zodat je de state ziet veranderen ook als iemand anders schakelt. Dit voorkomt het 'flikker'-effect bij elke klik.",
+        reflection: "Wat kan iedereen op jouw netwerk nu met deze pagina? Welke veiligheidsmaatregelen mis je nog (wachtwoord, alleen-lokaal, ...)?",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 15: ESP32 Discord-melding
+  // ─────────────────────────────────────────────
+  {
+    id: "esp32-discord-melder",
+    title: "Discord-melding bij beweging (ESP32)",
+    description: "Een PIR-sensor en je ESP32 → een push-bericht in je Discord-server zodra er iemand voor de sensor langsloopt. Klassieke 'Internet of Things' in 30 regels code.",
+    difficulty: "Gemiddeld",
+    materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× PIR bewegingssensor (HC-SR501), Discord-account met een eigen server.",
+    learningGoal: "HTTPS-requests sturen vanaf een ESP32 naar een externe service (Discord-webhook) en die koppelen aan een fysieke trigger (PIR). Plus: het cooldown-patroon dat voorkomt dat je 100 berichten in een seconde stuurt.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "ds-s1",
+        title: "Eerste bericht naar Discord sturen",
+        content: "Een Discord-webhook is een geheime URL waar je met een POST-request berichten naartoe kunt sturen — geen bot-token, geen authenticatie. **Maken:** in Discord ga je naar het kanaal → Instellingen (tandwiel) → Integraties → Webhooks → Nieuwe Webhook → kopieer de URL. Plak die in `webhookUrl` en upload deze code: er verschijnt direct één test-bericht.",
+        diagram: false,
+        code: ds_s1,
+        legend: [
+          { term: "#include <HTTPClient.h>", desc: "Bibliotheek om HTTP/HTTPS-requests te doen vanaf de ESP32." },
+          { term: "http.begin(webhookUrl)", desc: "Open een verbinding naar de URL. ESP32's HTTPClient handelt zelf TLS af voor https-URLs." },
+          { term: "addHeader(\"Content-Type\", ...)", desc: "Vertel Discord dat we JSON sturen, geen formulier-data." },
+          { term: "R\"({\"content\":\")\"", desc: "Raw string met de eerste helft van de JSON. We plakken het bericht en de afsluiting eraan." },
+          { term: "http.POST(json)", desc: "Stuur het bericht. Returnt de HTTP-statuscode: 204 = succes, 401 = verkeerde URL." },
+        ],
+        assignment: "Maak een Discord-webhook (gebruik een test-kanaal!), plak de URL, upload, en kijk of er '*Hallo vanuit ESP32!*' in je kanaal verschijnt.",
+        challenge: "Voeg een 'username' veld toe aan de JSON: `{\"username\":\"Mijn ESP32\",\"content\":\"...\"}` zodat de bot een eigen naam krijgt in plaats van de webhook-naam.",
+        reflection: "Wat zou er gebeuren als iemand anders je webhook-URL heeft? Waarom is hem geheim houden belangrijk?",
+      },
+      {
+        id: "ds-s2",
+        title: "Koppelen aan een PIR-bewegingssensor",
+        content: "Nu we kunnen sturen, koppelen we het aan een echte trigger: een PIR-sensor. PIR = Passieve InfraRood: detecteert lichaamswarmte op afstand van een paar meter. Sluit `OUT` aan op GPIO 13 en stem de gevoeligheid af met de potmetertjes op de sensor zelf. Op iedere `HIGH`-puls sturen we een melding.",
+        diagram: true,
+        code: ds_s2,
+        legend: [
+          { term: "int pirPin = 13", desc: "GPIO 13 is een veilige general-purpose pin op ESP32." },
+          { term: "pinMode(pirPin, INPUT)", desc: "PIR-sensor heeft eigen 5V→3.3V output, geen interne pull-up nodig." },
+          { term: "digitalRead(pirPin) == HIGH", desc: "Sensor pulst HIGH zolang hij beweging detecteert (instelbaar met de tweede potmeter)." },
+          { term: "delay(3000)", desc: "Korte rust om te voorkomen dat één voorbij-loopactie 30 berichten triggert." },
+        ],
+        assignment: "Sluit de PIR aan (VCC → 5V, GND → GND, OUT → GPIO 13), upload, en loop voor de sensor. Je moet meldingen in Discord zien én 'Beweging gedetecteerd!' in de Serial Monitor.",
+        challenge: "Voeg het tijdstip toe aan het bericht: gebruik de `time()`-functie of haal NTP-tijd op met `configTime()`.",
+        reflection: "Waarom is een delay van 3 seconden niet genoeg om spam helemaal te voorkomen? (Hint: wat als jouw kat 10 keer per uur door de gang loopt?)",
+      },
+      {
+        id: "ds-s3",
+        title: "Cooldown-patroon: maximaal 1 melding per minuut",
+        content: "`delay(3000)` is te grof — het blokkeert de hele loop, dus we missen ook nuttige sensorwaarden in die tijd. Beter is het **cooldown-patroon** met `millis()`: we onthouden het tijdstip van de vorige melding en sturen alleen een nieuwe als er minstens 60 seconden verstreken zijn. De loop blijft snel draaien, alleen de melding wordt gefilterd.",
+        diagram: true,
+        code: ds_s3,
+        legend: [
+          { term: "unsigned long laatsteMelding", desc: "Tijdstip (in ms sinds opstart) van de vorige melding. `unsigned long` zodat overflow pas na ~50 dagen optreedt." },
+          { term: "const unsigned long cooldownMs = 60UL * 1000UL", desc: "60 sec * 1000 = 60.000 ms. `UL` = unsigned long literal, voorkomt overflow bij vermenigvuldiging." },
+          { term: "nu - laatsteMelding >= cooldownMs", desc: "Vergelijk verschil, niet absolute waarde. Werkt zelfs door de overflow heen." },
+          { term: "delay(100)", desc: "Korte sleep om de loop niet 100% CPU te laten gebruiken. Mag ook 10 of 50 ms zijn." },
+        ],
+        assignment: "Upload, loop 10 keer voor de sensor binnen 1 minuut. Je moet exact 1 Discord-melding krijgen, en in de Serial Monitor 'cooldown actief' bij de overige.",
+        challenge: "Maak de cooldown adaptief: na 3 meldingen achter elkaar verlengt hij naar 5 minuten (om bij continue activiteit niet te spammen). Reset naar 1 minuut na een uur stilte.",
+        reflection: "Waarom is het cooldown-patroon (millis-vergelijking) beter dan een grote `delay()`? Wat kun je nu wél doen tijdens de cooldown?",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 16: ESP32 Crypto-ticker
+  // ─────────────────────────────────────────────
+  {
+    id: "esp32-crypto-ticker",
+    title: "Crypto-koers ticker met ESP32 (Bitcoin)",
+    description: "Een mini-display dat live de Bitcoin-koers in euro toont met een pijltje dat aangeeft of de prijs gestegen of gedaald is in de laatste 24 uur. Data wordt rechtstreeks van de gratis CoinGecko-API gehaald.",
+    difficulty: "Gemiddeld",
+    materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× I2C 16x2 LCD-display (met PCF8574 backpack). Library: ArduinoJson v6.",
+    learningGoal: "HTTPS GET-requests doen vanaf de ESP32, JSON-antwoord parsen met de ArduinoJson-bibliotheek, en data in real-time op een LCD weergeven met directionele indicator.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "cr-s1",
+        title: "Eerste HTTPS GET naar CoinGecko",
+        content: "We beginnen met de ruwe respons. CoinGecko's API is gratis en vereist geen sleutel voor simpele queries. Omdat het https is, gebruiken we `WiFiClientSecure` met `setInsecure()` — voor een leerproject is dat prima, in productie zou je een root-CA-certificaat pinnen. Upload deze versie en bekijk de JSON in de Serial Monitor.",
+        diagram: false,
+        code: cr_s1,
+        legend: [
+          { term: "#include <WiFiClientSecure.h>", desc: "ESP32-bibliotheek voor TLS/HTTPS-verbindingen." },
+          { term: "client.setInsecure()", desc: "Sla certificaat-verificatie over. **Niet veilig** voor productie, maar goed genoeg om data te lezen voor een leerproject." },
+          { term: "http.begin(client, coinUrl)", desc: "Verbind met de URL via de secure client. ESP32 doet de TLS-handshake automatisch." },
+          { term: "http.GET()", desc: "Stuur de request, returnt de HTTP-statuscode (200 = OK)." },
+          { term: "http.getString()", desc: "Lees de hele response-body als String. Voor grote responses beter `getStream()` gebruiken (zie volgende stap)." },
+        ],
+        assignment: "Upload, open de Serial Monitor op 115200 baud. Je moet iets zien als `{\"bitcoin\":{\"eur\":58234}}`.",
+        challenge: "Verander de query om meerdere coins op te halen: `?ids=bitcoin,ethereum,solana&vs_currencies=eur`. Print alle drie de waardes.",
+        reflection: "Waarom is `setInsecure()` slecht in productie? Welke aanvalstype maakt het mogelijk?",
+      },
+      {
+        id: "cr-s2",
+        title: "JSON parsen met ArduinoJson",
+        content: "Tekst manueel knippen is foutgevoelig. **ArduinoJson** is dé bibliotheek (Library Manager → 'ArduinoJson') om JSON te parsen op microcontrollers. Geheugenefficiënt: een `StaticJsonDocument<256>` reserveert vooraf 256 bytes — genoeg voor een simpele response. We voegen ook `eur_24h_change` toe aan de query om de procentuele verandering te krijgen.",
+        diagram: false,
+        code: cr_s2,
+        legend: [
+          { term: "#include <ArduinoJson.h>", desc: "Installeer via Library Manager: zoek 'ArduinoJson', kies de versie van Benoit Blanchon." },
+          { term: "StaticJsonDocument<256>", desc: "Vaste-grootte JSON-document. Geheugen wordt vooraf gereserveerd, dus geen heap-fragmentatie." },
+          { term: "deserializeJson(doc, http.getStream())", desc: "Parse direct vanaf de network-stream — zuiniger dan eerst alles in een String laden." },
+          { term: "doc[\"bitcoin\"][\"eur\"]", desc: "Lees genest veld op. Returnt automatisch het juiste type (float in dit geval)." },
+          { term: "delay(60000)", desc: "Eens per minuut is genoeg en respecteert de gratis API rate-limit (30 calls/min)." },
+        ],
+        assignment: "Upload, open Serial Monitor. Je moet elke minuut twee regels zien: prijs in EUR + 24-uurs verandering in %.",
+        challenge: "Voeg een hoogste-vandaag tracker toe in een variabele: print 'NIEUW HOOGSTEPUNT!' als de huidige prijs hoger is dan eerder gemeten.",
+        reflection: "Wat zou er gebeuren als je `StaticJsonDocument<32>` zou gebruiken? Probeer het en kijk wat er fout gaat.",
+      },
+      {
+        id: "cr-s3",
+        title: "LCD-weergave met richting-pijl",
+        content: "Tijd om het zichtbaar te maken. Sluit een I2C LCD aan (zie aansluitschema), en bouw een `toon()`-helper die de prijs op regel 1 toont en op regel 2 een ASCII-pijltje (`^` omhoog, `v` omlaag, `-` neutraal) gevolgd door het percentage. **Let op:** ESP32's I2C zit op GPIO 21 (SDA) en GPIO 22 (SCL), niet op A4/A5 zoals bij Uno.",
+        diagram: true,
+        code: cr_s3,
+        legend: [
+          { term: "char pijl = (change > 0) ? '^' : ...", desc: "Genest ternary: positief → ^, negatief → v, anders → '-'. Compacte if/else-if/else." },
+          { term: "lcd.print(prijs, 0)", desc: "Tweede argument = aantal cijfers achter de komma. 0 = geheel getal (de Bitcoin-koers heeft geen 'centen' nodig op een 16-tekens-display)." },
+          { term: "lcd.print(\"        \")", desc: "Spaties om eventuele oude tekst (bv. een lager getal van 5 cijfers) te wissen." },
+          { term: "lcd.print(change, 2)", desc: "Verandering wél met 2 decimalen — het verschil tussen +0.5% en +5% is informatief." },
+        ],
+        assignment: "Sluit de LCD aan (zie schema), upload, en wacht een minuut. Je moet de prijs en het pijltje zien verschijnen.",
+        challenge: "Voeg een tweede coin toe (Ethereum). Wissel elke 10 sec tussen BTC en ETH op het LCD.",
+        reflection: "Wat zijn de voordelen van een eigen ticker boven gewoon je telefoon erbij pakken? Denk aan: latency, batterij, scherm-aan-houden, ...",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 17: ESP32 NS-vertrektijden
+  // ─────────────────────────────────────────────
+  {
+    id: "esp32-ns-display",
+    title: "NS-vertrektijden display (ESP32)",
+    description: "Toon live de eerstvolgende treinvertrekken vanaf jouw station op een LCD — perfect voor naast de voordeur. Gebruikt de officiële NS Reisinformatie API.",
+    difficulty: "Gevorderd",
+    materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× I2C 16x2 LCD-display, gratis NS-developer API-key (apiportal.ns.nl). Library: ArduinoJson v6.",
+    learningGoal: "Werken met een API die authenticatie via een header vereist, een grote JSON-response parsen met DynamicJsonDocument, gegevens roteren op een display, en non-blocking timing met `millis()`.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "ns-s1",
+        title: "API-key aanmaken en eerste GET",
+        content: "**API-key:** ga naar apiportal.ns.nl → registreer (gratis) → 'Subscribe' bij 'Ns-App' product → kopieer je 'Primary Key'. Plak die in `nsApiKey` en zet `station` op de code van jouw station ('UT' = Utrecht CS, 'AMS' = Amsterdam CS, 'ASD' = Amsterdam Centraal, 'EHV' = Eindhoven, 'GVC' = Den Haag CS). De API wil de sleutel in een aparte HTTP-header `Ocp-Apim-Subscription-Key`. Upload en bekijk de eerste 500 tekens in de Serial Monitor.",
+        diagram: false,
+        code: ns_s1,
+        legend: [
+          { term: "Ocp-Apim-Subscription-Key", desc: "API-key gaat als HTTP-header mee, niet in de URL. Veiliger en stijlconventie van Microsoft Azure (dat NS gebruikt)." },
+          { term: "addHeader(\"...\", nsApiKey)", desc: "Voeg een custom header toe aan de request voor authenticatie." },
+          { term: "http.getString().substring(0, 500)", desc: "Print alleen de eerste 500 tekens — de hele JSON kan duizenden tekens lang zijn." },
+          { term: "String url = String(\"...\") + station", desc: "Bouw de URL door een `String`-object samen te voegen met de stationcode. De `+`-operator werkt op `String` net als in JavaScript." },
+        ],
+        assignment: "Maak je API-key, vul ssid/password/key/station in, upload. In de Serial Monitor moet je status `200` zien plus het begin van een grote JSON met `payload` en `departures`.",
+        challenge: "Probeer een verkeerde API-key (verander 1 letter). Welke statuscode krijg je terug? (Hint: 401)",
+        reflection: "Waarom geeft NS de key liever in een header dan in de URL? Denk aan: logging, browsers, caching.",
+      },
+      {
+        id: "ns-s2",
+        title: "JSON parsen met DynamicJsonDocument",
+        content: "De NS-respons is groot (vaak 5–10 kB). Daarvoor gebruiken we `DynamicJsonDocument(8192)` — die alloceert pas geheugen wanneer hij weet hoe groot de input is. We pakken de eerste 3 vertrekken uit `payload.departures[]` en printen tijd, richting en spoor in de Serial Monitor. **Let op:** `plannedDateTime` komt als ISO-string `2026-05-02T08:23:00+0200`, we knippen er met `.substring(11, 16)` 'HH:MM' uit.",
+        diagram: false,
+        code: ns_s2,
+        legend: [
+          { term: "DynamicJsonDocument doc(8192)", desc: "8 kB buffer — genoeg voor ~10 vertrekken. Bij 'NoMemory' fout: vergroot dit getal." },
+          { term: "JsonArray departures = doc[\"payload\"][\"departures\"]", desc: "Pak de array uit de geneste JSON-structuur. JsonArray gedraagt zich als een gewone array." },
+          { term: "min((int)departures.size(), 3)", desc: "Cast naar `int` is nodig omdat `min()` niet weet welk type te kiezen tussen `size_t` en `int`." },
+          { term: ".substring(11, 16)", desc: "Karakter 11 t/m 15 van een ISO-tijdstempel = 'HH:MM' (de uren en minuten)." },
+          { term: "departures[i][\"plannedTrack\"]", desc: "Spoornummer als string (kan ook letters bevatten zoals '14a')." },
+        ],
+        assignment: "Upload. Je moet elke minuut 3 regels zien: tijd, eindbestemming en spoor van de eerstvolgende treinen.",
+        challenge: "Voeg vertraging toe: NS heeft ook `actualDateTime`. Vergelijk met `plannedDateTime` en print '+5 min vertraging' als ze verschillen.",
+        reflection: "Waarom is `DynamicJsonDocument` hier handiger dan `StaticJsonDocument`? Wat is het nadeel? (Hint: heap-fragmentatie bij langlopende programma's.)",
+      },
+      {
+        id: "ns-s3",
+        title: "Eerste vertrek op het LCD tonen",
+        content: "Tijd om het zichtbaar te maken. We sluiten de I2C LCD aan en tonen alleen het eerste vertrek: tijd op regel 1, eindbestemming op regel 2. Lange bestemming-namen (bv. 'Schiphol Airport') worden afgeknipt op 16 tekens — anders past het niet. We vullen de rest van regel 2 met spaties om oude tekst te wissen.",
+        diagram: true,
+        code: ns_s3,
+        legend: [
+          { term: "JsonObject eerste = doc[...][0]", desc: "Pak het eerste object uit de array. JsonObject = key/value-paren." },
+          { term: "(const char*)eerste[\"direction\"]", desc: "Cast naar `const char*` is nodig om JsonVariant naar een Arduino String te converteren." },
+          { term: "for (int i = ...; i < 16; i++) lcd.print(' ')", desc: "Vul aan met spaties tot 16 — wist eventuele langere oude tekst van vorige update." },
+          { term: "lcd.print(\"Verbinden...\")", desc: "Toon iets meteen bij opstart, zodat de gebruiker weet dat de chip leeft tijdens WiFi-verbinding (~5-10 sec)." },
+        ],
+        assignment: "Sluit de LCD aan, upload, wacht een minuut. Je moet een tijd + bestemming zien verschijnen.",
+        challenge: "Voeg het spoor toe achter de tijd op regel 1: '08:23 sp 5'.",
+        reflection: "Wat moet je doen als je station maar 1 vertrek per uur heeft? Kun je in dat geval iets anders tonen?",
+      },
+      {
+        id: "ns-s4",
+        title: "3 vertrekken roteren met non-blocking timing",
+        content: "Eén vertrek is leuk, maar we hebben er 3. Met `delay(5000)` zou de hele loop bevriezen. Daarom: het **non-blocking patroon** met `millis()` en twee timers — één voor 'wanneer opnieuw fetchen' (elke minuut), één voor 'wanneer naar volgende vertrek wisselen' (elke 5 sec). De loop draait razendsnel door en checkt alleen of er iets moet gebeuren.",
+        diagram: true,
+        code: ns_s4,
+        legend: [
+          { term: "struct Vertrek { String tijd; String richting; }", desc: "Eigen datatype dat tijd en bestemming koppelt — netter dan twee parallelle arrays." },
+          { term: "Vertrek vertrekken[3]", desc: "Vaste array van 3 vertrekken. Bij minder beschikbare wordt `aantal` lager gezet." },
+          { term: "nu - laatsteFetch > 60000UL", desc: "60.000 ms = 1 minuut. UL voorkomt overflow bij grote getallen." },
+          { term: "huidigeIdx = (huidigeIdx + 1) % aantal", desc: "Modulo zorgt voor wrapping: 0 → 1 → 2 → 0 → 1 → ...  Werkt voor elk aantal." },
+        ],
+        assignment: "Upload. Het LCD moet elke 5 sec wisselen tussen 3 verschillende vertrekken, en elke minuut nieuwe data ophalen.",
+        challenge: "Maak de wisseltijd instelbaar via een fysieke knop op GPIO 4: kort drukken → handmatig één verder, lang drukken → pauze (geen auto-rotation).",
+        reflection: "Waarom is dit non-blocking patroon beter dan `delay()`? Wat kun je nu doen tijdens de wachttijd dat je niet kon met `delay`? (Hint: knoppen lezen, status-LED knipperen, ...)",
       }
     ]
   }

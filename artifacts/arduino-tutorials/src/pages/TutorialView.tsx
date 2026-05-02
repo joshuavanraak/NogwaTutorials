@@ -201,7 +201,7 @@ export default function TutorialView() {
               key={step.id}
               id={step.id}
               data-step-id={step.id}
-              ref={(el) => (stepRefs.current[step.id] = el)}
+              ref={(el) => { stepRefs.current[step.id] = el; }}
               className="scroll-mt-24"
             >
               {/* Step heading */}

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowRight, CircuitBoard } from "lucide-react";
+import { ArrowRight, CircuitBoard, Wifi } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,8 @@ type ComponentType =
   | "joystick"
   | "stepper"
   | "encoder"
-  | "lcd_i2c";
+  | "lcd_i2c"
+  | "relay";
 
 type ColorKey = "teal" | "yellow" | "amber" | "blue" | "rose" | "violet" | "orange" | "slate" | "green";
 
@@ -25,7 +26,7 @@ type WiringRow = {
   to: string;
   resistance?: string;
   color: ColorKey;
-  direction?: "in" | "out"; // in = sensor → arduino, out = arduino → component
+  direction?: "in" | "out";
 };
 
 type PowerRow = {
@@ -47,6 +48,20 @@ const colors: Record<ColorKey, { bg: string; text: string; border: string }> = {
   slate:  { bg: "bg-slate-100", text: "text-slate-700",  border: "border-slate-200"  },
   green:  { bg: "bg-green-50",  text: "text-green-700",  border: "border-green-200"  },
 };
+
+// ─── Board detection ──────────────────────────────────────────────────────────
+
+function isEsp32(code: string): boolean {
+  return /#include\s*<WiFi\.h>|#include\s*<WebServer\.h>|#include\s*<HTTPClient\.h>|#include\s*<WiFiClientSecure\.h>|#include\s*<BLEDevice\.h>|#include\s*<BleKeyboard\.h>|esp_camera_init|esp_sleep_enable_ext0_wakeup/.test(code);
+}
+
+function pinLabel(pin: string, esp32: boolean): string {
+  if (esp32) return `GPIO ${pin.replace(/^A/, "")}`;
+  return pin.startsWith("A") ? `Analoge pin ${pin}` : `Pin ${pin}`;
+}
+
+const BOARD_VCC = (esp32: boolean) => esp32 ? "5V (VIN)" : "5V";
+const BOARD_VCC_LOGIC = (esp32: boolean) => esp32 ? "3.3V" : "5V";
 
 // ─── Parser ───────────────────────────────────────────────────────────────────
 
@@ -95,13 +110,14 @@ function parsePins(code: string): ParsedPin[] {
 function classifyName(name: string): ComponentType | null {
   const n = name.toLowerCase();
   if (n === "data_pin" || n.startsWith("datapin") || n === "data") return "neopixel";
+  if (n.includes("relay") || n.includes("relais") || n.includes("lamp")) return "relay";
   if (n.includes("led")) return "led";
   if (n.includes("pot")) return "potmeter";
   if (n.includes("pir")) return "pir";
   if (n.includes("ldr")) return "ldr";
   if (n === "dhtpin" || n.includes("dht")) return "dht";
   if (n.includes("buzz")) return "buzzer";
-  if (n.includes("button") || n.includes("btn")) return "button";
+  if (n.includes("button") || n.includes("btn") || n.includes("knop")) return "button";
   if (n.startsWith("servo")) return "servo";
   if (n.includes("joystick") || n.includes("joy")) return "joystick";
   if (n.startsWith("step") || n.startsWith("dir")) return "stepper";
@@ -115,20 +131,25 @@ type DiagramData = {
   signalRows: WiringRow[];
   powerRows: PowerRow[];
   gndRows: PowerRow[];
+  esp32: boolean;
 };
 
 function buildDiagram(code: string): DiagramData {
+  const esp32 = isEsp32(code);
   const pins = parsePins(code);
   const signalRows: WiringRow[] = [];
   const detectedComponents = new Set<ComponentType>();
 
-  // Detect I2C LCD usage (no pin variables — uses fixed A4/A5).
-  // Match either the #include or the constructor call to avoid
-  // false positives on stray mentions in comments or strings.
+  // Detect I2C LCD usage. Default I2C pins: Arduino A4/A5, ESP32 GPIO 21/22.
   if (/#include\s*<LiquidCrystal_I2C\.h>|LiquidCrystal_I2C\s+\w+\s*\(/.test(code)) {
     detectedComponents.add("lcd_i2c");
-    signalRows.push({ from: "Pin A4 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
-    signalRows.push({ from: "Pin A5 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
+    if (esp32) {
+      signalRows.push({ from: "GPIO 21 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
+      signalRows.push({ from: "GPIO 22 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
+    } else {
+      signalRows.push({ from: "Pin A4 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
+      signalRows.push({ from: "Pin A5 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
+    }
   }
 
   for (const { name, pin } of pins) {
@@ -136,73 +157,76 @@ function buildDiagram(code: string): DiagramData {
     if (!type) continue;
     detectedComponents.add(type);
 
-    const pinLabel = pin.startsWith("A") ? `Analoge pin ${pin}` : `Pin ${pin}`;
+    const label = pinLabel(pin, esp32);
 
     switch (type) {
       case "neopixel":
-        signalRows.push({ from: pinLabel, resistance: "330Ω", to: "NeoPixel Din (Data In)", color: "teal", direction: "out" });
+        signalRows.push({ from: label, resistance: "330Ω", to: "NeoPixel Din (Data In)", color: "teal", direction: "out" });
         break;
       case "led":
-        signalRows.push({ from: pinLabel, resistance: "220Ω", to: "LED + (anode)", color: "yellow", direction: "out" });
+        signalRows.push({ from: label, resistance: "220Ω", to: "LED + (anode)", color: "yellow", direction: "out" });
         break;
       case "potmeter":
-        signalRows.push({ from: pinLabel, to: "Potmeter (midden-aansluiting)", color: "violet", direction: "in" });
+        signalRows.push({ from: label, to: "Potmeter (midden-aansluiting)", color: "violet", direction: "in" });
         break;
       case "pir":
-        signalRows.push({ from: pinLabel, to: "PIR sensor OUT-pin", color: "orange", direction: "in" });
+        signalRows.push({ from: label, to: "PIR sensor OUT-pin", color: "orange", direction: "in" });
         break;
       case "ldr":
-        signalRows.push({ from: pinLabel, to: "LDR + 10kΩ spanningsdeler", color: "amber", direction: "in" });
+        signalRows.push({ from: label, to: "LDR + 10kΩ spanningsdeler", color: "amber", direction: "in" });
         break;
       case "dht":
-        signalRows.push({ from: pinLabel, resistance: "10kΩ", to: "DHT11 DATA-pin", color: "blue", direction: "in" });
+        signalRows.push({ from: label, resistance: "10kΩ", to: "DHT11 DATA-pin", color: "blue", direction: "in" });
         break;
       case "buzzer":
-        signalRows.push({ from: pinLabel, to: "Buzzer + (positief)", color: "rose", direction: "out" });
+        signalRows.push({ from: label, to: "Buzzer + (positief)", color: "rose", direction: "out" });
         break;
       case "button": {
-        const label = name.toLowerCase().includes("left")
+        const lbl = name.toLowerCase().includes("left")
           ? "Knop links (andere pin → GND)"
           : name.toLowerCase().includes("right")
           ? "Knop rechts (andere pin → GND)"
           : "Knop (andere pin → GND)";
-        signalRows.push({ from: pinLabel, to: label, color: "slate", direction: "in" });
+        signalRows.push({ from: label, to: lbl, color: "slate", direction: "in" });
         break;
       }
       case "servo": {
         const servoLabel = name.toLowerCase().includes("servo2") || name.toLowerCase().includes("_2")
           ? "Servo 2 Signaal (Oranje)"
           : "Servo 1 Signaal (Oranje)";
-        signalRows.push({ from: pinLabel, to: servoLabel, color: "green", direction: "out" });
+        signalRows.push({ from: label, to: servoLabel, color: "green", direction: "out" });
         break;
       }
       case "joystick": {
         const axisLabel = name.toLowerCase().includes("y")
           ? "Joystick VRY (Y-as)"
           : "Joystick VRX (X-as)";
-        signalRows.push({ from: pinLabel, to: axisLabel, color: "violet", direction: "in" });
+        signalRows.push({ from: label, to: axisLabel, color: "violet", direction: "in" });
         break;
       }
       case "stepper": {
         const n = name.toLowerCase();
         const isStep = n.startsWith("step");
         const axis = n.includes("x") ? " (X-as)" : n.includes("y") ? " (Y-as)" : n.includes("z") ? " (Z-as)" : "";
-        const label = isStep
+        const lbl = isStep
           ? `A4988/DRV8825 STEP${axis}`
           : `A4988/DRV8825 DIR${axis}`;
-        signalRows.push({ from: pinLabel, to: label, color: "blue", direction: "out" });
+        signalRows.push({ from: label, to: lbl, color: "blue", direction: "out" });
         break;
       }
       case "encoder": {
         const n = name.toLowerCase();
-        const label = n.startsWith("clk")
+        const lbl = n.startsWith("clk")
           ? "Rotary Encoder CLK"
           : n.startsWith("dt")
           ? "Rotary Encoder DT"
           : "Rotary Encoder";
-        signalRows.push({ from: pinLabel, to: label, color: "orange", direction: "in" });
+        signalRows.push({ from: label, to: lbl, color: "orange", direction: "in" });
         break;
       }
+      case "relay":
+        signalRows.push({ from: label, to: "Relais IN (control)", color: "rose", direction: "out" });
+        break;
     }
   }
 
@@ -217,26 +241,26 @@ function buildDiagram(code: string): DiagramData {
 
     switch (type) {
       case "neopixel":
-        powerRows.push({ arduinoPin: "5V", componentPin: "NeoPixel 5V", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "NeoPixel 5V", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "NeoPixel GND", color: "slate" });
         break;
       case "led":
         gndRows.push({ arduinoPin: "GND", componentPin: "LED − (kathode)", color: "slate" });
         break;
       case "potmeter":
-        powerRows.push({ arduinoPin: "5V", componentPin: "Potmeter links", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "Potmeter links", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Potmeter rechts", color: "slate" });
         break;
       case "pir":
-        powerRows.push({ arduinoPin: "5V", componentPin: "PIR VCC", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "PIR VCC (5V)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "PIR GND", color: "slate" });
         break;
       case "ldr":
-        powerRows.push({ arduinoPin: "5V", componentPin: "LDR (via weerstand naar A0)", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "LDR (via weerstand naar input)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "10kΩ naar GND", color: "slate" });
         break;
       case "dht":
-        powerRows.push({ arduinoPin: "3.3V / 5V", componentPin: "DHT11 VCC", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "DHT11 VCC", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "DHT11 GND", color: "slate" });
         break;
       case "buzzer":
@@ -246,30 +270,34 @@ function buildDiagram(code: string): DiagramData {
         gndRows.push({ arduinoPin: "GND", componentPin: "Knoppen (andere aansluitpen)", color: "slate" });
         break;
       case "servo":
-        powerRows.push({ arduinoPin: "5V", componentPin: "Servo(s) VCC (Rood)", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "Servo(s) VCC (Rood)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Servo(s) GND (Bruin)", color: "slate" });
         break;
       case "joystick":
-        powerRows.push({ arduinoPin: "5V", componentPin: "Joystick VCC", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "Joystick VCC", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Joystick GND", color: "slate" });
         break;
       case "stepper":
-        powerRows.push({ arduinoPin: "5V", componentPin: "Driver VDD (logica)", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "Driver VDD (logica)", color: "rose" });
         powerRows.push({ arduinoPin: "Externe 8–35V", componentPin: "Driver VMOT (motor) + 100µF cap", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Driver GND (logica + motor)", color: "slate" });
         break;
       case "encoder":
-        powerRows.push({ arduinoPin: "5V", componentPin: "Encoder + (VCC)", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "Encoder + (VCC)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Encoder GND", color: "slate" });
         break;
       case "lcd_i2c":
-        powerRows.push({ arduinoPin: "5V", componentPin: "LCD VCC (op I2C-backpack)", color: "rose" });
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "LCD VCC (op I2C-backpack)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "LCD GND (op I2C-backpack)", color: "slate" });
+        break;
+      case "relay":
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "Relais-module VCC (5V)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "Relais-module GND", color: "slate" });
         break;
     }
   }
 
-  return { signalRows, powerRows, gndRows };
+  return { signalRows, powerRows, gndRows, esp32 };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -310,55 +338,57 @@ function Row({ left, middle, right }: { left: ReactNode; middle?: ReactNode; rig
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function WiringDiagram({ code }: { code: string }) {
-  const { signalRows, powerRows, gndRows } = buildDiagram(code);
+  const { signalRows, powerRows, gndRows, esp32 } = buildDiagram(code);
 
   if (signalRows.length === 0) return null;
 
-  const allRows = [...signalRows, ...powerRows, ...gndRows];
+  const board = esp32 ? "ESP32" : "Arduino";
 
   return (
     <div className="my-6 bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-      <div className="bg-slate-100/50 px-4 py-3 border-b border-slate-200">
+      <div className="bg-slate-100/50 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
         <h4 className="font-display font-semibold text-sm text-slate-700 flex items-center gap-2">
           <CircuitBoard className="w-4 h-4 text-primary" />
           Aansluitschema
         </h4>
+        {esp32 && (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            <Wifi className="w-3 h-3" /> ESP32
+          </span>
+        )}
       </div>
 
       <div className="p-5 flex flex-col gap-3">
-        {/* Section: signal rows */}
         {signalRows.length > 0 && (
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Data / signaal</p>
         )}
         {signalRows.map((row, i) => (
           <Row
             key={i}
-            left={<ChipBadge label={`Arduino  ${row.from}`} color={row.color} />}
+            left={<ChipBadge label={`${board}  ${row.from}`} color={row.color} />}
             middle={row.resistance}
             right={<ChipBadge label={row.to} color={row.color} />}
           />
         ))}
 
-        {/* Section: power rows */}
         {powerRows.length > 0 && (
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mt-2">Voeding</p>
         )}
         {powerRows.map((row, i) => (
           <Row
             key={i}
-            left={<ChipBadge label={`Arduino  ${row.arduinoPin}`} color="rose" />}
+            left={<ChipBadge label={`${board}  ${row.arduinoPin}`} color="rose" />}
             right={<ChipBadge label={row.componentPin} color="rose" />}
           />
         ))}
 
-        {/* Section: GND rows */}
         {gndRows.length > 0 && (
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mt-2">Aarde (GND)</p>
         )}
         {gndRows.map((row, i) => (
           <Row
             key={i}
-            left={<ChipBadge label={`Arduino  ${row.arduinoPin}`} color="slate" />}
+            left={<ChipBadge label={`${board}  ${row.arduinoPin}`} color="slate" />}
             right={<ChipBadge label={row.componentPin} color="slate" />}
           />
         ))}

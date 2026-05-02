@@ -14,6 +14,7 @@ type ComponentType =
   | "button"
   | "servo"
   | "joystick"
+  | "joystick_sw"
   | "stepper"
   | "encoder"
   | "lcd_i2c"
@@ -140,6 +141,15 @@ function classifyName(name: string): ComponentType | null {
   if (n.includes("ldr")) return "ldr";
   if (n === "dhtpin" || n.includes("dht")) return "dht";
   if (n.includes("buzz")) return "buzzer";
+  // Joystick SW (de druk-knop bovenop een analoge joystick-module). Moet vóór "button"
+  // én vóór "joystick" staan: namen als joySw/joyButton/swPin/vuurPin matchen anders
+  // de generieke knop- of joystick-as-regels.
+  if (
+    n === "swpin" || n === "sw" ||
+    n === "joysw" || n === "joyswitch" || n === "joybutton" || n === "joybtn" || n === "joyknop" ||
+    n === "vuurpin" || n === "firepin" ||
+    (n.includes("joy") && (n.includes("sw") || n.includes("button") || n.includes("btn") || n.includes("knop")))
+  ) return "joystick_sw";
   if (n.includes("button") || n.includes("btn") || n.includes("knop")) return "button";
   if (n.startsWith("servo")) return "servo";
   if (n.includes("joystick") || n.includes("joy")) return "joystick";
@@ -222,9 +232,18 @@ function buildDiagram(code: string): DiagramData {
     signalRows.push({ from: pinLabel(csPin,  esp32), to: "MAX7219 CS (Load)",    color: "teal", direction: "out" });
   }
 
-  for (const { name, pin } of pins) {
-    const type = classifyName(name);
-    if (!type) continue;
+  // Eerste pass: bepaal welke component-types überhaupt voorkomen, zodat we
+  // joystick_sw kunnen "downgraden" naar een gewone knop wanneer er géén
+  // joystick-as (VRX/VRY) in dezelfde tutorial gebruikt wordt.
+  const classifiedPins = pins.map(p => ({ ...p, type: classifyName(p.name) }));
+  const joystickAxesPresent = classifiedPins.some(p => p.type === "joystick");
+
+  for (const { name, pin, type: rawType } of classifiedPins) {
+    if (!rawType) continue;
+    // joystick_sw zonder joystick-as → val terug op een gewone knop.
+    const type: ComponentType = rawType === "joystick_sw" && !joystickAxesPresent
+      ? "button"
+      : rawType;
     detectedComponents.add(type);
 
     const label = pinLabel(pin, esp32);
@@ -275,6 +294,15 @@ function buildDiagram(code: string): DiagramData {
           ? "Joystick VRY (Y-as)"
           : "Joystick VRX (X-as)";
         signalRows.push({ from: label, to: axisLabel, color: "violet", direction: "in" });
+        break;
+      }
+      case "joystick_sw": {
+        signalRows.push({
+          from: label,
+          to: "Joystick SW (knop bovenop, andere kant intern → GND)",
+          color: "violet",
+          direction: "in",
+        });
         break;
       }
       case "stepper": {

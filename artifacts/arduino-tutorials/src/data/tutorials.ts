@@ -3955,7 +3955,7 @@ bool beschoten[VELD][VELD];   // welke cellen al een schot kregen (raak of mis)
 
 int joystickX = A0;
 int joystickY = A1;
-int knopVuur  = 4;
+int vuurPin   = 4;
 
 int cursorRij = 0, cursorKol = 0;
 int vorigeKnop = HIGH;
@@ -4038,7 +4038,7 @@ void setup() {
   matrix.setIntensity(0, 4);
   matrix.clearDisplay(0);
 
-  pinMode(knopVuur, INPUT_PULLUP);
+  pinMode(vuurPin, INPUT_PULLUP);
   randomSeed(analogRead(A2));
   plaatsSchepen();
 }
@@ -4047,7 +4047,7 @@ void loop() {
   leesJoystick();
 
   // Vuur-knop met edge-detectie.
-  int huidig = digitalRead(knopVuur);
+  int huidig = digitalRead(vuurPin);
   if (vorigeKnop == HIGH && huidig == LOW) schiet();
   vorigeKnop = huidig;
 
@@ -4069,7 +4069,7 @@ bool schip[VELD][VELD];
 bool getroffen[VELD][VELD];
 bool beschoten[VELD][VELD];
 
-int joystickX = A0, joystickY = A1, knopVuur = 4;
+int joystickX = A0, joystickY = A1, vuurPin = 4;
 
 int cursorRij = 0, cursorKol = 0;
 int vorigeKnop = HIGH;
@@ -4169,7 +4169,7 @@ void setup() {
   matrix.shutdown(0, false);
   matrix.setIntensity(0, 4);
   matrix.clearDisplay(0);
-  pinMode(knopVuur, INPUT_PULLUP);
+  pinMode(vuurPin, INPUT_PULLUP);
   randomSeed(analogRead(A2));
   plaatsSchepen();
   Serial.begin(9600);
@@ -4181,7 +4181,7 @@ void loop() {
     return;
   }
   leesJoystick();
-  int huidig = digitalRead(knopVuur);
+  int huidig = digitalRead(vuurPin);
   if (vorigeKnop == HIGH && huidig == LOW) schiet();
   vorigeKnop = huidig;
   if (millis() - laatsteKnipper > 250) {
@@ -8098,7 +8098,7 @@ void toon2Dobbelstenen() {
         diagram: true,
         code: bs_s4,
         legend: [
-          { term: "int knopVuur = 4", desc: "Vuur-knop op digitale pin 4. Andere kant naar GND. INPUT_PULLUP voor stabiele input." },
+          { term: "int vuurPin = 4", desc: "Vuur-knop op digitale pin 4 — fungeert hier als de SW-pin van de joystick (druk-knop). Andere kant naar GND, INPUT_PULLUP voor stabiele input." },
           { term: "bool beschoten[VELD][VELD]", desc: "Derde 2D-array: welke cellen al een schot kregen, om dubbel-schieten te voorkomen." },
           { term: "if (vorigeKnop == HIGH && huidig == LOW) schiet();", desc: "Edge-detectie: één schot per knop-OVERGANG, niet zolang ingedrukt." },
           { term: "hitFeedback() / missFeedback()", desc: "Aparte animaties — voelt heel verschillend aan voor de speler. Hits 'flashen' op de cel; misses tonen 'plons' op de hele rij." },

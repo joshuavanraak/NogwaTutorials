@@ -13,7 +13,9 @@ type ComponentType =
   | "buzzer"
   | "button"
   | "servo"
-  | "joystick";
+  | "joystick"
+  | "stepper"
+  | "encoder";
 
 type ColorKey = "teal" | "yellow" | "amber" | "blue" | "rose" | "violet" | "orange" | "slate" | "green";
 
@@ -101,6 +103,8 @@ function classifyName(name: string): ComponentType | null {
   if (n.includes("button") || n.includes("btn")) return "button";
   if (n.startsWith("servo")) return "servo";
   if (n.includes("joystick") || n.includes("joy")) return "joystick";
+  if (n.startsWith("step") || n.startsWith("dir")) return "stepper";
+  if (n.startsWith("clk") || n.startsWith("dt") || n.includes("encoder")) return "encoder";
   return null;
 }
 
@@ -169,6 +173,26 @@ function buildDiagram(code: string): DiagramData {
         signalRows.push({ from: pinLabel, to: axisLabel, color: "violet", direction: "in" });
         break;
       }
+      case "stepper": {
+        const n = name.toLowerCase();
+        const isStep = n.startsWith("step");
+        const axis = n.includes("x") ? " (X-as)" : n.includes("y") ? " (Y-as)" : n.includes("z") ? " (Z-as)" : "";
+        const label = isStep
+          ? `A4988/DRV8825 STEP${axis}`
+          : `A4988/DRV8825 DIR${axis}`;
+        signalRows.push({ from: pinLabel, to: label, color: "blue", direction: "out" });
+        break;
+      }
+      case "encoder": {
+        const n = name.toLowerCase();
+        const label = n.startsWith("clk")
+          ? "Rotary Encoder CLK"
+          : n.startsWith("dt")
+          ? "Rotary Encoder DT"
+          : "Rotary Encoder";
+        signalRows.push({ from: pinLabel, to: label, color: "orange", direction: "in" });
+        break;
+      }
     }
   }
 
@@ -218,6 +242,15 @@ function buildDiagram(code: string): DiagramData {
       case "joystick":
         powerRows.push({ arduinoPin: "5V", componentPin: "Joystick VCC", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Joystick GND", color: "slate" });
+        break;
+      case "stepper":
+        powerRows.push({ arduinoPin: "5V", componentPin: "Driver VDD (logica)", color: "rose" });
+        powerRows.push({ arduinoPin: "Externe 8–35V", componentPin: "Driver VMOT (motor) + 100µF cap", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "Driver GND (logica + motor)", color: "slate" });
+        break;
+      case "encoder":
+        powerRows.push({ arduinoPin: "5V", componentPin: "Encoder + (VCC)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "Encoder GND", color: "slate" });
         break;
     }
   }

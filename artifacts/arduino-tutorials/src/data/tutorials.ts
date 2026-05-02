@@ -29,6 +29,422 @@ export type Tutorial = {
 };
 
 // ─────────────────────────────────────────────
+// TUTORIAL 9: Stappenmotor Basis (A4988 / DRV8825)
+// ─────────────────────────────────────────────
+
+const stepper_s1 = `int stepPin = 3;
+int dirPin = 4;
+
+void setup() {
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+}`;
+
+const stepper_s2 = `int stepPin = 3;
+int dirPin = 4;
+
+int stappenPerOmwenteling = 200;
+
+void setup() {
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+}
+
+void loop() {
+  // Met de klok mee
+  digitalWrite(dirPin, HIGH);
+
+  for (int i = 0; i < stappenPerOmwenteling; i++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(800);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(800);
+  }
+
+  delay(1000);
+}`;
+
+const stepper_s3 = `int stepPin = 3;
+int dirPin = 4;
+
+int stappenPerOmwenteling = 200;
+
+void setup() {
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+}
+
+void doeOmwenteling(int richting) {
+  digitalWrite(dirPin, richting);
+  for (int i = 0; i < stappenPerOmwenteling; i++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(800);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(800);
+  }
+}
+
+void loop() {
+  doeOmwenteling(HIGH);   // met de klok mee
+  delay(500);
+
+  doeOmwenteling(LOW);    // tegen de klok in
+  delay(500);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 10: Stappenmotor + Rotary Encoder
+// ─────────────────────────────────────────────
+
+const enc_s1 = `int clkPin = 2;
+int dtPin = 3;
+
+int laatsteCLK;
+int positie = 0;
+
+void setup() {
+  pinMode(clkPin, INPUT_PULLUP);
+  pinMode(dtPin, INPUT_PULLUP);
+  Serial.begin(9600);
+
+  laatsteCLK = digitalRead(clkPin);
+}
+
+void loop() {
+  int huidigeCLK = digitalRead(clkPin);
+
+  if (huidigeCLK != laatsteCLK && huidigeCLK == LOW) {
+    if (digitalRead(dtPin) != huidigeCLK) {
+      positie++;
+    } else {
+      positie--;
+    }
+    Serial.println(positie);
+  }
+
+  laatsteCLK = huidigeCLK;
+}`;
+
+const enc_s2 = `int clkPin = 2;
+int dtPin = 3;
+int stepPin = 5;
+int dirPin = 6;
+
+int laatsteCLK;
+
+void setup() {
+  pinMode(clkPin, INPUT_PULLUP);
+  pinMode(dtPin, INPUT_PULLUP);
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+
+  laatsteCLK = digitalRead(clkPin);
+}
+
+void doeStap(int richting) {
+  digitalWrite(dirPin, richting);
+  digitalWrite(stepPin, HIGH);
+  delayMicroseconds(800);
+  digitalWrite(stepPin, LOW);
+  delayMicroseconds(800);
+}
+
+void loop() {
+  int huidigeCLK = digitalRead(clkPin);
+
+  if (huidigeCLK != laatsteCLK && huidigeCLK == LOW) {
+    if (digitalRead(dtPin) != huidigeCLK) {
+      doeStap(HIGH);   // met de klok mee
+    } else {
+      doeStap(LOW);    // tegen de klok in
+    }
+  }
+
+  laatsteCLK = huidigeCLK;
+}`;
+
+const enc_s3 = `int clkPin = 2;
+int dtPin = 3;
+int stepPin = 5;
+int dirPin = 6;
+
+int laatsteCLK;
+int stappenPerKlik = 10;
+
+void setup() {
+  pinMode(clkPin, INPUT_PULLUP);
+  pinMode(dtPin, INPUT_PULLUP);
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+
+  laatsteCLK = digitalRead(clkPin);
+}
+
+void doeStappen(int richting, int aantal) {
+  digitalWrite(dirPin, richting);
+  for (int i = 0; i < aantal; i++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(800);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(800);
+  }
+}
+
+void loop() {
+  int huidigeCLK = digitalRead(clkPin);
+
+  if (huidigeCLK != laatsteCLK && huidigeCLK == LOW) {
+    if (digitalRead(dtPin) != huidigeCLK) {
+      doeStappen(HIGH, stappenPerKlik);
+    } else {
+      doeStappen(LOW, stappenPerKlik);
+    }
+  }
+
+  laatsteCLK = huidigeCLK;
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 11: G-Code Plotter / 3D-Printer (theorie)
+// ─────────────────────────────────────────────
+
+const gcode_s1 = `// X- en Y-as motor (A4988 / DRV8825 drivers)
+int stepPinX = 2;
+int dirPinX = 3;
+
+int stepPinY = 4;
+int dirPinY = 5;
+
+float huidigeX = 0;
+float huidigeY = 0;
+
+float stappenPerMm = 80;  // afhankelijk van de spindel / tandriem
+
+void setup() {
+  pinMode(stepPinX, OUTPUT);
+  pinMode(dirPinX, OUTPUT);
+  pinMode(stepPinY, OUTPUT);
+  pinMode(dirPinY, OUTPUT);
+
+  Serial.begin(9600);
+  Serial.println("Klaar - stuur G-code via Serial Monitor");
+}
+
+void loop() {
+  // wordt later ingevuld
+}`;
+
+const gcode_s2 = `int stepPinX = 2;
+int dirPinX = 3;
+int stepPinY = 4;
+int dirPinY = 5;
+
+float huidigeX = 0;
+float huidigeY = 0;
+float stappenPerMm = 80;
+
+void doeStappen(int stepPin, int dirPin, long aantal, int richting) {
+  digitalWrite(dirPin, richting);
+  for (long i = 0; i < aantal; i++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(500);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(500);
+  }
+}
+
+void beweegNaar(float doelX, float doelY) {
+  long stappenX = (doelX - huidigeX) * stappenPerMm;
+  long stappenY = (doelY - huidigeY) * stappenPerMm;
+
+  doeStappen(stepPinX, dirPinX, abs(stappenX), stappenX > 0 ? HIGH : LOW);
+  doeStappen(stepPinY, dirPinY, abs(stappenY), stappenY > 0 ? HIGH : LOW);
+
+  huidigeX = doelX;
+  huidigeY = doelY;
+}
+
+void setup() {
+  pinMode(stepPinX, OUTPUT);
+  pinMode(dirPinX, OUTPUT);
+  pinMode(stepPinY, OUTPUT);
+  pinMode(dirPinY, OUTPUT);
+}
+
+void loop() {
+  beweegNaar(50, 50);
+  delay(2000);
+  beweegNaar(0, 0);
+  delay(2000);
+}`;
+
+const gcode_s3 = `int stepPinX = 2;
+int dirPinX = 3;
+int stepPinY = 4;
+int dirPinY = 5;
+
+float huidigeX = 0;
+float huidigeY = 0;
+float stappenPerMm = 80;
+
+String invoer = "";
+
+void doeStappen(int stepPin, int dirPin, long aantal, int richting) {
+  digitalWrite(dirPin, richting);
+  for (long i = 0; i < aantal; i++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(500);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(500);
+  }
+}
+
+void beweegNaar(float doelX, float doelY) {
+  long stappenX = (doelX - huidigeX) * stappenPerMm;
+  long stappenY = (doelY - huidigeY) * stappenPerMm;
+
+  doeStappen(stepPinX, dirPinX, abs(stappenX), stappenX > 0 ? HIGH : LOW);
+  doeStappen(stepPinY, dirPinY, abs(stappenY), stappenY > 0 ? HIGH : LOW);
+
+  huidigeX = doelX;
+  huidigeY = doelY;
+}
+
+void parseGCode(String regel) {
+  // Voorbeeld: G1 X10 Y20
+  if (!regel.startsWith("G1") && !regel.startsWith("G0")) return;
+
+  float x = huidigeX;
+  float y = huidigeY;
+
+  int xIndex = regel.indexOf('X');
+  if (xIndex >= 0) x = regel.substring(xIndex + 1).toFloat();
+
+  int yIndex = regel.indexOf('Y');
+  if (yIndex >= 0) y = regel.substring(yIndex + 1).toFloat();
+
+  beweegNaar(x, y);
+  Serial.print("OK X=");
+  Serial.print(x);
+  Serial.print(" Y=");
+  Serial.println(y);
+}
+
+void setup() {
+  pinMode(stepPinX, OUTPUT);
+  pinMode(dirPinX, OUTPUT);
+  pinMode(stepPinY, OUTPUT);
+  pinMode(dirPinY, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Klaar - stuur G-code via Serial Monitor");
+}
+
+void loop() {
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\\n') {
+      parseGCode(invoer);
+      invoer = "";
+    } else {
+      invoer += c;
+    }
+  }
+}`;
+
+const gcode_s4 = `int stepPinX = 2;
+int dirPinX = 3;
+int stepPinY = 4;
+int dirPinY = 5;
+int stepPinZ = 6;
+int dirPinZ = 7;
+
+float huidigeX = 0;
+float huidigeY = 0;
+float huidigeZ = 0;
+float stappenPerMm = 80;
+
+String invoer = "";
+
+void doeStappen(int stepPin, int dirPin, long aantal, int richting) {
+  digitalWrite(dirPin, richting);
+  for (long i = 0; i < aantal; i++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(500);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(500);
+  }
+}
+
+void beweegNaar(float doelX, float doelY, float doelZ) {
+  long stappenX = (doelX - huidigeX) * stappenPerMm;
+  long stappenY = (doelY - huidigeY) * stappenPerMm;
+  long stappenZ = (doelZ - huidigeZ) * stappenPerMm;
+
+  doeStappen(stepPinX, dirPinX, abs(stappenX), stappenX > 0 ? HIGH : LOW);
+  doeStappen(stepPinY, dirPinY, abs(stappenY), stappenY > 0 ? HIGH : LOW);
+  doeStappen(stepPinZ, dirPinZ, abs(stappenZ), stappenZ > 0 ? HIGH : LOW);
+
+  huidigeX = doelX;
+  huidigeY = doelY;
+  huidigeZ = doelZ;
+}
+
+void parseGCode(String regel) {
+  // G28 = home (terug naar 0,0,0)
+  if (regel.startsWith("G28")) {
+    beweegNaar(0, 0, 0);
+    Serial.println("OK home");
+    return;
+  }
+
+  if (!regel.startsWith("G1") && !regel.startsWith("G0")) return;
+
+  float x = huidigeX;
+  float y = huidigeY;
+  float z = huidigeZ;
+
+  int xIndex = regel.indexOf('X');
+  if (xIndex >= 0) x = regel.substring(xIndex + 1).toFloat();
+
+  int yIndex = regel.indexOf('Y');
+  if (yIndex >= 0) y = regel.substring(yIndex + 1).toFloat();
+
+  int zIndex = regel.indexOf('Z');
+  if (zIndex >= 0) z = regel.substring(zIndex + 1).toFloat();
+
+  beweegNaar(x, y, z);
+  Serial.print("OK X=");
+  Serial.print(x);
+  Serial.print(" Y=");
+  Serial.print(y);
+  Serial.print(" Z=");
+  Serial.println(z);
+}
+
+void setup() {
+  pinMode(stepPinX, OUTPUT);
+  pinMode(dirPinX, OUTPUT);
+  pinMode(stepPinY, OUTPUT);
+  pinMode(dirPinY, OUTPUT);
+  pinMode(stepPinZ, OUTPUT);
+  pinMode(dirPinZ, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("3D-Printer simulator - stuur G-code");
+}
+
+void loop() {
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\\n') {
+      parseGCode(invoer);
+      invoer = "";
+    } else {
+      invoer += c;
+    }
+  }
+}`;
+
+// ─────────────────────────────────────────────
 // TUTORIAL 8: Servo Motor
 // ─────────────────────────────────────────────
 
@@ -1002,6 +1418,230 @@ servo2.attach(10);
 int y = analogRead(joystickY);
 int hoekY = map(y, 0, 1023, 0, 180);
 servo2.write(hoekY);`
+      }
+    ]
+  },
+  {
+    id: "stepper-basis",
+    title: "Stappenmotor Basis (A4988 / DRV8825)",
+    description: "Leer een stappenmotor aansturen via een A4988 of DRV8825 driver. Eerst draait de motor in één richting, daarna heen en terug in een loop. De basis voor elk preciesie-project zoals een plotter of CNC.",
+    difficulty: "Gemiddeld",
+    learningGoal: "Ik kan een stappenmotor aansturen met een driver (A4988 / DRV8825) via STEP- en DIR-pinnen.",
+    materials: "Arduino Uno, NEMA 17 stappenmotor, A4988 of DRV8825 driver, externe 12V voeding (8–35V), 100µF condensator, breadboard, draden.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "stepper-s1",
+        title: "Driver aansluiten & pinnen instellen",
+        content: "Een stappenmotor draait niet vrij rond zoals een gewone DC-motor: hij beweegt in vaste 'stappen' (meestal 200 per omwenteling = 1.8° per stap). Een driver zoals de A4988 of DRV8825 vertaalt twee simpele signalen — STEP (puls) en DIR (richting) — naar de spoel-stromen die de motor exact één stap verzetten. BELANGRIJK: sluit nooit een stappenmotor direct aan op de Arduino. Hij heeft 12V (of vergelijkbaar) externe voeding nodig via de VMOT-pin van de driver. Plaats een 100µF condensator over VMOT/GND om spanningspieken op te vangen.",
+        diagram: true,
+        code: stepper_s1,
+        legend: [
+          { term: "int stepPin = 3", desc: "STEP-pin van de driver. Elke HIGH-puls = 1 stap van de motor." },
+          { term: "int dirPin = 4", desc: "DIR-pin van de driver. HIGH = met de klok mee, LOW = tegen de klok in." },
+          { term: "pinMode(stepPin, OUTPUT)", desc: "Stel de STEP-pin in als uitgang." },
+          { term: "pinMode(dirPin, OUTPUT)", desc: "Stel de DIR-pin in als uitgang." },
+        ],
+        assignment: "Sluit de driver correct aan: VMOT + GND op je 12V voeding, VDD + GND op de Arduino, STEP op pin 3, DIR op pin 4. Verbind ook nSLEEP en nRESET met elkaar (anders slaapt de driver). De motor-spoelen sluit je aan op 1A/1B en 2A/2B.",
+        reflection: "Waarom heeft een stappenmotor een aparte voeding nodig en kan een servo wel rechtstreeks op de 5V van de Arduino?"
+      },
+      {
+        id: "stepper-s2",
+        title: "Eén volledige omwenteling",
+        content: "Om de motor één volledige omwenteling te laten maken, moeten we 200 keer een korte HIGH-puls naar de STEP-pin sturen (bij een standaard NEMA 17 zonder microstepping). De delayMicroseconds() bepaalt de snelheid: hoe korter de pauze, hoe sneller de motor draait. Te kort en de motor 'mist' stappen — probeer waarden tussen 500 en 2000 µs.",
+        code: stepper_s2,
+        legend: [
+          { term: "int stappenPerOmwenteling = 200", desc: "Een NEMA 17 doet 200 stappen per volledige omwenteling (1.8° per stap). Bij microstepping vermenigvuldig je dit." },
+          { term: "digitalWrite(dirPin, HIGH)", desc: "Bepaal de draairichting voordat je begint met stappen." },
+          { term: "digitalWrite(stepPin, HIGH)", desc: "Start een puls op de STEP-pin." },
+          { term: "delayMicroseconds(800)", desc: "Wacht 800 microseconden (0.8 ms). Dit bepaalt de snelheid van de motor." },
+          { term: "digitalWrite(stepPin, LOW)", desc: "Beëindig de puls. Eén HIGH→LOW cyclus = 1 stap." },
+        ],
+        assignment: "Upload de code en kijk of de motor één omwenteling per seconde maakt. Verander delayMicroseconds(800) naar 400 — wat gebeurt er?",
+        challenge: "Probeer delayMicroseconds(200). Op een gegeven moment slaat de motor over (mist hij stappen). Wat is bij jou de minimale waarde?",
+        reflection: "Waarom heeft een stappenmotor 'stappen' en geen vloeiende beweging zoals een DC-motor? Wat is hier het voordeel van?"
+      },
+      {
+        id: "stepper-s3",
+        title: "Heen en terug in een loop",
+        content: "Nu maken we de code netter door de stap-logica in een aparte functie doeOmwenteling() te zetten. Die functie krijgt een parameter mee: HIGH (met de klok mee) of LOW (tegen de klok in). In de loop() roepen we hem twee keer aan met verschillende richtingen — dit is precies de basis die je later gebruikt voor een plotter of 3D-printer.",
+        code: stepper_s3,
+        legend: [
+          { term: "void doeOmwenteling(int richting)", desc: "Eigen functie die één omwenteling doet in de opgegeven richting." },
+          { term: "doeOmwenteling(HIGH)", desc: "Roep de functie aan met richting HIGH = met de klok mee." },
+          { term: "doeOmwenteling(LOW)", desc: "Tegen de klok in." },
+          { term: "delay(500)", desc: "Korte pauze tussen de richtingswisselingen zodat je het verschil ziet." },
+        ],
+        assignment: "Upload de code. Draait de motor netjes heen en terug?",
+        challenge: "Voeg een derde aanroep toe die slechts een halve omwenteling doet (100 stappen). Of: laat hem 5 keer een halve draai doen voor hij terugdraait.",
+        reflection: "Hoe zou je dit gebruiken voor een echt project? Denk aan een automatische zonwering of een rolluik."
+      }
+    ]
+  },
+  {
+    id: "stepper-encoder",
+    title: "Stappenmotor + Rotary Encoder",
+    description: "Combineer een stappenmotor met een rotary encoder. Door de encoder-knop te draaien, beweegt de motor mee — handig voor handmatige bediening van een CNC, plotter of focus-mechanisme.",
+    difficulty: "Gevorderd",
+    learningGoal: "Ik kan een rotary encoder uitlezen en de waarde gebruiken om een stappenmotor mee aan te sturen.",
+    materials: "Arduino Uno, NEMA 17 stappenmotor, A4988/DRV8825 driver, KY-040 rotary encoder, externe 12V voeding, breadboard, draden.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "enc-s1",
+        title: "Rotary encoder uitlezen",
+        content: "Een rotary encoder is een knop die je in beide richtingen kunt blijven draaien. Hij heeft twee uitgangs-pinnen (CLK en DT) die verschoven HIGH/LOW signalen geven als je hem draait. Door te kijken welke pin als eerste verandert, kun je bepalen of er met de klok mee of tegen de klok in wordt gedraaid. We gebruiken een variabele 'positie' die op- of aftelt en printen die naar de Serial Monitor.",
+        diagram: true,
+        code: enc_s1,
+        legend: [
+          { term: "int clkPin = 2", desc: "CLK-pin van de encoder op pin 2. Dit is het 'klok'-signaal." },
+          { term: "int dtPin = 3", desc: "DT-pin van de encoder op pin 3. Dit is het 'data'-signaal." },
+          { term: "laatsteCLK = digitalRead(clkPin)", desc: "Onthoud de vorige stand van CLK om verandering te kunnen detecteren." },
+          { term: "if (huidigeCLK != laatsteCLK && huidigeCLK == LOW)", desc: "Detecteer een overgang van HIGH naar LOW — dit is één 'klik' van de encoder." },
+          { term: "if (digitalRead(dtPin) != huidigeCLK)", desc: "Vergelijk DT met CLK om de richting te bepalen." },
+          { term: "Serial.println(positie)", desc: "Stuur de huidige positie naar de Serial Monitor zodat je kunt controleren of het werkt." },
+        ],
+        assignment: "Sluit de encoder aan en open de Serial Monitor (9600 baud). Draai de knop langzaam — de waarde moet op- en aftellen.",
+        reflection: "Waarom heeft een encoder TWEE signalen (CLK en DT) nodig om de richting te bepalen, en niet maar één?"
+      },
+      {
+        id: "enc-s2",
+        title: "Stepper koppelen aan de encoder",
+        content: "Nu koppelen we de encoder aan de stappenmotor. In plaats van een variabele op te tellen, sturen we direct één stap naar de motor zodra de encoder klikt. We hergebruiken de doeStap()-functie uit de basis-tutorial. Belangrijk: omdat we elke klik direct vertalen naar één stap, draait de motor maar heel langzaam — daar lossen we straks iets aan op.",
+        diagram: true,
+        code: enc_s2,
+        legend: [
+          { term: "int stepPin = 5", desc: "STEP-pin van de driver. We kiezen pin 5 zodat 2 en 3 vrij zijn voor de encoder." },
+          { term: "int dirPin = 6", desc: "DIR-pin van de driver." },
+          { term: "void doeStap(int richting)", desc: "Functie die één enkele stap doet in de gegeven richting." },
+          { term: "doeStap(HIGH)", desc: "Eén stap met de klok mee — gekoppeld aan een klik rechtsom." },
+          { term: "doeStap(LOW)", desc: "Eén stap tegen de klok in — gekoppeld aan een klik linksom." },
+        ],
+        assignment: "Upload de code. Draai aan de encoder en kijk of de motor mee beweegt.",
+        challenge: "De motor beweegt maar heel weinig per klik (1 stap = 1.8°). Hoe los je dat in de volgende stap op?",
+        reflection: "Waarom is het slim om de stap-logica in een aparte functie te zetten in plaats van alles in loop()?"
+      },
+      {
+        id: "enc-s3",
+        title: "Versnellen: meerdere stappen per klik",
+        content: "Nu maken we de motor sneller door bij elke encoder-klik niet 1, maar 10 stappen tegelijk te doen. We veranderen doeStap() naar doeStappen() met een parameter 'aantal'. Met 10 stappen per klik (= 18° per klik) voelt het meteen veel responsiever. Probeer ook eens 50 of 100 — dan heb je een echte 'jog'-functie zoals op een CNC.",
+        code: enc_s3,
+        legend: [
+          { term: "int stappenPerKlik = 10", desc: "Hoeveel stappen de motor per encoder-klik doet. Verhoog voor snellere beweging." },
+          { term: "void doeStappen(int richting, int aantal)", desc: "Aangepaste functie die meerdere stappen per aanroep doet." },
+          { term: "for (int i = 0; i < aantal; i++)", desc: "Lus die het opgegeven aantal stappen uitvoert." },
+          { term: "doeStappen(HIGH, stappenPerKlik)", desc: "Doe stappenPerKlik stappen met de klok mee." },
+        ],
+        assignment: "Test met stappenPerKlik = 10, dan = 50, dan = 200 (een hele omwenteling per klik). Welk getal voelt het natuurlijkst?",
+        challenge: "Voeg een drukknop toe die 'stappenPerKlik' wisselt tussen 1 (precisie) en 50 (snel). Zo heb je een fijn-instelling én een grof-instelling.",
+        reflection: "Bedenk een toepassing waar deze constructie nuttig is: handmatig de Z-as van een 3D-printer instellen? Een microscoop scherpstellen? Een telescoop richten?"
+      }
+    ]
+  },
+  {
+    id: "gcode-plotter",
+    title: "G-Code Plotter / 3D-Printer (theorie)",
+    description: "Bouw zelf de basis van een plotter of 3D-printer: een G-code parser die meerdere stappenmotoren coördineert. Deze tutorial laat zien HOE een 3D-printer werkt — perfect voor de theorie.",
+    difficulty: "Expert",
+    learningGoal: "Ik begrijp hoe een 3D-printer of plotter G-code interpreteert en die vertaalt naar gecoördineerde bewegingen van meerdere stappenmotoren.",
+    materials: "Arduino Uno (of Mega voor 3 motoren), 2–3x A4988/DRV8825 drivers, 2–3x NEMA 17 stappenmotoren, externe 12V voeding (5A+), condensatoren, breadboard, veel draden. Optioneel: complete CNC-shield.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "gcode-s1",
+        title: "Twee assen aansluiten (X & Y)",
+        content: "Een plotter beweegt over twee assen: X (links/rechts) en Y (voor/achter). Elke as heeft een eigen stappenmotor met een eigen driver. We definiëren per as een STEP- en DIR-pin. Daarnaast houden we 'huidigeX' en 'huidigeY' bij — de positie in millimeters waar de plotter nu staat. De variabele 'stappenPerMm' bepaalt hoeveel motorstappen er nodig zijn voor 1 mm beweging — dit hangt af van de mechanica (tandriem of leadscrew).",
+        diagram: true,
+        code: gcode_s1,
+        legend: [
+          { term: "int stepPinX = 2", desc: "STEP-pin voor de X-as motor." },
+          { term: "int dirPinX = 3", desc: "DIR-pin voor de X-as motor." },
+          { term: "int stepPinY = 4", desc: "STEP-pin voor de Y-as motor." },
+          { term: "int dirPinY = 5", desc: "DIR-pin voor de Y-as motor." },
+          { term: "float huidigeX = 0", desc: "Houdt bij waar de plotter NU staat op de X-as (in mm)." },
+          { term: "float stappenPerMm = 80", desc: "Conversie: hoeveel motorstappen = 1 mm beweging. Hangt af van je tandriem (GT2 = 80) of leadscrew." },
+        ],
+        assignment: "Sluit twee complete drivers aan zoals in de stepper-basis tutorial — alleen nu twee tegelijk, op verschillende pinnen. Zorg voor een sterke voeding (5A+).",
+        reflection: "Waarom is het zo belangrijk om 'huidigeX' en 'huidigeY' bij te houden? Wat zou er gebeuren als je dat niet doet?"
+      },
+      {
+        id: "gcode-s2",
+        title: "Een beweegNaar(x, y) functie",
+        content: "Het hart van elke plotter is een functie die zegt: 'ga van waar je nu bent naar coördinaat (X, Y)'. Onze beweegNaar() berekent het verschil tussen waar we zijn en waar we naartoe moeten, vermenigvuldigt met stappenPerMm, en stuurt dat aantal stappen naar de juiste motor. Let op: in deze versie bewegen X en Y na elkaar, niet tegelijk — een echte plotter doet dat wel via 'Bresenham' of 'linear interpolation', maar dat is een latere uitbreiding.",
+        code: gcode_s2,
+        legend: [
+          { term: "void doeStappen(int stepPin, int dirPin, long aantal, int richting)", desc: "Generieke stap-functie die op WELKE motor dan ook werkt — we geven gewoon de pinnen mee." },
+          { term: "long stappenX = (doelX - huidigeX) * stappenPerMm", desc: "Bereken hoeveel stappen we moeten doen: verschil in mm × stappen-per-mm." },
+          { term: "stappenX > 0 ? HIGH : LOW", desc: "Als het doel verder is dan waar we zijn → vooruit. Anders achteruit." },
+          { term: "abs(stappenX)", desc: "Het AANTAL stappen is altijd positief; de richting bepalen we apart met HIGH/LOW." },
+          { term: "huidigeX = doelX", desc: "Update onze positie. Cruciaal! Zonder dit is de volgende beweging fout." },
+        ],
+        assignment: "Upload de code en kijk of de motoren naar (50, 50) bewegen en weer terug naar (0, 0). Houd de motoren los of zet er een marker op.",
+        challenge: "Voeg een derde aanroep toe: beweegNaar(100, 0). Welke route volgt de pen nu?",
+        reflection: "Waarom bewegen X en Y in deze versie ná elkaar in plaats van tegelijk? Wat zou je zien op papier als je een diagonaal probeert te tekenen?"
+      },
+      {
+        id: "gcode-s3",
+        title: "G-Code parser bouwen",
+        content: "G-code is de internationale taal van CNC's en 3D-printers. Een regel ziet er bijvoorbeeld zo uit: 'G1 X10 Y20'. G1 = beweeg, X10 = ga naar X = 10 mm, Y20 = ga naar Y = 20 mm. We schrijven een parseGCode() functie die een tekstregel uit elkaar haalt: zoek 'X' en 'Y' in de string en lees de getallen die erna staan. Vervolgens roept hij beweegNaar() aan. We lezen regels van de Serial Monitor, waardoor je via de pc commando's naar je plotter kunt sturen.",
+        code: gcode_s3,
+        legend: [
+          { term: "String invoer = \"\"", desc: "Buffer waarin we karakter-voor-karakter de binnenkomende G-code regel opbouwen." },
+          { term: "regel.startsWith(\"G1\")", desc: "Controleer of de regel begint met G1 (lineaire beweging). Andere commando's negeren we hier." },
+          { term: "regel.indexOf('X')", desc: "Zoek de positie van het karakter 'X' in de regel. Geeft -1 als het niet gevonden is." },
+          { term: "regel.substring(xIndex + 1).toFloat()", desc: "Pak alles na de 'X' en zet het om naar een float. 'X10 Y20' → 10.00." },
+          { term: "if (c == '\\n')", desc: "Newline = einde van een commando. Tijd om te parsen en uit te voeren." },
+          { term: "Serial.println(\"OK ...\")", desc: "Bevestig dat het commando is uitgevoerd — 3D-printers gebruiken dit om te weten of ze de volgende regel mogen sturen." },
+        ],
+        assignment: "Upload, open Serial Monitor (zet 'Newline' aan onderin), en typ: 'G1 X20 Y20'. De motoren moeten bewegen. Probeer dan 'G1 X0 Y0' om terug te gaan.",
+        challenge: "Schrijf een korte 'tekening' uit als G-code en plak hem in de Serial Monitor (regel voor regel): bijvoorbeeld een vierkant van 4 hoeken.",
+        reflection: "Echte slicer-software (zoals Cura of PrusaSlicer) genereert duizenden regels G-code voor één 3D-print. Hoe zou jij die hier in stromen via Serial?"
+      },
+      {
+        id: "gcode-s4",
+        title: "Z-as toevoegen — een echte 3D-printer in concept",
+        content: "Een 3D-printer voegt een derde as toe: Z (omhoog/omlaag). We breiden de pin-definities, beweegNaar() en de parser uit met Z. Ook implementeren we G28 (home) — dat brengt alle assen terug naar (0, 0, 0). Dit is conceptueel een complete 3D-printer firmware: lees G-code via Serial → parse → coördineer 3 motoren. Wat ontbreekt voor een ÉCHTE printer? Een hot-end (E-as voor extrusie), end-stop sensoren voor homing, temperatuur-controle, en interpolatie zodat assen tegelijk bewegen. Maar het principe is identiek aan dat van een Marlin-firmware.",
+        code: gcode_s4,
+        legend: [
+          { term: "int stepPinZ = 6 / int dirPinZ = 7", desc: "STEP en DIR voor de derde motor (Z-as)." },
+          { term: "float huidigeZ = 0", desc: "Houdt de Z-positie bij." },
+          { term: "regel.startsWith(\"G28\")", desc: "G28 = Home All Axes. Beweeg naar (0, 0, 0). In een echte printer zou je hier endstop-sensoren gebruiken." },
+          { term: "beweegNaar(0, 0, 0)", desc: "Naar de oorsprong. Pure software-home zonder sensoren." },
+          { term: "void beweegNaar(float doelX, float doelY, float doelZ)", desc: "Uitgebreide versie die nu ook Z meeneemt." },
+          { term: "Serial.println(\"OK X=...\")", desc: "Bevestig met de huidige positie zodat de host-software synchroon blijft." },
+        ],
+        assignment: "Test met: 'G1 X10 Y10 Z5' en daarna 'G28'. Werken alle 3 motoren correct?",
+        challenge: "Voeg een M3 / M5 commando toe (pen-omlaag / pen-omhoog) door een servo aan te sturen — dan heb je een complete pen-plotter. Voor 3D-printen zou je een vierde 'E-as' toevoegen voor de extruder.",
+        reflection: "Welke 4 dingen ontbreken er nog om dit een ECHTE 3D-printer te maken? En welk onderdeel van het bovenstaande systeem zou je het meest verbazen dat het in elke 3D-printer ter wereld op deze manier werkt?",
+        optionalCodeTitle: "Theorie: hoe Bresenham diagonalen vloeiend maakt",
+        optionalCode: `// In een ECHTE printer bewegen X en Y TEGELIJK voor een diagonaal.
+// Dat doe je met het Bresenham algoritme. Pseudo-code:
+
+void beweegLineair(long stappenX, long stappenY) {
+  long max = max(abs(stappenX), abs(stappenY));
+  long error = 0;
+
+  for (long i = 0; i < max; i++) {
+    // Doe altijd een stap op de 'lange' as
+    digitalWrite(stepPinX, HIGH);
+    delayMicroseconds(500);
+    digitalWrite(stepPinX, LOW);
+
+    // Op de 'korte' as: stap alleen als de error groot genoeg is
+    error += abs(stappenY);
+    if (error >= max) {
+      digitalWrite(stepPinY, HIGH);
+      delayMicroseconds(500);
+      digitalWrite(stepPinY, LOW);
+      error -= max;
+    }
+
+    delayMicroseconds(500);
+  }
+}
+
+// Hierdoor lijkt de beweging van afstand een rechte diagonaal,
+// terwijl de motoren in werkelijkheid getrapte stapjes maken.`
       }
     ]
   }

@@ -27,7 +27,8 @@ type ComponentType =
   | "soil"
   | "mq"
   | "rfid"
-  | "pump";
+  | "pump"
+  | "temp";
 
 type ColorKey = "teal" | "yellow" | "amber" | "blue" | "rose" | "violet" | "orange" | "slate" | "green";
 
@@ -133,6 +134,7 @@ function classifyName(name: string): ComponentType | null {
   if (n.includes("irrecv") || n.includes("ir_recv") || n.includes("ir_receive") || n.includes("irreceive")) return "ir_recv";
   if (n.includes("irled") || n.includes("ir_led") || n.includes("ir_send") || n.includes("irsend") || n.includes("ir_tx") || n.includes("irtx")) return "ir_led";
   if (n.includes("led")) return "led";
+  if (n.includes("temp") || n.includes("tmp36")) return "temp";
   if (n.includes("pot")) return "potmeter";
   if (n.includes("pir")) return "pir";
   if (n.includes("ldr")) return "ldr";
@@ -313,6 +315,9 @@ function buildDiagram(code: string): DiagramData {
       case "ir_led":
         signalRows.push({ from: label, resistance: "220Ω", to: "IR-LED + (anode, lange poot)", color: "rose", direction: "out" });
         break;
+      case "temp":
+        signalRows.push({ from: label, to: "TMP36 middelste pin (V_out)", color: "amber", direction: "in" });
+        break;
     }
   }
 
@@ -418,6 +423,10 @@ function buildDiagram(code: string): DiagramData {
         powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "Relais-module VCC (5V)", color: "rose" });
         powerRows.push({ arduinoPin: "Externe 5V (apart!)", componentPin: "Pomp + via Relais NO/COM", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Relais-module GND + pomp − (gemeenschappelijk)", color: "slate" });
+        break;
+      case "temp":
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "TMP36 linkerpin (+Vs)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "TMP36 rechterpin (GND)", color: "slate" });
         break;
     }
   }

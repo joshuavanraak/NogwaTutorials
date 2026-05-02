@@ -5479,6 +5479,635 @@ void loop() {
 }`;
 
 // ─────────────────────────────────────────────
+// BEGINNER-BATCH: 15 nieuwe instaptutorials (mei 2026)
+// ─────────────────────────────────────────────
+
+// 1. Knipperende LED ("Hello World")
+const blink_s1 = `int ledPin = 13;
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(ledPin, HIGH);   // LED aan
+  delay(1000);                  // 1000 ms = 1 seconde wachten
+  digitalWrite(ledPin, LOW);    // LED uit
+  delay(1000);
+}`;
+
+const blink_s2 = `int ledPin = 13;
+
+// Twee variabelen maken het patroon makkelijk te tweaken.
+int aanTijd = 100;     // hoe lang de LED brandt
+int uitTijd = 900;     // hoe lang de LED uit is
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(ledPin, HIGH);
+  delay(aanTijd);
+  digitalWrite(ledPin, LOW);
+  delay(uitTijd);
+}`;
+
+// 2. Drukknop bedient LED
+const knopled_s1 = `int knopPin = 2;
+int ledPin = 13;
+
+void setup() {
+  // INPUT_PULLUP: ingebouwde pull-up weerstand aan, zodat
+  // de pin standaard HIGH is en LOW wordt bij indrukken.
+  pinMode(knopPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  int waarde = digitalRead(knopPin);
+
+  if (waarde == LOW) {              // ingedrukt
+    digitalWrite(ledPin, HIGH);
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+}`;
+
+const knopled_s2 = `// Toggle: elke druk wisselt de LED tussen aan en uit.
+int knopPin = 2;
+int ledPin = 13;
+
+bool ledStatus = false;
+bool wasIngedrukt = false;
+
+void setup() {
+  pinMode(knopPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  bool nu = (digitalRead(knopPin) == LOW);
+
+  // Edge-detectie: alleen reageren op de overgang los → ingedrukt.
+  if (nu && !wasIngedrukt) {
+    ledStatus = !ledStatus;
+    digitalWrite(ledPin, ledStatus ? HIGH : LOW);
+  }
+
+  wasIngedrukt = nu;
+  delay(20);   // simpele debounce
+}`;
+
+// 3. LED faden met PWM
+const fade_s1 = `int ledPin = 9;   // moet een PWM-pin zijn (gemarkeerd met ~)
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+  analogWrite(ledPin, 64);   // 64 / 255 ≈ 25% helderheid
+}
+
+void loop() {
+  // De LED blijft op vaste 25%-helderheid - geen knipperen.
+}`;
+
+const fade_s2 = `int ledPin = 9;
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  // Helderheid omhoog: 0 → 255
+  for (int h = 0; h <= 255; h++) {
+    analogWrite(ledPin, h);
+    delay(8);
+  }
+  // Helderheid omlaag: 255 → 0
+  for (int h = 255; h >= 0; h--) {
+    analogWrite(ledPin, h);
+    delay(8);
+  }
+}`;
+
+// 4. RGB LED kleurmenging
+const rgb_s1 = `int rLedPin = 9;
+int gLedPin = 10;
+int bLedPin = 11;
+
+void setup() {
+  pinMode(rLedPin, OUTPUT);
+  pinMode(gLedPin, OUTPUT);
+  pinMode(bLedPin, OUTPUT);
+}
+
+void loop() {
+  // Volledig rood
+  analogWrite(rLedPin, 255);
+  analogWrite(gLedPin, 0);
+  analogWrite(bLedPin, 0);
+  delay(800);
+
+  // Volledig groen
+  analogWrite(rLedPin, 0);
+  analogWrite(gLedPin, 255);
+  analogWrite(bLedPin, 0);
+  delay(800);
+
+  // Volledig blauw
+  analogWrite(rLedPin, 0);
+  analogWrite(gLedPin, 0);
+  analogWrite(bLedPin, 255);
+  delay(800);
+}`;
+
+const rgb_s2 = `int rLedPin = 9;
+int gLedPin = 10;
+int bLedPin = 11;
+
+// Helper: alle drie de kanalen in één regel.
+void zetKleur(int r, int g, int b) {
+  analogWrite(rLedPin, r);
+  analogWrite(gLedPin, g);
+  analogWrite(bLedPin, b);
+}
+
+void setup() {
+  pinMode(rLedPin, OUTPUT);
+  pinMode(gLedPin, OUTPUT);
+  pinMode(bLedPin, OUTPUT);
+}
+
+void loop() {
+  zetKleur(255,   0, 128);   // roze
+  delay(700);
+  zetKleur(255, 165,   0);   // oranje
+  delay(700);
+  zetKleur(  0, 255, 255);   // cyaan
+  delay(700);
+  zetKleur(180,   0, 255);   // paars
+  delay(700);
+}`;
+
+const rgb_s3 = `int rLedPin = 9;
+int gLedPin = 10;
+int bLedPin = 11;
+
+void zetKleur(int r, int g, int b) {
+  analogWrite(rLedPin, r);
+  analogWrite(gLedPin, g);
+  analogWrite(bLedPin, b);
+}
+
+void setup() {
+  pinMode(rLedPin, OUTPUT);
+  pinMode(gLedPin, OUTPUT);
+  pinMode(bLedPin, OUTPUT);
+}
+
+void loop() {
+  // Vloeiend door het kleurenwiel: rood → groen → blauw → rood.
+  for (int i = 0; i <= 255; i++) {
+    zetKleur(255 - i, i, 0);
+    delay(8);
+  }
+  for (int i = 0; i <= 255; i++) {
+    zetKleur(0, 255 - i, i);
+    delay(8);
+  }
+  for (int i = 0; i <= 255; i++) {
+    zetKleur(i, 0, 255 - i);
+    delay(8);
+  }
+}`;
+
+// 5. Stoplicht
+const stop_s1 = `int rLedPin = 8;
+int oLedPin = 9;
+int gLedPin = 10;
+
+void setup() {
+  pinMode(rLedPin, OUTPUT);
+  pinMode(oLedPin, OUTPUT);
+  pinMode(gLedPin, OUTPUT);
+}
+
+void loop() {
+  // Rood: 4s
+  digitalWrite(rLedPin, HIGH);
+  digitalWrite(oLedPin, LOW);
+  digitalWrite(gLedPin, LOW);
+  delay(4000);
+
+  // Rood + oranje: 1s (klaarmaken om te rijden)
+  digitalWrite(oLedPin, HIGH);
+  delay(1000);
+
+  // Groen: 4s
+  digitalWrite(rLedPin, LOW);
+  digitalWrite(oLedPin, LOW);
+  digitalWrite(gLedPin, HIGH);
+  delay(4000);
+
+  // Oranje: 2s (klaarmaken om te stoppen)
+  digitalWrite(gLedPin, LOW);
+  digitalWrite(oLedPin, HIGH);
+  delay(2000);
+
+  digitalWrite(oLedPin, LOW);
+}`;
+
+const stop_s2 = `int rLedPin = 8;
+int oLedPin = 9;
+int gLedPin = 10;
+
+// Eén helper-functie ipv 9 digitalWrites per fase.
+void zetStoplicht(bool rood, bool oranje, bool groen) {
+  digitalWrite(rLedPin, rood   ? HIGH : LOW);
+  digitalWrite(oLedPin, oranje ? HIGH : LOW);
+  digitalWrite(gLedPin, groen  ? HIGH : LOW);
+}
+
+void setup() {
+  pinMode(rLedPin, OUTPUT);
+  pinMode(oLedPin, OUTPUT);
+  pinMode(gLedPin, OUTPUT);
+}
+
+void loop() {
+  zetStoplicht(true,  false, false);  delay(4000);   // rood
+  zetStoplicht(true,  true,  false);  delay(1000);   // rood+oranje
+  zetStoplicht(false, false, true );  delay(4000);   // groen
+  zetStoplicht(false, true,  false);  delay(2000);   // oranje
+}`;
+
+// 6. Morse SOS
+const morse_s1 = `int ledPin = 13;
+
+void puntje() {
+  digitalWrite(ledPin, HIGH);
+  delay(200);
+  digitalWrite(ledPin, LOW);
+  delay(200);
+}
+
+void streep() {
+  digitalWrite(ledPin, HIGH);
+  delay(600);
+  digitalWrite(ledPin, LOW);
+  delay(200);
+}
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  // S = ... (3x puntje)
+  puntje(); puntje(); puntje();
+  delay(400);                  // pauze tussen letters
+
+  // O = --- (3x streep)
+  streep(); streep(); streep();
+  delay(400);
+
+  // S = ...
+  puntje(); puntje(); puntje();
+  delay(2000);                 // lange pauze tussen woorden
+}`;
+
+const morse_s2 = `// SOS uit een tekst-string + mini Morse-tabel.
+int ledPin = 13;
+
+const int PUNT          = 200;
+const int STREEP        = 600;
+const int LETTER_PAUZE  = 400;
+const int WOORD_PAUZE   = 2000;
+
+void puntje() {
+  digitalWrite(ledPin, HIGH); delay(PUNT);
+  digitalWrite(ledPin, LOW);  delay(PUNT);
+}
+
+void streep() {
+  digitalWrite(ledPin, HIGH); delay(STREEP);
+  digitalWrite(ledPin, LOW);  delay(PUNT);
+}
+
+// Beperkt: alleen S en O (rest negeren).
+void zendLetter(char c) {
+  if (c == 'S' || c == 's') { puntje(); puntje(); puntje(); }
+  if (c == 'O' || c == 'o') { streep(); streep(); streep(); }
+  delay(LETTER_PAUZE);
+}
+
+void zendBericht(const char* tekst) {
+  for (int i = 0; tekst[i] != '\\0'; i++) {
+    if (tekst[i] == ' ') { delay(WOORD_PAUZE); continue; }
+    zendLetter(tekst[i]);
+  }
+}
+
+void setup() {
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  zendBericht("SOS");
+  delay(WOORD_PAUZE);
+}`;
+
+// 7. Knippersnelheid via potmeter
+const kpot_s1 = `int potPin = A0;
+int ledPin = 13;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+  int waarde = analogRead(potPin);
+  // Map de potmeter (0..1023) naar een wachttijd van 50..1000 ms.
+  int wachttijd = map(waarde, 0, 1023, 50, 1000);
+
+  Serial.print("Wachttijd: ");
+  Serial.print(wachttijd);
+  Serial.println(" ms");
+
+  digitalWrite(ledPin, HIGH);
+  delay(wachttijd);
+  digitalWrite(ledPin, LOW);
+  delay(wachttijd);
+}`;
+
+// 8. LED dimmer met twee knoppen
+const dim_s1 = `int knopOmhoogPin = 2;
+int knopOmlaagPin = 3;
+int ledPin = 9;
+
+int helderheid = 128;   // start halverwege
+
+void setup() {
+  pinMode(knopOmhoogPin, INPUT_PULLUP);
+  pinMode(knopOmlaagPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+  analogWrite(ledPin, helderheid);
+  Serial.begin(9600);
+}
+
+void loop() {
+  if (digitalRead(knopOmhoogPin) == LOW) helderheid += 5;
+  if (digitalRead(knopOmlaagPin) == LOW) helderheid -= 5;
+
+  // constrain() houdt de waarde tussen 0 en 255.
+  helderheid = constrain(helderheid, 0, 255);
+
+  analogWrite(ledPin, helderheid);
+  Serial.print("Helderheid: ");
+  Serial.println(helderheid);
+
+  delay(50);   // bepaalt hoe snel de helderheid loopt bij vasthouden
+}`;
+
+// 9. Buzzer-melodie
+const mel_s1 = `int buzzerPin = 8;
+
+void setup() {
+  // tone(pin, frequentie, duur_in_ms) speelt 1 toon.
+  tone(buzzerPin, 262, 300);  // C4
+  delay(350);
+  tone(buzzerPin, 330, 300);  // E4
+  delay(350);
+  tone(buzzerPin, 392, 300);  // G4
+  delay(350);
+  noTone(buzzerPin);
+}
+
+void loop() {
+  // De drie tonen klinken 1x in setup().
+}`;
+
+const mel_s2 = `int buzzerPin = 8;
+
+// Begin van Frère Jacques (Vader Jacob) - frequenties in Hz.
+int noten[] = {
+  262, 294, 330, 262,   // do re mi do
+  262, 294, 330, 262,   // do re mi do
+  330, 349, 392,        // mi fa sol
+  330, 349, 392         // mi fa sol
+};
+
+int duur[] = {
+  300, 300, 300, 300,
+  300, 300, 300, 300,
+  400, 400, 800,
+  400, 400, 800
+};
+
+int aantal = sizeof(noten) / sizeof(noten[0]);
+
+void setup() {
+  for (int i = 0; i < aantal; i++) {
+    tone(buzzerPin, noten[i], duur[i]);
+    delay(duur[i] + 50);   // 50 ms stilte tussen noten
+  }
+  noTone(buzzerPin);
+}
+
+void loop() { }`;
+
+// 10. Politie-sirene
+const sir_s1 = `int buzzerPin = 8;
+
+void setup() { }
+
+void loop() {
+  // Vloeiende sweep omhoog van 400 → 1200 Hz.
+  for (int f = 400; f <= 1200; f += 10) {
+    tone(buzzerPin, f);
+    delay(2);
+  }
+  // ...en weer omlaag.
+  for (int f = 1200; f >= 400; f -= 10) {
+    tone(buzzerPin, f);
+    delay(2);
+  }
+}`;
+
+const sir_s2 = `// Klassieke politie-sirene: 2 vaste tonen die snel wisselen.
+int buzzerPin = 8;
+
+void setup() { }
+
+void loop() {
+  tone(buzzerPin, 700);
+  delay(400);
+  tone(buzzerPin, 950);
+  delay(400);
+}`;
+
+// 11. Mini-piano met buzzer + 4 knoppen
+const piano_s1 = `int buzzerPin = 8;
+
+// 4 knoppen op pin 2..5 (andere pin van elke knop → GND).
+int knop1Pin = 2;
+int knop2Pin = 3;
+int knop3Pin = 4;
+int knop4Pin = 5;
+
+// 4 noten - C4, D4, E4, F4 (Hz).
+int noten[4]    = { 262, 294, 330, 349 };
+int knoppen[4]  = { 2, 3, 4, 5 };
+
+void setup() {
+  for (int i = 0; i < 4; i++) {
+    pinMode(knoppen[i], INPUT_PULLUP);
+  }
+}
+
+void loop() {
+  bool eenActief = false;
+
+  for (int i = 0; i < 4; i++) {
+    if (digitalRead(knoppen[i]) == LOW) {
+      tone(buzzerPin, noten[i]);
+      eenActief = true;
+      break;   // 1 toon tegelijk - laagste knop wint
+    }
+  }
+
+  if (!eenActief) noTone(buzzerPin);
+}`;
+
+// 12. Schemer-alarm (LDR + buzzer)
+const sa_s1 = `int ldrPin = A0;
+int buzzerPin = 8;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int licht = analogRead(ldrPin);
+  Serial.print("Licht: ");
+  Serial.println(licht);
+
+  if (licht < 300) {
+    // Te donker → alarm (880 Hz = de A boven middle C)
+    tone(buzzerPin, 880);
+  } else {
+    noTone(buzzerPin);
+  }
+
+  delay(100);
+}`;
+
+// 13. TMP36 thermometer
+const tmp_s1 = `int tempPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int ruwe = analogRead(tempPin);
+
+  // TMP36: 10 mV per °C, met 500 mV bij 0 °C.
+  // 1) ruwe waarde → spanning in volt (Arduino Uno: 0..5V → 0..1023)
+  // 2) spanning → graden Celsius
+  float spanning = ruwe * (5.0 / 1023.0);
+  float celsius  = (spanning - 0.5) * 100.0;
+
+  Serial.print("Temperatuur: ");
+  Serial.print(celsius, 1);
+  Serial.println(" °C");
+
+  delay(500);
+}`;
+
+// 14. TMP36 + 3 LED-zones (koud / normaal / warm)
+const tz_s1 = `int tempPin = A0;
+int blauwLedPin = 8;    // koud
+int groenLedPin = 9;    // normaal
+int roodLedPin  = 10;   // warm
+
+float leesCelsius() {
+  int ruwe = analogRead(tempPin);
+  float spanning = ruwe * (5.0 / 1023.0);
+  return (spanning - 0.5) * 100.0;
+}
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(blauwLedPin, OUTPUT);
+  pinMode(groenLedPin, OUTPUT);
+  pinMode(roodLedPin,  OUTPUT);
+}
+
+void loop() {
+  float c = leesCelsius();
+  Serial.print(c, 1); Serial.println(" °C");
+
+  // Eerst alle 3 uit, daarna alleen de juiste aan.
+  digitalWrite(blauwLedPin, LOW);
+  digitalWrite(groenLedPin, LOW);
+  digitalWrite(roodLedPin,  LOW);
+
+  if      (c < 18.0) digitalWrite(blauwLedPin, HIGH);
+  else if (c > 24.0) digitalWrite(roodLedPin,  HIGH);
+  else               digitalWrite(groenLedPin, HIGH);
+
+  delay(500);
+}`;
+
+// 15. Drukknop-teller met state change detection
+const teller_s1 = `int knopPin = 2;
+int teller = 0;
+
+void setup() {
+  pinMode(knopPin, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Druk op de knop. Elke druk telt op.");
+}
+
+void loop() {
+  if (digitalRead(knopPin) == LOW) {
+    teller++;
+    Serial.print("Teller: ");
+    Serial.println(teller);
+  }
+  delay(20);
+}
+// LET OP: dit telt 50 keer per seconde door zolang je de knop vasthoudt.
+// Stap 2 lost dat op met edge-detectie.`;
+
+const teller_s2 = `int knopPin = 2;
+int teller = 0;
+
+bool wasIngedrukt = false;
+
+void setup() {
+  pinMode(knopPin, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Druk op de knop. Elke druk telt 1x op.");
+}
+
+void loop() {
+  bool nu = (digitalRead(knopPin) == LOW);
+
+  // Edge-detectie: alleen tellen op de overgang los → ingedrukt.
+  if (nu && !wasIngedrukt) {
+    teller++;
+    Serial.print("Teller: ");
+    Serial.println(teller);
+  }
+
+  wasIngedrukt = nu;
+  delay(20);   // simpele debounce
+}`;
+
+// ─────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────
 
@@ -8242,5 +8871,576 @@ IrSender.sendSamsung(adres, commando, 0);
 IrSender.sendNECRaw(IrReceiver.decodedIRData.decodedRawData, 0);`
       }
     ]
-  }
+  },
+  // ─── BEGINNER-BATCH (mei 2026) ──────────────────────────────────────
+  {
+    id: "blink-led",
+    title: "Knipperende LED (Hello World)",
+    description: "De allereerste Arduino-tutorial: laat één LED knipperen. Leer hoe pinMode, digitalWrite en delay samen je hardware besturen.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een LED aansluiten op een Arduino en hem laten knipperen met code.",
+    materials: "Arduino Uno, breadboard, 1× LED, 1× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "blink-s1",
+        title: "Knipper 1× per seconde",
+        content: "Dit is de Hello World van Arduino. We gebruiken pin 13 omdat daar op de Uno al een ingebouwde LED op zit — handig om te testen zelfs zonder externe LED. setup() voeren we 1 keer uit (instellen dat pin 13 een uitgang is). loop() blijft steeds opnieuw lopen: aan, wachten, uit, wachten.",
+        diagram: true,
+        code: blink_s1,
+        legend: [
+          { term: "int ledPin = 13", desc: "We slaan het pinnummer op in een variabele zodat we het maar op één plek hoeven aan te passen." },
+          { term: "pinMode(ledPin, OUTPUT)", desc: "Stelt pin 13 in als uitgang. De Arduino gaat hier stroom naartoe sturen." },
+          { term: "digitalWrite(ledPin, HIGH)", desc: "Zet pin 13 op 5V → de LED gaat aan." },
+          { term: "delay(1000)", desc: "Wacht 1000 milliseconden = 1 seconde voordat de volgende regel wordt uitgevoerd." },
+        ],
+        assignment: "Upload de code en kijk of de ingebouwde LED naast pin 13 knippert. Sluit daarna een externe LED aan via een 220Ω weerstand.",
+        challenge: "Verander beide delays naar 200. Wat verandert er?",
+        reflection: "Wat zou er gebeuren als je de delay weglaat?",
+      },
+      {
+        id: "blink-s2",
+        title: "Patroon met variabelen",
+        content: "Door aanTijd en uitTijd in variabelen te zetten, kun je het knipperpatroon snel veranderen door alleen de getallen bovenaan aan te passen. Met aanTijd=100 en uitTijd=900 krijg je een korte flits per seconde — herkenbaar als 'hartslag' of waarschuwingslicht.",
+        code: blink_s2,
+        legend: [
+          { term: "int aanTijd = 100", desc: "Hoeveel ms de LED brandt per cyclus." },
+          { term: "int uitTijd = 900", desc: "Hoeveel ms de LED uit blijft. Samen vormen ze 1 seconde periode." },
+          { term: "delay(aanTijd)", desc: "Gebruik een variabele in plaats van een vast getal. Veranderen op één plek = werkt overal." },
+        ],
+        assignment: "Pas aanTijd en uitTijd aan zodat het lijkt op een hartslag (bijvoorbeeld 100 ms aan, dan 200 ms uit, lange pauze van 1000 ms).",
+        challenge: "Voeg een 2e LED toe op pin 12 die juist tegenovergesteld knippert (uit als de andere aan is).",
+        reflection: "Waarom is het handiger om variabelen te gebruiken in plaats van keer op keer 100 en 900 te typen?",
+      },
+    ],
+  },
+  {
+    id: "knop-led",
+    title: "Drukknop bedient LED",
+    description: "Lees een drukknop uit en laat hem een LED besturen. Leer over INPUT_PULLUP, digitalRead en het verschil tussen 'vasthouden' en 'toggle'.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een knop uitlezen en daarmee een LED aansturen, zowel bij vasthouden als met een toggle.",
+    materials: "Arduino Uno, breadboard, 1× drukknop, 1× LED, 1× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "knopled-s1",
+        title: "LED brandt zolang je de knop indrukt",
+        content: "We gebruiken INPUT_PULLUP zodat de knop met maar 2 draden werkt: één naar pin 2, de andere naar GND. De ingebouwde pull-up zorgt dat de pin standaard HIGH leest. Bij indrukken sluit de knop pin 2 kort met GND — daardoor leest de Arduino LOW.",
+        diagram: true,
+        code: knopled_s1,
+        legend: [
+          { term: "INPUT_PULLUP", desc: "Activeert de interne pull-up weerstand (~20kΩ) zodat de pin standaard HIGH is." },
+          { term: "digitalRead(knopPin)", desc: "Leest de digitale waarde van pin 2: HIGH (1) of LOW (0)." },
+          { term: "if (waarde == LOW)", desc: "Met INPUT_PULLUP betekent LOW dat de knop INGEDRUKT is." },
+        ],
+        assignment: "Sluit de knop aan met één pin op pin 2 en de andere op GND. Druk hem in en zie de LED reageren.",
+        challenge: "Vervang INPUT_PULLUP door INPUT en kijk wat er gebeurt zonder externe weerstand. (Tip: de LED zal grillig reageren — zonder pull-up of pull-down 'zweeft' de pin.)",
+        reflection: "Waarom werken alle moderne computertoetsenborden ook met een vorm van pull-up?",
+      },
+      {
+        id: "knopled-s2",
+        title: "Toggle: indrukken wisselt aan/uit",
+        content: "Een toggle reageert pas op het MOMENT van indrukken, niet zolang je de knop vasthoudt. Daarvoor onthouden we in wasIngedrukt of de knop vorige loop al ingedrukt was. Alleen op de overgang los → ingedrukt wisselen we de LED-status. Dit heet edge-detectie.",
+        code: knopled_s2,
+        legend: [
+          { term: "bool ledStatus = false", desc: "Onthoudt of de LED nu aan of uit moet zijn. Wisselt elke geldige knopdruk." },
+          { term: "bool wasIngedrukt", desc: "Onthoudt of de knop vorige loop ingedrukt was, voor edge-detectie." },
+          { term: "ledStatus = !ledStatus", desc: "De ! operator inverteert: true wordt false en omgekeerd." },
+          { term: "delay(20)", desc: "Simpele debounce — wacht even zodat de knop niet 50× per seconde 'wiebelt'." },
+        ],
+        assignment: "Upload en test: één keer drukken → LED aan, opnieuw drukken → LED uit.",
+        challenge: "Voeg een tweede knop toe (bijv. pin 3) die de LED dim-pulserend laat knipperen.",
+        reflection: "Waarom is edge-detectie belangrijk voor knoppen die veel functies tegelijk moeten kunnen aansturen?",
+      },
+    ],
+  },
+  {
+    id: "led-fade",
+    title: "LED faden met PWM",
+    description: "Laat een LED langzaam helderder en zachter worden met analogWrite. Leer over PWM-pinnen en for-loops.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een LED traploos dimmen met PWM en de helderheid in een for-loop animeren.",
+    materials: "Arduino Uno, breadboard, 1× LED, 1× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "fade-s1",
+        title: "Vaste helderheid met analogWrite",
+        content: "analogWrite() schrijft geen echte analoge spanning, maar een snel knipperend signaal (PWM). Hoe vaker de pin HIGH staat, hoe helderder de LED lijkt. De waarde gaat van 0 (uit) tot 255 (vol). Belangrijk: dit werkt alleen op pinnen met een ~ ervoor (op de Uno: 3, 5, 6, 9, 10, 11).",
+        diagram: true,
+        code: fade_s1,
+        legend: [
+          { term: "PWM-pin (~)", desc: "Pin die snel kan schakelen tussen HIGH en LOW. Op de Uno gemarkeerd met een tilde (~)." },
+          { term: "analogWrite(ledPin, 64)", desc: "Stuurt een PWM-signaal van waarde 64/255 ≈ 25% duty cycle." },
+          { term: "0..255", desc: "Bereik van analogWrite. 0 = altijd LOW (uit), 255 = altijd HIGH (vol aan)." },
+        ],
+        assignment: "Probeer waarden 0, 50, 128, 200, 255. Kun je het verschil zien tussen 200 en 255?",
+        challenge: "Probeer analogWrite op pin 7 — werkt dat? Waarom (niet)?",
+        reflection: "Waarom kunnen we niet écht een continue spanning maken met digitalWrite alleen?",
+      },
+      {
+        id: "fade-s2",
+        title: "Zachtjes faden in/out",
+        content: "Met twee for-loops (eerst van 0 → 255, daarna terug van 255 → 0) ontstaat een zacht ademend effect. De delay(8) bepaalt hoe snel het fade-effect loopt — kleinere waarden zijn sneller. Leuk voor sfeerverlichting of een 'sleep'-indicator op een apparaat.",
+        code: fade_s2,
+        legend: [
+          { term: "for (int h = 0; h <= 255; h++)", desc: "Loopt h van 0 tot en met 255, één per stap." },
+          { term: "h--", desc: "h-- is hetzelfde als h = h - 1. Verlaag h met 1." },
+          { term: "delay(8)", desc: "Hoe groter de delay, hoe trager de fade. 8 ms × 256 stappen ≈ 2 sec per richting." },
+        ],
+        assignment: "Verander delay(8) eerst in 1 en daarna in 30. Hoe verandert het effect?",
+        challenge: "Maak een 'hartslag' patroon: snel naar vol, langzaam terug naar uit, korte pauze, herhaal.",
+        reflection: "Waarom werkt dit alleen op een PWM-pin en niet op pin 13?",
+      },
+    ],
+  },
+  {
+    id: "rgb-led-kleuren",
+    title: "RGB LED kleuren mengen",
+    description: "Maak elke gewenste kleur met een RGB LED door rood, groen en blauw los aan te sturen. Leer over kleurmenging en helper-functies.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een RGB LED aansluiten en elke kleur maken door drie PWM-kanalen te combineren.",
+    materials: "Arduino Uno, breadboard, 1× RGB LED (gemeenschappelijke kathode), 3× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "rgb-s1",
+        title: "Drie kanalen: rood, groen, blauw",
+        content: "Een RGB LED is eigenlijk drie LEDs in één behuizing, met één gemeenschappelijke pin (meestal de kathode → GND). Door de drie andere pinnen op aparte PWM-uitgangen aan te sluiten, kun je elk kanaal apart helderder of zachter maken. Combinaties leveren alle kleuren op.",
+        diagram: true,
+        code: rgb_s1,
+        legend: [
+          { term: "rLedPin = 9", desc: "Rood-kanaal op PWM-pin 9. Een 220Ω weerstand zit ertussen om de LED te beschermen." },
+          { term: "analogWrite(rLedPin, 255)", desc: "Vol rood = waarde 255. Andere kanalen op 0." },
+          { term: "Gemeenschappelijke kathode", desc: "De langste poot van een common-cathode RGB LED gaat naar GND." },
+        ],
+        assignment: "Sluit aan en upload. Verschijnen er 3 verschillende kleuren? Zo niet, controleer welk type RGB LED je hebt (common cathode vs anode).",
+        challenge: "Heb je een common-anode versie? Verbind de gemeenschappelijke pin dan met 5V en draai de waarden om: 255 = uit, 0 = vol aan.",
+        reflection: "Waarom hebben we precies 3 kleuren nodig om alle kleuren te maken?",
+      },
+      {
+        id: "rgb-s2",
+        title: "Eigen kleuren maken met een helper",
+        content: "Drie analogWrite-regels per kleur is veel typewerk. Met een helper-functie zetKleur(r, g, b) wordt elke kleur één regel. Probeer eigen RGB-combinaties — websites zoals htmlcolorcodes.com geven je RGB-waarden voor elke kleur die je kunt bedenken.",
+        code: rgb_s2,
+        legend: [
+          { term: "void zetKleur(int r, int g, int b)", desc: "Zelf gemaakte functie die 3 getallen krijgt en de drie analogWrites doet." },
+          { term: "zetKleur(255, 165, 0)", desc: "Roept de functie aan met rood=255, groen=165, blauw=0 → oranje." },
+          { term: "Helper-functie", desc: "Een korte functie voor herhalend werk. Voorkomt copy/paste-fouten." },
+        ],
+        assignment: "Voeg minstens 4 eigen kleuren toe (bijvoorbeeld: lichtblauw, zacht roze, donkergroen, geel).",
+        challenge: "Maak een functie zetWit(int helderheid) die een wit met regelbare helderheid produceert.",
+        reflection: "Waarom is zetKleur(255,255,0) geel en niet bruin? Hoe gaat een echt scherm hiermee om?",
+      },
+      {
+        id: "rgb-s3",
+        title: "Vloeiende regenboog-overgang",
+        content: "Met drie for-loops achter elkaar maken we een rondgang door het kleurenwiel: rood → groen → blauw → rood. In elke loop verlagen we het ene kanaal terwijl we het andere verhogen. Het resultaat is een ademende kleurenshow.",
+        code: rgb_s3,
+        legend: [
+          { term: "zetKleur(255 - i, i, 0)", desc: "Eerste loop: rood gaat van 255 → 0, terwijl groen van 0 → 255 gaat. Resultaat: rood loopt over in groen." },
+          { term: "Drie achtereenvolgende loops", desc: "Elke loop overgang is 256 stappen × 8ms ≈ 2 sec. Hele cyclus duurt ~6 sec." },
+        ],
+        assignment: "Verander de delay naar 4 en daarna naar 30. Welk effect bevalt jou het beste?",
+        challenge: "Voeg een 4e loop toe die langzaam fade naar wit (alle 3 op 255) en weer terug.",
+        reflection: "Wat heeft dit gemeen met de RGB-pixels in een tv-scherm of telefoon?",
+      },
+    ],
+  },
+  {
+    id: "stoplicht",
+    title: "Stoplicht met 3 LEDs",
+    description: "Bouw een werkend stoplicht met rood, oranje en groen. Leer over sequenties met delay en hoe een helper-functie code overzichtelijk houdt.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een sequentie van LEDs aansturen die een echt stoplicht nabootst.",
+    materials: "Arduino Uno, breadboard, 1× rode LED, 1× oranje (gele) LED, 1× groene LED, 3× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "stop-s1",
+        title: "Sequentie met digitalWrite",
+        content: "Een stoplicht heeft 4 fases: rood → rood+oranje → groen → oranje. We schrijven elke fase uit met digitalWrite-regels en een delay daarna. Het werkt, maar wordt al snel onoverzichtelijk: in stap 2 maken we het korter.",
+        diagram: true,
+        code: stop_s1,
+        legend: [
+          { term: "rLedPin / oLedPin / gLedPin", desc: "Drie aparte LEDs op pin 8, 9 en 10. Naam met led erin → wiring-tool herkent ze als LED." },
+          { term: "delay(4000)", desc: "Hoe lang het rode licht brandt. 4000 ms = 4 seconden." },
+          { term: "Rood + oranje", desc: "In Nederland brandt voor groen even rood en oranje samen — zie sommige stoplichten op de weg." },
+        ],
+        assignment: "Upload en zie of de timing klopt. Pas alle delays aan zodat het stoplicht 2× zo snel werkt.",
+        challenge: "Voeg een 5e fase toe: knipperend oranje (5 keer aan/uit) net voordat groen ingaat.",
+        reflection: "Waarom hebben Nederlandse stoplichten 4 fases en bijvoorbeeld Amerikaanse maar 3?",
+      },
+      {
+        id: "stop-s2",
+        title: "Korter met een helper-functie",
+        content: "We maken een functie zetStoplicht(rood, oranje, groen) die 3 booleans krijgt en de juiste LEDs aanzet. Daarmee wordt elke fase 1 regel in plaats van 3 digitalWrites. Resultaat: korter, leesbaarder, en makkelijker om nieuwe fases toe te voegen.",
+        code: stop_s2,
+        legend: [
+          { term: "void zetStoplicht(bool ...)", desc: "Een eigen functie met 3 boolean-parameters. true = aan, false = uit." },
+          { term: "rood ? HIGH : LOW", desc: "Ternary operator: 'als rood true is, gebruik HIGH, anders LOW'." },
+          { term: "zetStoplicht(true, false, false)", desc: "Eén regel om de hele LED-status in te stellen." },
+        ],
+        assignment: "Vergelijk de twee versies: hoeveel regels code zat er in fase 'rood' in stap 1, en hoeveel in stap 2?",
+        challenge: "Voeg een knipperend-rood-fase toe (5x snel knipperen) als 'avondstand'.",
+        reflection: "Waarom is een helper-functie handig zodra je dezelfde set acties op meerdere plekken nodig hebt?",
+      },
+    ],
+  },
+  {
+    id: "morse-sos",
+    title: "SOS in morse-code",
+    description: "Laat een LED 'SOS' knipperen in morse-code. Leer over zelf gemaakte functies, constanten en arrays van karakters.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan eigen functies maken (puntje, streep) en daarmee een herkenbaar morse-patroon knipperen.",
+    materials: "Arduino Uno, breadboard, 1× LED, 1× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "morse-s1",
+        title: "Hardgecodeerd: puntje() en streep()",
+        content: "We maken twee functies: puntje() (kort knipper) en streep() (lang knipper). Daarmee wordt het morse-patroon leesbaar code: 'S' is gewoon puntje() puntje() puntje(). Tussen letters wachten we wat langer, tussen woorden nóg langer — anders kun je niet horen waar de letters ophouden.",
+        diagram: true,
+        code: morse_s1,
+        legend: [
+          { term: "void puntje()", desc: "Eigen functie zonder return-waarde (void). Knippert 200ms aan, 200ms uit." },
+          { term: "void streep()", desc: "Drievoudig zo lang als een puntje. In morse is 1 streep = 3 puntjes." },
+          { term: "delay(400)", desc: "Pauze tussen letters: 2 puntjes lang = 400 ms." },
+          { term: "delay(2000)", desc: "Pauze tussen woorden: extra lang." },
+        ],
+        assignment: "Tel hardop mee: pun-pun-pun (S), strr-strr-strr (O), pun-pun-pun (S). Komt het overeen met wat je ziet?",
+        challenge: "Voeg een H toe (4× puntje) na de tweede S, zodat je 'SOSH' knippert.",
+        reflection: "Waarom kozen marconisten in WW2 voor exact deze ratios (1 streep = 3 puntjes)?",
+      },
+      {
+        id: "morse-s2",
+        title: "Generiek: morse-code uit een tekst",
+        content: "Nu maken we het slimmer: zendBericht('SOS') loopt door de string heen en stuurt elke letter door naar zendLetter(). Voor nu kennen we alleen S en O — andere letters worden genegeerd. Met deze structuur kun je de tabel later eenvoudig uitbreiden naar het hele alfabet.",
+        code: morse_s2,
+        legend: [
+          { term: "const char* tekst", desc: "Verwijzing naar een tekst (string). C-style: een array van karakters die eindigt met '\\0'." },
+          { term: "for (...; tekst[i] != '\\0'; ...)", desc: "Loopt door de tekst tot het 'eind-teken' \\0 wordt bereikt." },
+          { term: "zendLetter(c)", desc: "Eigen functie die een karakter omzet naar puntjes en strepen." },
+          { term: "PUNT = 200", desc: "const = constante. Kan na declaratie niet meer veranderen — handig om 'magic numbers' te vermijden." },
+        ],
+        assignment: "Pas zendBericht('SOS') aan naar zendBericht('OS SOS') en kijk hoe de woordpauze werkt.",
+        challenge: "Voeg ondersteuning toe voor de letters E (1× puntje) en T (1× streep). Knipper daarna 'TESS'.",
+        reflection: "Waarom kozen ze voor S = ... en O = --- (waarschijnlijk de twee meest herkenbare patronen)?",
+      },
+    ],
+  },
+  {
+    id: "knipper-potmeter",
+    title: "Knippersnelheid via potmeter",
+    description: "Combineer een potmeter en een LED zodat je live de knippersnelheid kunt regelen. Leer over map() en variabele delays.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een sensor uitlezen en die waarde gebruiken om het gedrag van mijn programma realtime aan te passen.",
+    materials: "Arduino Uno, breadboard, 1× potmeter (10kΩ), 1× LED, 1× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis", "sensor"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "kpot-s1",
+        title: "Potmeter regelt de delay",
+        content: "We lezen elke loop opnieuw de potmeter uit (waarde 0..1023) en zetten dat met map() om naar een delay tussen 50 en 1000 ms. Hoe verder de potmeter rechts, hoe trager het knipperen. De Serial Monitor laat zien welke wachttijd op dit moment actief is — handig om te begrijpen wat er gebeurt.",
+        diagram: true,
+        code: kpot_s1,
+        legend: [
+          { term: "analogRead(potPin)", desc: "Leest de potmeter als waarde van 0 (helemaal links) tot 1023 (helemaal rechts)." },
+          { term: "map(waarde, 0, 1023, 50, 1000)", desc: "Schaalt het bereik 0..1023 om naar 50..1000. Lineair, dus halverwege ≈ 525 ms." },
+          { term: "Serial.print/println", desc: "Schrijft de live wachttijd naar de Serial Monitor (Tools → Serial Monitor)." },
+        ],
+        assignment: "Open de Serial Monitor (9600 baud). Draai de potmeter en kijk hoe de wachttijd live verandert.",
+        challenge: "Maak het bereik dynamischer: laat de delay van 10 tot 2000 lopen, zodat je van zeer snel tot zeer traag kunt regelen.",
+        reflection: "Waar gebruik je in het dagelijks leven een potmeter (volume, dimmer, gas-pedaal)?",
+      },
+    ],
+  },
+  {
+    id: "dimmer-twee-knoppen",
+    title: "LED dimmer met twee knoppen",
+    description: "Regel de helderheid van een LED met een 'helderder' en 'zachter' knop. Leer constrain() en hoe je een waarde binnen veilige grenzen houdt.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een variabele aanpassen met knoppen en die binnen een geldig bereik houden met constrain().",
+    materials: "Arduino Uno, breadboard, 2× drukknop, 1× LED, 1× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "dim-s1",
+        title: "Twee knoppen + één variabele",
+        content: "We bewaren de helderheid in een variabele 'helderheid'. Bij elke loop checken we beide knoppen: + knop → +5, − knop → −5. Daarna gebruiken we constrain() om te zorgen dat de waarde nooit onder 0 of boven 255 komt. analogWrite() schrijft de nieuwe waarde naar de LED. delay(50) bepaalt hoe snel de waarde loopt zolang je de knop vasthoudt.",
+        diagram: true,
+        code: dim_s1,
+        legend: [
+          { term: "knopOmhoogPin / knopOmlaagPin", desc: "Twee aparte knoppen op pin 2 en 3. Andere kant van elke knop → GND." },
+          { term: "helderheid += 5", desc: "Verhoog helderheid met 5. Korter dan 'helderheid = helderheid + 5'." },
+          { term: "constrain(helderheid, 0, 255)", desc: "Plak de waarde binnen 0..255. Zonder dit zou de waarde uit de PWM-range kunnen lopen." },
+          { term: "delay(50)", desc: "Hoe sneller dit getal, hoe sneller de helderheid loopt bij vasthouden." },
+        ],
+        assignment: "Test: ingedrukt houden moet de LED langzaam helderder of zachter laten worden.",
+        challenge: "Voeg een 3e knop toe die de helderheid direct op 0 of 128 zet (reset/half).",
+        reflection: "Waarom is constrain() belangrijk? Wat zou er kunnen gebeuren zonder?",
+      },
+    ],
+  },
+  {
+    id: "buzzer-melodie",
+    title: "Melodie spelen met buzzer",
+    description: "Speel een herkenbaar melodietje (Vader Jacob) met een passieve buzzer. Leer over tone(), frequenties en arrays.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan tonen en een melodie spelen met de tone()-functie en arrays.",
+    materials: "Arduino Uno, breadboard, 1× passieve buzzer, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "mel-s1",
+        title: "Drie tonen achter elkaar",
+        content: "tone() speelt een toon op een buzzer. Het neemt 3 waarden: pin, frequentie in Hz, en duur in ms. Lage frequentie = lage toon, hoge frequentie = hoge toon. Een C4 (de C onder middle C) is 262 Hz, E4 is 330 Hz, G4 is 392 Hz — samen vormen ze een C-akkoord.",
+        diagram: true,
+        code: mel_s1,
+        legend: [
+          { term: "tone(pin, freq, duur)", desc: "Speelt een toon op pin met frequentie 'freq' Hz, gedurende 'duur' ms." },
+          { term: "262 Hz = C4", desc: "Frequentie van de noot C op de 4e octaaf." },
+          { term: "noTone(pin)", desc: "Stopt elke toon op die pin." },
+          { term: "Passieve vs actieve buzzer", desc: "tone() werkt op PASSIEVE buzzers. Actieve buzzers piepen altijd op één vaste toon." },
+        ],
+        assignment: "Verander de drie frequenties naar 440, 494 en 523 (A4, B4, C5). Hoe klinkt dit?",
+        challenge: "Maak een 'pieper' met tone(buzzerPin, 4000, 100) en delay(200) — herhalend.",
+        reflection: "Wat is het verschil tussen een passieve en een actieve buzzer in jouw kit?",
+      },
+      {
+        id: "mel-s2",
+        title: "Een hele melodie met arrays",
+        content: "Voor een melodie hebben we 2 lijsten nodig: één met de noten (frequenties) en één met de duur per noot. We loopen er met een for-loop doorheen en spelen elke noot met tone(). De delay direct erna is iets langer dan de toon zelf, zodat noten elkaar niet overlappen.",
+        code: mel_s2,
+        legend: [
+          { term: "int noten[] = { ... }", desc: "Array met de frequenties van elke noot. Compiler bepaalt de lengte uit het aantal items." },
+          { term: "int duur[] = { ... }", desc: "Array met de duur in ms per noot. Moet exact dezelfde lengte hebben als noten[]." },
+          { term: "sizeof(noten) / sizeof(noten[0])", desc: "Truc om de array-lengte te berekenen, zonder hem hardcoded mee te geven." },
+          { term: "delay(duur[i] + 50)", desc: "Wacht iets langer dan de noot duurt → kleine pauze tussen noten." },
+        ],
+        assignment: "Probeer de eerste 8 noten van 'Twinkle, twinkle, little star' te coderen (C C G G A A G — F F E E D D C).",
+        challenge: "Voeg een 'tempo' variabele toe: zet alle duur-waarden gedeeld door of vermenigvuldigd met tempo.",
+        reflection: "Waarom hebben we precies dezelfde lengte bij beide arrays nodig? Wat zou er gebeuren als ze verschillen?",
+      },
+    ],
+  },
+  {
+    id: "politie-sirene",
+    title: "Politie-sirene met buzzer",
+    description: "Maak twee sirene-effecten: een vloeiende sweep en een klassieke twee-tonen sirene. Leer over for-loops met variabele frequentie.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan tone() in een for-loop gebruiken om frequentie-effecten te maken.",
+    materials: "Arduino Uno, breadboard, 1× passieve buzzer, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "sir-s1",
+        title: "Sweep: vloeiend omhoog en omlaag",
+        content: "Met een for-loop laten we de frequentie geleidelijk veranderen van 400 → 1200 Hz en weer terug. Een delay van slechts 2 ms maakt de overgang vloeiend. Het resultaat is een 'sirenenachtig' geluid zoals oude ambulances en politiewagens.",
+        diagram: true,
+        code: sir_s1,
+        legend: [
+          { term: "for (int f = 400; f <= 1200; f += 10)", desc: "Loopt frequentie 'f' van 400 naar 1200 in stappen van 10 Hz." },
+          { term: "tone(buzzerPin, f)", desc: "Zonder duur-parameter blijft de toon klinken tot de volgende tone() of noTone()." },
+          { term: "delay(2)", desc: "Hoe kleiner, hoe vloeiender de overgang. 2 ms × 80 stappen ≈ 160 ms per richting." },
+        ],
+        assignment: "Probeer 'f += 1' (kleinere stappen) en 'f += 50' (grote stappen). Wat klinkt het beste?",
+        challenge: "Maak een 'doppler-effect': eerst snel omhoog, dan langzaam omlaag (alsof iemand voorbij rijdt).",
+        reflection: "Waarom klinkt deze sirene anders dan moderne politie-sirenes in Nederland?",
+      },
+      {
+        id: "sir-s2",
+        title: "Twee-tonen wisseling",
+        content: "Een tweede klassiek geluid is de 'tweetoner': twee vaste frequenties die snel wisselen. Geen for-loop nodig — alleen tone() + delay() + tone() + delay(). Pas de delays en frequenties aan om je eigen variant te bouwen.",
+        code: sir_s2,
+        legend: [
+          { term: "tone(buzzerPin, 700)", desc: "700 Hz blijft klinken tot de volgende tone()." },
+          { term: "delay(400)", desc: "Hoe lang elke toon duurt. Klein = snel wisselen, groot = langzaam." },
+        ],
+        assignment: "Probeer 600 + 800 (zachter), of 1000 + 1500 (scherper). Welke past beter bij ambulance vs politie?",
+        challenge: "Combineer beide programma's: speel de twee-toner 4 keer, dan een sweep, dan opnieuw.",
+        reflection: "Waarom kiezen hulpverleners voor zulke specifieke geluiden? (Hint: hoor je ze in lawaai?)",
+      },
+    ],
+  },
+  {
+    id: "piano-buzzer",
+    title: "Mini-piano met buzzer + 4 knoppen",
+    description: "Bouw een speelbare mini-piano: elke knop is een aparte noot. Leer hoe je meerdere knoppen tegelijk uitleest in een for-loop.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan meerdere knoppen tegelijk uitlezen en op basis daarvan verschillende geluiden afspelen.",
+    materials: "Arduino Uno, breadboard, 4× drukknop, 1× passieve buzzer, draden.",
+    board: "arduino",
+    tags: ["basis", "game"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "piano-s1",
+        title: "Vier knoppen, vier noten",
+        content: "Elke knop staat voor een noot: knop 1 = C4, knop 2 = D4, knop 3 = E4, knop 4 = F4 — de eerste vier noten van een toonladder. Met een for-loop checken we alle vier de knoppen. Wordt er één ingedrukt → speel de bijbehorende noot. Geen knop ingedrukt → noTone() (stilte).",
+        diagram: true,
+        code: piano_s1,
+        legend: [
+          { term: "int noten[4] = { 262, 294, 330, 349 }", desc: "Array met C4, D4, E4, F4 in Hz." },
+          { term: "int knoppen[4] = { 2, 3, 4, 5 }", desc: "Array met de pinnummers van de 4 knoppen." },
+          { term: "for-loop met break", desc: "Stopt bij de eerste ingedrukte knop. Als knop 1 EN 4 tegelijk worden ingedrukt, wint knop 1." },
+          { term: "noTone(buzzerPin)", desc: "Stop elke toon zodra geen enkele knop wordt ingedrukt." },
+        ],
+        assignment: "Druk de knoppen één voor één in en speel een eenvoudige melodie (bijv. 1, 2, 3, 4, 4, 3, 2, 1).",
+        challenge: "Voeg een 5e knop toe (pin 6) met G4 (392 Hz). Pas zowel de array's als de for-loop limiet aan.",
+        reflection: "Waarom 'wint' de eerste knop in de for-loop? Hoe zou je 'meerdere noten tegelijk' kunnen aanpakken? (Hint: niet met tone() — die speelt maar 1 toon tegelijk per pin.)",
+      },
+    ],
+  },
+  {
+    id: "schemer-alarm",
+    title: "Schemer-alarm (LDR + buzzer)",
+    description: "Laat een buzzer alarm slaan zodra het te donker wordt. Leer hoe je twee componenten combineert tot een werkend gadget.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een lichtsensor uitlezen en daarmee automatisch een buzzer aansturen.",
+    materials: "Arduino Uno, breadboard, 1× LDR, 1× 10kΩ weerstand, 1× passieve buzzer, draden.",
+    board: "arduino",
+    tags: ["sensor"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "sa-s1",
+        title: "Donker → alarm aan, licht → stilte",
+        content: "We meten elke 100 ms hoe veel licht er op de LDR valt. Onder de drempel (300) gaat de buzzer aan op 880 Hz, daarboven blijft het stil. Open de Serial Monitor om live de lichtwaarde te zien — handig om te bepalen welke drempelwaarde past bij jouw kamer.",
+        diagram: true,
+        code: sa_s1,
+        legend: [
+          { term: "ldrPin = A0", desc: "LDR aangesloten op analoge pin A0 via een 10kΩ spanningsdeler naar GND." },
+          { term: "if (licht < 300)", desc: "Drempelwaarde — alles eronder = 'donker'. Pas dit aan voor jouw lichtomstandigheden." },
+          { term: "tone(buzzerPin, 880)", desc: "880 Hz = de noot A boven middle C. Klinkt scherp en doordringend." },
+          { term: "noTone(buzzerPin)", desc: "Stopt het alarm zodra het weer licht wordt." },
+        ],
+        assignment: "Houd je hand boven de LDR. Begint de buzzer? Pas de drempel aan zodat het alarm bij jouw verlichting precies goed afgaat.",
+        challenge: "Voeg een LED toe die ook aanslaat bij donker — visueel + hoorbaar alarm tegelijk.",
+        reflection: "Waar zou je dit kunnen gebruiken in het echt? (denk aan gangkast, koelkast-deur, kluis...)",
+      },
+    ],
+  },
+  {
+    id: "tmp36-thermometer",
+    title: "Thermometer met TMP36",
+    description: "Lees de temperatuur uit met een TMP36-sensor en toon hem in graden Celsius via de Serial Monitor.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een analoge temperatuursensor uitlezen en de ruwe waarde omzetten naar °C.",
+    materials: "Arduino Uno, breadboard, 1× TMP36 sensor, draden.",
+    board: "arduino",
+    tags: ["sensor"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "tmp-s1",
+        title: "Ruwe waarde → graden Celsius",
+        content: "De TMP36 geeft een spanning af die direct de temperatuur weergeeft: 10 mV per °C, met 500 mV bij 0 °C. Dus bij 25 °C krijgen we 0,75 V. analogRead() geeft een waarde 0..1023 voor 0..5V. Daarom: spanning = ruwe × (5/1023), en celsius = (spanning − 0,5) × 100. Opletten: TMP36 heeft 3 pinnen — links naar 5V, midden naar A0, rechts naar GND. Verkeerd om aansluiten = de sensor wordt heet en gaat kapot!",
+        diagram: true,
+        code: tmp_s1,
+        legend: [
+          { term: "tempPin = A0", desc: "TMP36 middelste pin → analoge pin A0." },
+          { term: "ruwe * (5.0 / 1023.0)", desc: "Reken de digitale waarde terug naar volt. Let op: gebruik kommagetallen (5.0) voor exacte deling." },
+          { term: "(spanning - 0.5) * 100.0", desc: "TMP36 formule: trek 0,5V offset af, en vermenigvuldig met 100 om mV-per-°C terug te rekenen." },
+          { term: "Serial.print(celsius, 1)", desc: "Print celsius met 1 decimaal achter de komma." },
+        ],
+        assignment: "Open de Serial Monitor (9600 baud). Klopt de waarde grofweg met de kamertemperatuur? Houd je vinger erop — de waarde moet stijgen.",
+        challenge: "Voeg een tweede regel toe die de temperatuur ook in Fahrenheit toont: F = C × 1,8 + 32.",
+        reflection: "Waarom heeft de TMP36 een offset van 0,5V bij 0°C? (Hint: zodat hij ook negatieve temperaturen kan meten zonder negatieve spanning.)",
+      },
+    ],
+  },
+  {
+    id: "tmp36-led-zones",
+    title: "Temperatuur-LEDs (koud / normaal / warm)",
+    description: "Combineer de TMP36 met 3 LEDs die aangeven of het koud, normaal of warm is. Leer over if/else if en het opdelen van een bereik in zones.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan een sensorwaarde opdelen in drie zones en daarvoor het juiste signaal geven.",
+    materials: "Arduino Uno, breadboard, 1× TMP36 sensor, 3× LED (blauw, groen, rood), 3× 220Ω weerstand, draden.",
+    board: "arduino",
+    tags: ["sensor"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "tz-s1",
+        title: "Drie zones met if/else if",
+        content: "Onder 18 °C: blauwe LED (koud). Tussen 18 en 24: groene LED (normaal). Boven 24: rode LED (warm). We doen eerst alle drie de LEDs uit, en zetten daarna alleen de juiste aan — zo voorkom je dat er meerdere tegelijk branden bij snelle wisselingen. We hergebruiken de leesCelsius() helper-functie zodat de loop kort en leesbaar blijft.",
+        diagram: true,
+        code: tz_s1,
+        legend: [
+          { term: "float leesCelsius()", desc: "Helper-functie die de hele TMP36-conversie doet en de temperatuur als float teruggeeft." },
+          { term: "Eerst alles uit, dan juiste aan", desc: "Voorkomt dat oude LEDs blijven hangen tijdens een wissel." },
+          { term: "if / else if / else", desc: "Splitst het bereik in drie elkaar uitsluitende zones. Slechts één regel klopt tegelijk." },
+          { term: "blauwLedPin, groenLedPin, roodLedPin", desc: "Drie aparte LEDs op pin 8, 9 en 10. Wiring-tool herkent alle drie als LED." },
+        ],
+        assignment: "Test door de sensor in je hand op te warmen — moet de blauwe LED → groene LED → rode LED-overgang volgen.",
+        challenge: "Voeg een vierde LED (geel, pin 11) toe voor 'heel warm' (>30 °C) — pas de if/else uit naar 4 zones.",
+        reflection: "Waarom is het zinvol om óók de huidige temperatuur naar Serial te printen, ook al hebben we de LEDs?",
+      },
+    ],
+  },
+  {
+    id: "drukknop-teller",
+    title: "Drukknop-teller (state change)",
+    description: "Tel hoe vaak een knop is ingedrukt. Leer over edge-detectie: het verschil tussen 'knop ingedrukt' en 'knop net ingedrukt'.",
+    difficulty: "Beginner",
+    learningGoal: "Ik kan edge-detectie implementeren zodat een knop precies één keer telt per druk.",
+    materials: "Arduino Uno, breadboard, 1× drukknop, draden.",
+    board: "arduino",
+    tags: ["basis"],
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "teller-s1",
+        title: "Naïeve versie (telt veel te vaak)",
+        content: "We tellen elke loop dat de knop LOW (ingedrukt) is. Probleem: de loop draait honderden keren per seconde. Eén knopdruk telt dus al snel 50 of 100 keer op. Open de Serial Monitor en zie het probleem live. In stap 2 lossen we dit op met edge-detectie.",
+        diagram: true,
+        code: teller_s1,
+        legend: [
+          { term: "if (digitalRead(knopPin) == LOW)", desc: "True zolang de knop INGEDRUKT is. Maar dat is meestal vele loops achter elkaar." },
+          { term: "teller++", desc: "Verhoog teller met 1. Wordt nu veel te vaak uitgevoerd." },
+          { term: "delay(20)", desc: "Beperkt de telsnelheid een beetje, maar lost het echte probleem niet op." },
+        ],
+        assignment: "Upload, open de Serial Monitor (9600 baud), druk één keer kort op de knop. Hoeveel telt-ie op?",
+        challenge: "Probeer de delay aan te passen. Helpt een grotere delay? Wat is het nadeel?",
+        reflection: "Waarom is dit gedrag in echte apparaten ongewenst? (Denk aan een liftknop die je verdiep 10 keer indrukt...)",
+      },
+      {
+        id: "teller-s2",
+        title: "Edge-detectie: precies 1 keer per druk",
+        content: "We onthouden in wasIngedrukt of de knop vorige loop al ingedrukt was. Alleen als de knop nu ingedrukt is én vorige loop niet → tel op. Dit heet 'edge-detectie' (de overgang los → ingedrukt). Met dit patroon telt elke fysieke druk precies 1 keer, ongeacht hoe lang je de knop vasthoudt.",
+        code: teller_s2,
+        legend: [
+          { term: "bool wasIngedrukt = false", desc: "Onthoudt de status van vorige loop. Begint op 'niet ingedrukt'." },
+          { term: "if (nu && !wasIngedrukt)", desc: "Edge: nu ingedrukt EN vorige loop niet → echte druk." },
+          { term: "wasIngedrukt = nu", desc: "Onthoud status voor de volgende loop. Cruciaal — vergeten = teller wordt nooit meer wakker." },
+          { term: "delay(20)", desc: "Korte debounce zodat een mechanische 'wiebel' bij contact niet als 5 drukken telt." },
+        ],
+        assignment: "Test: 10 keer drukken moet exact teller=10 opleveren, niet 50 of 200.",
+        challenge: "Voeg een tweede knop toe (pin 3) die de teller juist met 1 verlaagt (en niet onder 0 gaat).",
+        reflection: "Waar in echte apparaten ben je dit 'precies 1× per druk' patroon tegengekomen?",
+      },
+    ],
+  },
 ];

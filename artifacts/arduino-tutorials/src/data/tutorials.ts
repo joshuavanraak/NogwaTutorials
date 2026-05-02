@@ -4951,6 +4951,574 @@ void loop() {
 }`;
 
 // ─────────────────────────────────────────────
+// TUTORIAL 33: OLED-grafieken & mini-oscilloscoop
+// ─────────────────────────────────────────────
+
+const oled_s1 = `#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define BREEDTE 128
+#define HOOGTE  64
+
+// -1 = geen reset-pin, &Wire = standaard I2C-bus.
+Adafruit_SSD1306 display(BREEDTE, HOOGTE, &Wire, -1);
+
+void setup() {
+  Serial.begin(9600);
+
+  // 0x3C is het meest voorkomende I2C-adres voor 128x64 SSD1306.
+  // Sommige modules zijn 0x3D — als 'OLED niet gevonden' verschijnt: probeer 0x3D.
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED niet gevonden! Check VCC/GND/SDA/SCL en het adres.");
+    while (true) {}   // stop hier — verder gaan heeft geen zin
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.print("Hallo OLED!");
+  display.display();   // PAS NU komt de tekst echt op het scherm
+}
+
+void loop() {
+  // Niks — de tekst blijft staan.
+}`;
+
+const oled_s2 = `#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define BREEDTE 128
+#define HOOGTE  64
+Adafruit_SSD1306 display(BREEDTE, HOOGTE, &Wire, -1);
+
+void setup() {
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  // Titel bovenaan
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("Mini-scope");
+
+  // Y-as: vertikale lijn van (10, 10) naar (10, 63).
+  display.drawLine(10, 10, 10, 63, SSD1306_WHITE);
+  // X-as: horizontale lijn helemaal onderaan.
+  display.drawLine(10, 63, 127, 63, SSD1306_WHITE);
+
+  // Demo-data: een schuine lijn van linksonder naar rechtsboven.
+  display.drawLine(10, 60, 127, 12, SSD1306_WHITE);
+
+  // Labeltjes op de assen
+  display.setCursor(0, 8);
+  display.print("max");
+  display.setCursor(0, 56);
+  display.print("min");
+
+  display.display();
+}
+
+void loop() {}`;
+
+const oled_s3 = `#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define BREEDTE 128
+#define HOOGTE  64
+Adafruit_SSD1306 display(BREEDTE, HOOGTE, &Wire, -1);
+
+int potPin = A0;
+
+// We bewaren precies BREEDTE waarden — één per pixel-kolom.
+const int N = BREEDTE;
+int buffer[N];
+int schrijfIndex = 0;     // waar de VOLGENDE meting komt te staan
+
+void setup() {
+  Serial.begin(9600);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+
+  // Vul de buffer met nullen zodat de eerste schermen geen 'rommel' tonen.
+  for (int i = 0; i < N; i++) buffer[i] = 0;
+}
+
+void loop() {
+  // 1. Meet en zet op de huidige plek.
+  int waarde = analogRead(potPin);
+  buffer[schrijfIndex] = waarde;
+
+  // 2. Schuif de pointer één plek door — wrap rond met modulo.
+  //    Zo wordt de OUDSTE waarde altijd door de NIEUWSTE overschreven.
+  schrijfIndex = (schrijfIndex + 1) % N;
+
+  // Debug: laat zien dat schrijfIndex netjes rondloopt 0..127, 0..127, ...
+  Serial.print("Index: ");
+  Serial.print(schrijfIndex);
+  Serial.print("   meting: ");
+  Serial.println(waarde);
+
+  delay(50);   // ~20 metingen per seconde
+}`;
+
+const oled_s4 = `#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define BREEDTE 128
+#define HOOGTE  64
+Adafruit_SSD1306 display(BREEDTE, HOOGTE, &Wire, -1);
+
+int potPin = A0;
+
+const int N = BREEDTE;
+int buffer[N];
+int schrijfIndex = 0;
+
+void setup() {
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  for (int i = 0; i < N; i++) buffer[i] = 0;
+}
+
+void teken() {
+  display.clearDisplay();
+
+  // 1. Bereken min/max van wat er nu in de buffer zit (auto-zoom op de Y-as).
+  int minW = 1023, maxW = 0;
+  for (int i = 0; i < N; i++) {
+    if (buffer[i] < minW) minW = buffer[i];
+    if (buffer[i] > maxW) maxW = buffer[i];
+  }
+  if (maxW - minW < 10) maxW = minW + 10;   // voorkom een platte lijn / div-by-zero
+
+  // 2. Teken assen
+  display.drawLine(0, 0, 0, 63, SSD1306_WHITE);    // Y-as (links)
+  display.drawLine(0, 63, 127, 63, SSD1306_WHITE); // X-as (onder)
+
+  // 3. Loop door de buffer in 'oudste -> nieuwste'-volgorde.
+  //    Trick: schrijfIndex wijst naar de OUDSTE waarde (die straks overschreven wordt).
+  int vorigeY = 63;
+  for (int x = 0; x < N; x++) {
+    int idx = (schrijfIndex + x) % N;
+    int w = buffer[idx];
+    // Hoge waarde -> kleine y (boven). Min..max wordt ge-mapt naar 8..63.
+    int y = map(w, minW, maxW, 63, 8);
+    if (x == 0) vorigeY = y;
+    display.drawLine(x - 1, vorigeY, x, y, SSD1306_WHITE);
+    vorigeY = y;
+  }
+
+  // 4. Labels rechtsboven: huidige max, min en laatste meting.
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);   // tekst met zwarte achtergrond = leesbaar over de lijn
+  display.setCursor(95, 0);
+  display.print("max ");
+  display.print(maxW);
+  display.setCursor(95, 8);
+  display.print("min ");
+  display.print(minW);
+
+  display.display();
+}
+
+void loop() {
+  // Meet en sla op
+  buffer[schrijfIndex] = analogRead(potPin);
+  schrijfIndex = (schrijfIndex + 1) % N;
+
+  // Teken de hele grafiek opnieuw — 30 ms per frame ≈ 33 fps.
+  teken();
+  delay(30);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 34: Tilt-game met accelerometer (MPU6050 + 8x8 LED-matrix)
+// ─────────────────────────────────────────────
+
+const tilt_s1 = `#include <Wire.h>
+#include <MPU6050_light.h>
+
+// We gebruiken MPU6050_light (Bibliotheekbeheer -> "MPU6050_light" van rfetick).
+// Compactere API dan de officiele MPU6050-bibliotheek, prima voor een tilt-game.
+MPU6050 mpu(Wire);
+
+void setup() {
+  Serial.begin(9600);
+  Wire.begin();
+
+  byte status = mpu.begin();
+  Serial.print("MPU6050 status: ");
+  Serial.println(status);   // 0 = OK, anders bedrading checken
+  while (status != 0) {}    // stop hier bij fout
+
+  // Houd het bord stil + plat tijdens deze ~1 sec. Auto-nul.
+  Serial.println("Kalibreren - houd plat...");
+  delay(500);
+  mpu.calcOffsets();
+  Serial.println("Klaar!");
+}
+
+void loop() {
+  mpu.update();   // niet vergeten - anders krijg je nooit nieuwe waarden
+
+  Serial.print("ax: ");  Serial.print(mpu.getAccX(), 2);
+  Serial.print("  ay: "); Serial.print(mpu.getAccY(), 2);
+  Serial.print("  az: "); Serial.println(mpu.getAccZ(), 2);
+
+  // Tip: kantel het bord langzaam links/rechts/voor/achter.
+  // ax + ay zwaaien tussen ongeveer -1.0 en +1.0 (in g).
+  // Drift van ~0.05 is normaal - geen probleem voor een tilt-game.
+  delay(100);
+}`;
+
+const tilt_s2 = `#include <Wire.h>
+#include <MPU6050_light.h>
+
+MPU6050 mpu(Wire);
+
+int balX = 4;   // bal-positie op een 8x8 grid (0..7)
+int balY = 4;
+
+void setup() {
+  Serial.begin(9600);
+  Wire.begin();
+  mpu.begin();
+  mpu.calcOffsets();
+}
+
+// Vertaal een acceleratie (-1.0 .. +1.0 g) naar een grid-coord (0..7).
+// We vermenigvuldigen met 8 zodat een halve kanteling al merkbaar is,
+// en clampen aan de randen zodat de bal niet 'verdwijnt'.
+int mapAccelNaarGrid(float a) {
+  int v = (int)(a * 8.0 + 4.0);
+  if (v < 0) v = 0;
+  if (v > 7) v = 7;
+  return v;
+}
+
+void loop() {
+  mpu.update();
+  balX = mapAccelNaarGrid(mpu.getAccX());
+  balY = mapAccelNaarGrid(mpu.getAccY());
+
+  Serial.print("Bal op (");
+  Serial.print(balX);
+  Serial.print(", ");
+  Serial.print(balY);
+  Serial.println(")");
+  delay(80);
+}`;
+
+const tilt_s3 = `#include <Wire.h>
+#include <MPU6050_light.h>
+#include <LedControl.h>
+
+// LedControl(DIN, CLK, CS, aantal_modules)
+LedControl matrix = LedControl(12, 11, 10, 1);
+MPU6050 mpu(Wire);
+
+int balX = 4, balY = 4;
+
+void setup() {
+  Wire.begin();
+  mpu.begin();
+  mpu.calcOffsets();
+
+  // De MAX7219 start in 'shutdown'-modus — even aanzetten.
+  matrix.shutdown(0, false);
+  matrix.setIntensity(0, 4);   // 0..15  (4 = comfortabel zonder verblinding)
+  matrix.clearDisplay(0);
+}
+
+int mapAccelNaarGrid(float a) {
+  int v = (int)(a * 8.0 + 4.0);
+  if (v < 0) v = 0;
+  if (v > 7) v = 7;
+  return v;
+}
+
+// Render-helper: zet 1 LED aan op (x, y). API is setLed(module, ROW, COL, on).
+void tekenBal(int x, int y) {
+  matrix.clearDisplay(0);
+  matrix.setLed(0, y, x, true);
+}
+
+void loop() {
+  mpu.update();
+  balX = mapAccelNaarGrid(mpu.getAccX());
+  balY = mapAccelNaarGrid(mpu.getAccY());
+
+  tekenBal(balX, balY);
+  delay(50);
+}`;
+
+const tilt_s4 = `#include <Wire.h>
+#include <MPU6050_light.h>
+#include <LedControl.h>
+
+LedControl matrix = LedControl(12, 11, 10, 1);
+MPU6050 mpu(Wire);
+
+int balX = 4, balY = 4;
+int doelX = 0, doelY = 0;
+int score = 0;
+
+void plaatsDoel() {
+  doelX = random(0, 8);
+  doelY = random(0, 8);
+}
+
+int mapAccelNaarGrid(float a) {
+  int v = (int)(a * 8.0 + 4.0);
+  if (v < 0) v = 0;
+  if (v > 7) v = 7;
+  return v;
+}
+
+void teken() {
+  matrix.clearDisplay(0);
+
+  // Doel altijd aan
+  matrix.setLed(0, doelY, doelX, true);
+
+  // Bal knippert (anders zie je het verschil met het doel niet).
+  static bool aan = true;
+  aan = !aan;
+  if (aan || balX != doelX || balY != doelY) {
+    matrix.setLed(0, balY, balX, true);
+  }
+}
+
+void juich() {
+  // Hele matrix snel 3x knipperen als 'goal!'-feedback.
+  for (int n = 0; n < 3; n++) {
+    for (int r = 0; r < 8; r++)
+      for (int c = 0; c < 8; c++)
+        matrix.setLed(0, r, c, true);
+    delay(120);
+    matrix.clearDisplay(0);
+    delay(120);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  randomSeed(analogRead(A0));
+  Wire.begin();
+  mpu.begin();
+  mpu.calcOffsets();
+
+  matrix.shutdown(0, false);
+  matrix.setIntensity(0, 4);
+  matrix.clearDisplay(0);
+
+  plaatsDoel();
+}
+
+void loop() {
+  mpu.update();
+  balX = mapAccelNaarGrid(mpu.getAccX());
+  balY = mapAccelNaarGrid(mpu.getAccY());
+
+  // Doel geraakt? Score + nieuw doel.
+  if (balX == doelX && balY == doelY) {
+    score++;
+    Serial.print("Score: ");
+    Serial.println(score);
+    juich();
+    plaatsDoel();
+  }
+
+  teken();
+  delay(80);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 35: IR-afstandsbediening leren & afspelen
+// ─────────────────────────────────────────────
+
+const ir_s1 = `// IRremote v3.x of v4.x (Bibliotheekbeheer -> "IRremote" van shirriff/Arduino-IRremote).
+// LET OP: oude v2.x-tutorials gebruiken een andere API (#include <IRremote.h> + IRrecv-objecten).
+// Wij gebruiken IRremote.hpp + het globale IrReceiver-object.
+#include <IRremote.hpp>
+
+int irRecvPin = 11;   // VS1838B OUT-pin
+
+void setup() {
+  Serial.begin(9600);
+
+  // ENABLE_LED_FEEDBACK = de ingebouwde LED op pin 13 knippert mee bij ontvangst.
+  // Handig om te zien dat er IR binnenkomt zonder Serial te openen.
+  IrReceiver.begin(irRecvPin, ENABLE_LED_FEEDBACK);
+
+  Serial.println("Klaar - richt een TV-afstandsbediening op de sensor en druk op een knop.");
+}
+
+void loop() {
+  if (IrReceiver.decode()) {
+    Serial.println("Signaal ontvangen!");
+    IrReceiver.resume();   // PIETLUTTIG: zonder dit krijg je nooit een tweede signaal binnen
+  }
+}`;
+
+const ir_s2 = `#include <IRremote.hpp>
+
+int irRecvPin = 11;
+
+void setup() {
+  Serial.begin(9600);
+  IrReceiver.begin(irRecvPin, ENABLE_LED_FEEDBACK);
+  Serial.println("Druk op willekeurige knoppen op een afstandsbediening.");
+  Serial.println("Noteer adres + commando per knop - die heb je in stap 3 nodig.");
+}
+
+void loop() {
+  if (IrReceiver.decode()) {
+    // Negeer 'herhalingen' (knop ingedrukt houden) - levert leesbaarder log op.
+    if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT) {
+      IrReceiver.resume();
+      return;
+    }
+
+    Serial.print("Protocol: ");
+    Serial.print(getProtocolString(IrReceiver.decodedIRData.protocol));
+    Serial.print("   adres: 0x");
+    Serial.print(IrReceiver.decodedIRData.address, HEX);
+    Serial.print("   commando: 0x");
+    Serial.println(IrReceiver.decodedIRData.command, HEX);
+
+    IrReceiver.resume();
+  }
+}`;
+
+const ir_s3 = `#include <IRremote.hpp>
+
+int irRecvPin = 11;
+
+// Onze 'whitelist': elke knop heeft een naam + de 3 velden uit stap 2.
+// VERVANG deze voorbeelden door JOUW eigen waarden uit de Serial Monitor!
+struct OpgenomenCode {
+  const char* naam;
+  uint16_t address;
+  uint16_t command;
+};
+
+OpgenomenCode codes[] = {
+  { "TV aan/uit", 0x00FF, 0x40 },
+  { "Volume +",   0x00FF, 0x07 },
+  { "Volume -",   0x00FF, 0x08 },
+  { "Mute",       0x00FF, 0x09 },
+};
+const int AANTAL = sizeof(codes) / sizeof(codes[0]);
+
+void toonLijst() {
+  Serial.println("Bekende knoppen:");
+  for (int i = 0; i < AANTAL; i++) {
+    Serial.print("  ");
+    Serial.print(i + 1);
+    Serial.print(". ");
+    Serial.println(codes[i].naam);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  IrReceiver.begin(irRecvPin, ENABLE_LED_FEEDBACK);
+  toonLijst();
+}
+
+void loop() {
+  if (!IrReceiver.decode()) return;
+
+  if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT) {
+    IrReceiver.resume();
+    return;
+  }
+
+  uint16_t adr = IrReceiver.decodedIRData.address;
+  uint16_t cmd = IrReceiver.decodedIRData.command;
+
+  // Doorzoek de whitelist op een match.
+  bool gevonden = false;
+  for (int i = 0; i < AANTAL; i++) {
+    if (codes[i].address == adr && codes[i].command == cmd) {
+      Serial.print("Herkend -> ");
+      Serial.println(codes[i].naam);
+      gevonden = true;
+      break;
+    }
+  }
+  if (!gevonden) {
+    Serial.print("Onbekend: 0x");
+    Serial.print(adr, HEX);
+    Serial.print(" / 0x");
+    Serial.println(cmd, HEX);
+  }
+
+  IrReceiver.resume();
+}`;
+
+const ir_s4 = `#include <IRremote.hpp>
+
+// LET OP: IRremote v3+/v4 gebruikt op de Uno standaard pin 3 als IR-zendpin.
+// Pin 3 is namelijk een TIMER2-PWM-pin - daarmee genereert de bibliotheek
+// het 38 kHz infrarood-draaggolfsignaal. Andere pinnen werken NIET zonder
+// extra config.
+int irLedPin = 3;
+
+// 4 knoppen op pin 4..7 (INPUT_PULLUP -> ander uiteinde naar GND).
+int knop1Pin = 4;
+int knop2Pin = 5;
+int knop3Pin = 6;
+int knop4Pin = 7;
+
+struct OpgenomenCode {
+  const char* naam;
+  uint16_t address;
+  uint16_t command;
+};
+
+// Vul deze in met JOUW codes uit stap 2 — anders stuurt-ie niks zinnigs.
+OpgenomenCode codes[4] = {
+  { "TV aan/uit", 0x00FF, 0x40 },
+  { "Volume +",   0x00FF, 0x07 },
+  { "Volume -",   0x00FF, 0x08 },
+  { "Mute",       0x00FF, 0x09 },
+};
+
+int knoppen[4] = { 4, 5, 6, 7 };
+bool wasIngedrukt[4] = { false, false, false, false };
+
+void verstuur(int i) {
+  Serial.print("Verzend: ");
+  Serial.println(codes[i].naam);
+  // sendNEC(adres, commando, herhalingen). 0 herhalingen = 1 puls.
+  IrSender.sendNEC(codes[i].address, codes[i].command, 0);
+}
+
+void setup() {
+  Serial.begin(9600);
+  for (int i = 0; i < 4; i++) pinMode(knoppen[i], INPUT_PULLUP);
+
+  IrSender.begin(irLedPin);   // start de 38 kHz-PWM op pin 3
+  Serial.println("Druk op een van de 4 knoppen om die code te zenden.");
+}
+
+void loop() {
+  // Edge-detectie: alleen op de overgang los -> ingedrukt zenden.
+  // Anders krijg je 50x per seconde een puls zolang je de knop vasthoudt.
+  for (int i = 0; i < 4; i++) {
+    bool nu = (digitalRead(knoppen[i]) == LOW);
+    if (nu && !wasIngedrukt[i]) verstuur(i);
+    wasIngedrukt[i] = nu;
+  }
+  delay(20);
+}`;
+
+// ─────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────
 
@@ -7340,6 +7908,308 @@ void logToegang(int tagIndex, bool ok) {
         assignment: "Sluit de LDR aan: één pootje → 5V, andere pootje → A0 én via 10kΩ naar GND. Upload. Test in donker (hand over LDR): beweging → lamp aan zoals voorheen. Test in fel licht: beweging → lamp blijft uit.",
         challenge: "Voeg **'schemering-overgang'** toe: tussen waarde 500 en 700 = 'twilight'-zone waarin het licht maar half-helder aangaat (PWM op een MOSFET i.p.v. relais).",
         reflection: "Waarom wordt PIR-met-auto-licht overal gebruikt in trappenhuizen, maar nooit in slaapkamers? (Hint: bewust uitgaan ≠ in slaap vallen — PIR triggert niet op stille slaap, dus systeem zou middenin de nacht uitschakelen. Slaapkamers gebruiken meestal handmatige schakelaars of dim-cycli.)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 33: OLED-grafieken & mini-oscilloscoop (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "oled-oscilloscoop",
+    title: "OLED-grafieken & mini-oscilloscoop",
+    description: "Plot een analoge sensor-waarde live als scrollende lijn op een 128x64 OLED. Inclusief assen en automatisch min/max-zoomen — eigen mini-scope op je bureau.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, SSD1306 OLED (128x64, I2C-versie met 4 pinnen), potmeter (10kΩ) of een willekeurige analoge sensor (LDR, MQ-, microfoon-module...), breadboard + jumpers. Bibliotheken: Adafruit_SSD1306 + Adafruit_GFX (Bibliotheekbeheer).",
+    learningGoal: "Een SSD1306 OLED aansturen via I2C, een ringbuffer gebruiken om over tijd te verzamelen, en die data live tekenen als grafiek met dynamische assen-schaal.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "oled-s1",
+        title: "OLED + Adafruit-bibliotheek setup",
+        content: "De SSD1306 is een **monochroom OLED-scherm** dat via **I2C** praat — dezelfde 2 draadjes (SDA/SCL) als bij de I2C LCD. Op de Arduino Uno zijn dat A4 (SDA) en A5 (SCL). Het meest voorkomende I2C-adres is **0x3C**, maar een paar modules zijn 0x3D — als 'OLED niet gevonden' verschijnt, probeer dat adres in de code.\n\n**Bibliotheek installeren**: Bibliotheekbeheer → zoek 'Adafruit SSD1306' van Adafruit → installeer (vraagt automatisch om 'Adafruit GFX' — ja zeggen).\n\n**Verschil met LCD**: een LCD toont alleen tekens uit een tabel, een OLED is een echte pixelmatrix (128 × 64 = 8192 pixels). Daarom kunnen we straks ook lijnen, assen en grafieken tekenen.",
+        diagram: true,
+        code: oled_s1,
+        legend: [
+          { term: "#include <Adafruit_SSD1306.h>", desc: "Hoofdbibliotheek voor SSD1306 OLEDs. Vraagt automatisch om Adafruit GFX (de tekenfuncties)." },
+          { term: "Adafruit_SSD1306 display(128, 64, &Wire, -1)", desc: "Maak het scherm-object. -1 = geen aparte reset-pin gebruiken." },
+          { term: "display.begin(SSD1306_SWITCHCAPVCC, 0x3C)", desc: "Initialiseer met intern voltage + I2C-adres 0x3C. Returnt false bij fout." },
+          { term: "display.display()", desc: "CRUCIAAL: zonder deze regel zie je niks. De Adafruit-lib tekent alles in een geheugen-buffer en pas display() stuurt het naar het scherm." },
+          { term: "while (true) {}", desc: "Bij init-fout: stop hier in plaats van met een leeg scherm verder te gaan. Maakt fout makkelijker te zien." },
+        ],
+        assignment: "Sluit aan: VCC→5V (of 3.3V — check je module), GND→GND, SDA→A4, SCL→A5. Installeer Adafruit_SSD1306 via Bibliotheekbeheer. Upload. Je zou 'Hallo OLED!' linksboven moeten zien.",
+        challenge: "Verander de tekstgrootte: `display.setTextSize(2)` voor 2x zo groot. Hoeveel tekens passen er nog op een regel?",
+        reflection: "Waarom moet je `display.display()` aanroepen? Wat zou er gebeuren als je 'm vergeet?",
+      },
+      {
+        id: "oled-s2",
+        title: "Tekst + lijnen tekenen (assen-skelet)",
+        content: "Nu gaan we **pixel-tekenen**. De Adafruit_GFX-bibliotheek geeft je `drawLine(x1, y1, x2, y2, kleur)`, `drawPixel(x, y, kleur)`, `drawRect(...)` enzovoort. Coordinaten: (0,0) = LINKSBOVEN, x gaat naar rechts, y gaat NAAR BENEDEN. Dat klopt anders dan een wiskunde-grafiek waar y omhoog gaat — daar moeten we straks rekening mee houden bij de grafiek.\n\nIn deze stap bouwen we het 'skelet' van onze scope: een titel, een Y-as links, een X-as onderaan en een schuine demo-lijn als preview.",
+        code: oled_s2,
+        legend: [
+          { term: "drawLine(10, 10, 10, 63, SSD1306_WHITE)", desc: "Lijn van (10,10) naar (10,63). Vertikaal omdat de x-coordinaat hetzelfde blijft = Y-as." },
+          { term: "drawLine(10, 63, 127, 63, ...)", desc: "Horizontale lijn helemaal onderaan = X-as." },
+          { term: "SSD1306_WHITE", desc: "De OLED is monochroom — pixel staat aan (wit) of uit. Geen kleuren, geen helderheidsniveaus." },
+          { term: "setCursor(x, y)", desc: "Waar de volgende display.print() begint. Y=0 is bovenaan." },
+          { term: "Coordinaten: y omlaag", desc: "Een hoge sensor-waarde betekent straks een KLEINE y. Daarom mappen we straks min->63, max->8 (omgedraaid)." },
+        ],
+        assignment: "Upload. Je ziet nu een titel, twee assen en een diagonale lijn. Verander `drawLine(10, 60, 127, 12, ...)` naar `drawLine(127, 60, 10, 12, ...)` — wat verandert er?",
+        challenge: "Voeg een rechthoek toe rond de hele grafiek met `display.drawRect(10, 10, 117, 54, SSD1306_WHITE)` — dat geeft een nettere 'plot-area'.",
+        reflection: "Op een 128 × 64-scherm zijn er 8192 pixels. Hoeveel bytes geheugen heeft de Arduino dan minstens nodig om de hele buffer bij te houden? (Hint: 8 pixels per byte = 1024 bytes. Op een Uno met 2KB SRAM is dat al bijna de helft!)",
+      },
+      {
+        id: "oled-s3",
+        title: "Ringbuffer voor 128 metingen",
+        content: "Een **ringbuffer** is een lijst met vaste grootte waarin de oudste waarde altijd door de nieuwste overschreven wordt — een 'rondlopende' geschiedenis. Wij gebruiken er één van precies 128 elementen, eentje per pixel-kolom op het scherm.\n\nDe truc: een teller `schrijfIndex` wijst naar de plek waar de **volgende** meting komt. Na elke meting `schrijfIndex = (schrijfIndex + 1) % 128`. De modulo zorgt dat hij na 127 weer op 0 begint. Tegelijk wijst die index naar de **oudste** waarde (die straks overschreven wordt) — handig om straks van oud naar nieuw te lezen.\n\n**Dit pattern zie je overal**: chat-apps die laatste-N-berichten bewaren, audio-recorders, sensor-loggers, kringbuffers in audio/streaming...",
+        code: oled_s3,
+        legend: [
+          { term: "const int N = 128", desc: "1 waarde per pixel-kolom. Past precies in 128 × 2 bytes = 256 bytes RAM (int = 2 bytes op Uno)." },
+          { term: "int buffer[N]", desc: "De ringbuffer zelf. Vooraf met nullen vullen voorkomt 'rommel' in de eerste schermen." },
+          { term: "schrijfIndex = (schrijfIndex + 1) % N", desc: "DE klassieke ringbuffer-truc. Modulo-operator wraps van 127 -> 0 zonder if/else." },
+          { term: "Oudste = nieuwste plek", desc: "Subtiel: de plek waar we STRAKS schrijven, bevat NU de oudste waarde. Dat gebruiken we in stap 4 om in volgorde te tekenen." },
+          { term: "delay(50)", desc: "20 metingen per seconde — meer dan genoeg voor een trage potmeter, niet zo snel dat de Serial overspoeld raakt." },
+        ],
+        assignment: "Upload. Open Serial Monitor. Draai aan de potmeter en kijk dat schrijfIndex netjes 0,1,2,...,127,0,1,2,... loopt en dat de meting meeverandert.",
+        challenge: "Maak `N = 64` in plaats van 128 (halve scherm-breedte). Waarom kan dat? Wat zou je veranderen aan stap 4 om dit netjes te tekenen?",
+        reflection: "Waarom is een ringbuffer beter dan elke meting telkens 1 plek opschuiven (`for i: buffer[i] = buffer[i+1]`)? (Hint: opschuiven kost 128 stappen per meting — een ringbuffer kost 1.)",
+      },
+      {
+        id: "oled-s4",
+        title: "Scrollende grafiek met assen + min/max-labels",
+        content: "Eindversie: bij elke meting tekenen we de **hele buffer** opnieuw als verbonden lijn. We loop'en de buffer in 'oudste -> nieuwste'-volgorde door op `schrijfIndex` te starten en met modulo door te tellen. Daardoor scrollt de grafiek mooi van rechts naar links, alsof je een zaag-machine ziet.\n\n**Auto-zoom op de Y-as**: we berekenen elke frame de huidige min en max van de buffer, en mappen die naar de y-coordinaten 63 (onderaan) tot 8 (bijna bovenaan). Daardoor blijft een vlakke signaal toch goed zichtbaar — anders zie je alleen een rechte lijn ergens in het midden.\n\n**Resultaat**: een werkende oscilloscoop voor lage frequenties (~33 fps × 128 pixels = 4 sec geschiedenis op het scherm).",
+        diagram: true,
+        code: oled_s4,
+        legend: [
+          { term: "for (int x = 0; x < N; x++) { int idx = (schrijfIndex + x) % N; ... }", desc: "Lees de buffer in 'oudste -> nieuwste'-volgorde door bij schrijfIndex te beginnen. Modulo wraps automatisch." },
+          { term: "int y = map(w, minW, maxW, 63, 8)", desc: "Hoge waarde -> kleine y (=hoog op scherm), lage waarde -> grote y (=laag op scherm). De omgekeerde range mapt 'm goed." },
+          { term: "if (maxW - minW < 10) maxW = minW + 10", desc: "Voorkom delen-door-nul / vlakke lijn als alle waarden hetzelfde zijn. Forceer een minimum bereik." },
+          { term: "drawLine(x - 1, vorigeY, x, y, ...)", desc: "Verbonden lijn-grafiek: trek lijn van vorige y-positie naar nieuwe. Mooier dan losse pixels." },
+          { term: "setTextColor(WHITE, BLACK)", desc: "Tekst MET zwarte achtergrond — anders is het label onleesbaar over de grafiek-lijn." },
+        ],
+        assignment: "Upload. Draai aan de potmeter en kijk de grafiek live mee bewegen. Vervang de potmeter door een LDR (op A0 + 10kΩ naar GND) en wuif je hand er overheen — je ziet de schaduw als een dipje in de lijn.",
+        challenge: "Voeg een **trigger-modus** toe: teken alleen opnieuw wanneer de waarde door een drempel (bv. 512) heen stijgt. Dan staat een periodiek signaal stil op het scherm, zoals een echte scope.",
+        reflection: "Waarom kan deze 'scope' geen audio-signaal van een microfoon meten? (Hint: 33 fps = 33 metingen per seconde. Audio heeft 8000+ samples per seconde nodig — ver buiten ons bereik. Voor audio heb je interrupts + DMA + een veel snellere chip nodig.)",
+        optionalCodeTitle: "Snippet: voeg een trigger toe (alleen tekenen op stijgende flank)",
+        optionalCode: `// Houd de vorige meting bij. Trigger = vorige < drempel && nieuwe >= drempel.
+int vorige = 0;
+const int DREMPEL = 512;
+bool triggerOk = false;
+
+void loop() {
+  int meting = analogRead(potPin);
+
+  // Trigger-detectie: alleen tekenen als we net door drempel heen stegen.
+  if (vorige < DREMPEL && meting >= DREMPEL) triggerOk = true;
+  vorige = meting;
+
+  buffer[schrijfIndex] = meting;
+  schrijfIndex = (schrijfIndex + 1) % N;
+
+  if (triggerOk) {
+    teken();
+    triggerOk = false;
+  }
+  delay(30);
+}`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 34: Tilt-game met accelerometer (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "tilt-game-mpu6050",
+    title: "Tilt-game met accelerometer",
+    description: "Bouw een 'kantel'-spel: een MPU6050-accelerometer voelt hoe je het bord houdt, en een balletje rolt mee over een 8×8 LED-matrix. Vang het knipperende doel om punten te scoren.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, MPU6050-module (ook bekend als GY-521), 8×8 LED-matrix met MAX7219-driver, breadboard + jumpers. Bibliotheken: MPU6050_light (van rfetick) + LedControl (Bibliotheekbeheer).",
+    learningGoal: "Een I2C-accelerometer uitlezen, fysieke kanteling vertalen naar grid-coordinaten, en een simpele game-loop bouwen rond positie + doel + score.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "tilt-s1",
+        title: "MPU6050 uitlezen via I2C",
+        content: "De **MPU6050** is een goedkope (~€2) 6-as bewegingssensor: 3 acceleratie-assen + 3 rotatie-assen (gyro). Voor een tilt-game hebben we alleen de **acceleratie** nodig. Hij praat via **I2C** op A4/A5 — net als de OLED en LCD die we al gebruikt hebben.\n\n**Bibliotheek-keuze**: er bestaan drie populaire MPU6050-libs. Wij gebruiken `MPU6050_light` van rfetick — kleinste API, direct werkende `getAccX/Y/Z()`, geen gedoe met sensor-fusion of registers.\n\n**Drift is normaal**: ook stilliggend zie je waarden van ±0.05g schommelen. Dat is geen kapotte sensor — het is gewoon een goedkope MEMS-chip. Voor een tilt-game maakt dat niks uit; voor precieze hoekmetingen zou je meerdere sensoren moeten combineren (sensor fusion).",
+        diagram: true,
+        code: tilt_s1,
+        legend: [
+          { term: "#include <MPU6050_light.h>", desc: "Lichte bibliotheek met directe getAccX/Y/Z()-functies. Installeer via Bibliotheekbeheer ('MPU6050_light' van rfetick)." },
+          { term: "MPU6050 mpu(Wire)", desc: "Maak het sensor-object aan. 'Wire' = de standaard I2C-bus (A4=SDA, A5=SCL op Uno)." },
+          { term: "mpu.begin()", desc: "Init. Returnt 0 bij succes, anders een foutcode (1=geen contact = bedrading checken)." },
+          { term: "mpu.calcOffsets()", desc: "Auto-nul: meet ~1 sec terwijl je het bord plat houdt en trekt die offset er voortaan vanaf." },
+          { term: "mpu.update()", desc: "VERPLICHT in elke loop voordat je getAccX/Y/Z aanroept. Anders krijg je oude waarden." },
+          { term: "Drift ±0.05g", desc: "Normaal. Voor een tilt-game irrelevant. Voor een hoek-meting tot 0.1° heb je sensor-fusion nodig." },
+        ],
+        assignment: "Sluit aan: VCC→5V (de module heeft een eigen 3.3V-regelaar), GND→GND, SDA→A4, SCL→A5. Installeer 'MPU6050_light' via Bibliotheekbeheer. Upload. Open Serial Monitor — bij plat liggen: ax≈0, ay≈0, az≈+1.0 (zwaartekracht omhoog op de chip).",
+        challenge: "Kantel het bord 90° rechtsom. Welke as wordt nu +1.0g? En als je 'm op zijn kop houdt?",
+        reflection: "Waarom meet de Z-as +1.0g als de sensor PLAT ligt? (Hint: dit is de zwaartekracht die de sensor 'voelt'. In een vrije val zou az = 0 zijn — dat gebruiken iPhones om val-detectie te doen.)",
+      },
+      {
+        id: "tilt-s2",
+        title: "Acceleratie mappen naar 8×8 grid",
+        content: "Onze 8×8 LED-matrix heeft 64 vakjes — coordinaten (x, y) van 0..7. We willen dat een **lichte kanteling** de bal al beweegt, en een **stevige kanteling** 'm helemaal naar de rand schuift. Bij plat liggen moet hij in het midden staan: (4, 4).\n\nFormule: `v = a * 8 + 4` mapt acceleratie -1.0g..+1.0g naar -4..+12, en met `constrain` clampen we naar 0..7. Bij a=0 (plat) → v=4 (midden). Bij a=+0.5 → v=8 → clamp naar 7 (rand). Lekker responsief.\n\n**Geen rocket science**: dit is gewoon een lineaire schaling. Als de bal te 'gevoelig' beweegt: vermenigvuldig met 4 in plaats van 8. Te 'sloom': vermenigvuldig met 16.",
+        code: tilt_s2,
+        legend: [
+          { term: "int balX, balY", desc: "Bal-positie op het 8x8 grid. We houden 'm in 'wereld'-coordinaten 0..7." },
+          { term: "(int)(a * 8.0 + 4.0)", desc: "Lineaire schaal: -1.0g -> -4 (clampt naar 0), 0g -> 4 (midden), +1.0g -> +12 (clampt naar 7). Vervang de 8 door grotere waarde voor gevoeliger spel." },
+          { term: "if (v < 0) v = 0; if (v > 7) v = 7", desc: "Clamp/constrain. Voorkomt dat de bal 'verdwijnt' buiten het scherm." },
+          { term: "Plat liggen = midden", desc: "Bij ax=ay=0 valt de formule terug op v=4 — precies het midden van het 8x8 grid." },
+        ],
+        assignment: "Upload. Open Serial Monitor. Beweeg het bord rustig. De getallen (balX, balY) moeten tussen 0 en 7 blijven en duidelijk meebewegen met de kanteling.",
+        challenge: "Vermenigvuldig met 4 in plaats van 8 — nu moet je veel verder kantelen om de rand te raken. Of vermenigvuldig met 16 — dan is alleen al een tikje genoeg om naar de rand te schuiven.",
+        reflection: "Waarom werkt dit ook prima zonder de Y-as om te draaien? (Hint: we testen zelf welke fysieke richting bij welke as hoort. Sluit de matrix straks gewoon aan zoals het 'logisch' aanvoelt — software-correctie is goedkoper dan herbedraden.)",
+      },
+      {
+        id: "tilt-s3",
+        title: "Render-helper: balletje op de 8×8 matrix",
+        content: "Nu combineren we de MPU6050 met de LED-matrix uit de eerdere battleship-tutorial. De `LedControl`-bibliotheek heeft één rare gewoonte: de API is `setLed(module, ROW, COL, on)` — dus eerst de Y, dan de X. Daarom passeren we `(0, balY, balX, true)` en niet andersom. **Dit verwart bijna iedereen de eerste keer.**\n\nWe schrijven een mini-render-functie `tekenBal(x, y)` die de matrix wist en één LED aanzet. Door dat in elke loop opnieuw te doen krijg je de illusie van een bewegende bal.",
+        diagram: true,
+        code: tilt_s3,
+        legend: [
+          { term: "LedControl matrix(12, 11, 10, 1)", desc: "Pinnen: DIN=12, CLK=11, CS=10. '1' = aantal modules (we gebruiken 1 matrix). Dit is de standaard MAX7219-bedrading." },
+          { term: "matrix.shutdown(0, false)", desc: "MAX7219 start in 'shutdown'. Met false zet je hem aan. Vergeten = donkere matrix." },
+          { term: "matrix.setIntensity(0, 4)", desc: "Helderheid 0..15. Op 4 is comfortabel; op 15 verblindt het." },
+          { term: "matrix.setLed(0, y, x, true)", desc: "PAS OP volgorde: (module, ROW, COL, aan/uit). Y eerst, X tweede — andersom dan veel andere libraries." },
+          { term: "tekenBal(int x, int y)", desc: "Render-helper: wis matrix + zet 1 LED aan. Wordt elke loop aangeroepen met de nieuwe bal-positie." },
+        ],
+        assignment: "Sluit de MAX7219-matrix aan: DIN→pin 12, CLK→pin 11, CS→pin 10, VCC→5V, GND→GND. Upload. Kantel het bord — de LED hoort mee te bewegen over de 8×8 grid.",
+        challenge: "Beweegt de bal in de 'verkeerde' richting (kantel naar rechts maar bal gaat naar links)? Voeg `balX = 7 - balX;` toe na de map-aanroep om die as te spiegelen. Doe hetzelfde voor Y indien nodig.",
+        reflection: "Waarom 'flikkert' de matrix niet ondanks dat we hem 20x per seconde wissen + opnieuw tekenen? (Hint: de MAX7219 heeft zelf een interne buffer + multiplext de LEDs op ~1kHz. Wij sturen alleen de NIEUWE staat; hij houdt 'm tussendoor zichtbaar.)",
+      },
+      {
+        id: "tilt-s4",
+        title: "Game-loop: doel pakken + score + juich-animatie",
+        content: "Eindversie: een willekeurig **doel-vakje** licht op, jij rolt het balletje er met kantelen naartoe, raakt 'm = +1 punt + alle LEDs flitsen 3x als juich-feedback, dan komt er een nieuw doel.\n\n**Knipperende bal**: omdat doel + bal allebei 'aan' zijn, zou je bij overlap niks zien. Truc: de bal wordt elke frame aan/uit getoggled met een `static bool aan` — op het doel zie je dus altijd het knipperende balletje wanneer ze samenvallen. Dit zelfde 'static bool toggle'-pattern werkt overal waar je iets wilt laten knipperen zonder een aparte timer-variabele.",
+        code: tilt_s4,
+        legend: [
+          { term: "static bool aan", desc: "Static = behoudt waarde tussen functie-aanroepen door. Klassieke C-truc om state in een functie te bewaren zonder globale variabele." },
+          { term: "plaatsDoel()", desc: "random(0, 8) geeft 0..7 — perfecte coordinaten voor het 8x8 grid. randomSeed(analogRead(A0)) in setup() voor echte willekeur." },
+          { term: "if (balX == doelX && balY == doelY)", desc: "Eenvoudige collision-check op een grid: pixel-perfect gelijk = 'gepakt'." },
+          { term: "juich() animatie", desc: "Hele matrix 3x knipperen = duidelijke 'goal!'-feedback voor de speler. Belangrijke UX-regel: succes ALTIJD groot vieren." },
+          { term: "Score in Serial", desc: "Op een 8x8 matrix is geen plek voor een nummer — Serial Monitor open laten voor de score, of voeg een OLED toe als upgrade." },
+        ],
+        assignment: "Upload. Een doel licht op. Kantel om de bal ernaartoe te rollen. Bij raken: hele matrix knippert + score + nieuw doel. Open Serial Monitor om je score bij te houden.",
+        challenge: "Voeg een **obstakel** toe: een derde willekeurig vakje dat ook knippert. Als je dat raakt: game over (juich() vervangen door een 'sad' rode-loop animatie + score reset).",
+        reflection: "Waarom voelt het spel beter aan met een korte `delay(80)` dan zonder delay? (Hint: zonder delay update de bal honderden keren per seconde — sneller dan je hand kan compenseren. 12-15 fps is genoeg voor vloeiend spel én geeft de speler tijd om te reageren.)",
+        optionalCodeTitle: "Snippet: voeg een obstakel toe dat game-over geeft",
+        optionalCode: `int obstX = 0, obstY = 0;
+
+void plaatsObstakel() {
+  do {
+    obstX = random(0, 8);
+    obstY = random(0, 8);
+  } while ((obstX == balX && obstY == balY) || (obstX == doelX && obstY == doelY));
+}
+
+void gameOver() {
+  for (int n = 0; n < 5; n++) {
+    for (int r = 0; r < 8; r++)
+      for (int c = 0; c < 8; c++)
+        matrix.setLed(0, r, c, true);
+    delay(80);
+    matrix.clearDisplay(0);
+    delay(80);
+  }
+  score = 0;
+  plaatsDoel();
+  plaatsObstakel();
+}
+
+// In loop(): na de doel-check toevoegen:
+// if (balX == obstX && balY == obstY) gameOver();`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 35: IR-afstandsbediening leren & afspelen (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "ir-remote-leren",
+    title: "IR-afstandsbediening leren & afspelen",
+    description: "Lees codes uit van élke TV-afstandsbediening, sla ze op in code en speel ze terug via een IR-LED. Eigen mini-universele afstandsbediening op één Arduino.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, VS1838B IR-receiver (3-pins module of los op breadboard), IR-LED (zendt 940nm — uitziet als gewone LED), 220Ω weerstand, 4 drukknoppen, breadboard + jumpers, een willekeurige TV/airco-afstandsbediening om uit te lezen. Bibliotheek: IRremote v3.x of v4.x (Bibliotheekbeheer → 'IRremote' van shirriff/Arduino-IRremote).",
+    learningGoal: "Werken met de IRremote-bibliotheek, IR-codes ontvangen en classificeren, ze opslaan in een struct-array, en ze later terug zenden via een IR-LED.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "ir-s1",
+        title: "Receiver setup + smoke-test",
+        content: "De **VS1838B** is een 3-pins IR-module: VCC, GND en DATA. Hij heeft intern al een **38 kHz-bandfilter + demodulator** ingebouwd — daardoor levert-ie een schoon digitaal signaal aan de Arduino, geen analoge gekkigheid. **Pin-volgorde checken op je module!** De volgorde verschilt per fabrikant — kijk op de print of in de datasheet, anders blaas je 'm op.\n\n**Bibliotheek**: installeer 'IRremote' van shirriff/Arduino-IRremote via Bibliotheekbeheer. Wij gebruiken **v3.x of v4.x** — de moderne API met `IrReceiver` / `IrSender` als globale objecten. **Pas op**: oude tutorials op internet gebruiken nog v2.x (`#include <IRremote.h>` + `IRrecv myIR(...)`) — dat is INCOMPATIBEL. Onze code is v3+.\n\nIn deze stap: gewoon kijken of er signaal binnenkomt. Bij elke IR-druk verschijnt 'Signaal ontvangen!' in de Serial Monitor + de ingebouwde LED op pin 13 knippert mee.",
+        diagram: true,
+        code: ir_s1,
+        legend: [
+          { term: "#include <IRremote.hpp>", desc: "Let op: .hpp (niet .h). v3+ syntax. v2.x oude code gebruikt #include <IRremote.h>." },
+          { term: "IrReceiver.begin(pin, ENABLE_LED_FEEDBACK)", desc: "Globale singleton, geen object aanmaken. ENABLE_LED_FEEDBACK = pin 13 knippert mee bij elke ontvangst." },
+          { term: "int irRecvPin = 11", desc: "Data-pin van de VS1838B. Mag elke digitale pin zijn — 11 is gewoon traditie in de IRremote-voorbeelden." },
+          { term: "IrReceiver.decode()", desc: "Returnt true als er een nieuwe code binnen is. False = nog niks." },
+          { term: "IrReceiver.resume()", desc: "VERPLICHT na elke decode(). Vertelt de bibliotheek 'klaar, luister naar de volgende'. Vergeten = je hoort er nooit meer een." },
+        ],
+        assignment: "Sluit aan: VS1838B VCC→5V, GND→GND, OUT→pin 11. Installeer IRremote v3+ via Bibliotheekbeheer. Upload. Open Serial Monitor (9600). Richt een TV-remote op de sensor en druk willekeurige knoppen — 'Signaal ontvangen!' moet verschijnen + LED 13 knippert.",
+        challenge: "Probeer je telefoon: vrijwel alle moderne smartphones hebben GEEN IR meer. Een tablet, oude TV-remote, airco-remote of speelgoedauto-remote werkt wel. Welke krijg je werkend?",
+        reflection: "Waarom heeft een IR-module die 38 kHz-filter ingebouwd? (Hint: zonder zou de Arduino kamerverlichting, zon, halogeenlampen ook als 'IR' zien. 38 kHz pulseren is heel onnatuurlijk = uniek herkenbaar. Daarom werken IR-remotes ook in fel zonlicht.)",
+      },
+      {
+        id: "ir-s2",
+        title: "Codes leren: protocol + adres + commando",
+        content: "Een IR-druk bestaat uit 3 stukjes data:\n- **Protocol** (NEC, Sony, RC5, Samsung, ...) — welk merk/standaard\n- **Adres** (16-bit) — welk apparaat (TV, airco, ...)\n- **Commando** (8-bit) — welke knop (volume +, kanaal -, ...)\n\nDe IRremote-lib decodeert dat automatisch. We printen alledrie en negeren 'herhalingen' (`IRDATA_FLAGS_IS_REPEAT`) — anders krijg je per knop-druk 5x dezelfde regel zolang je 'm vasthoudt.\n\n**Doel van deze stap**: noteer voor 4 knoppen op je remote (bv. aan/uit, vol+, vol-, mute) het adres en commando. Die heb je in stap 3 nodig.",
+        code: ir_s2,
+        legend: [
+          { term: "IrReceiver.decodedIRData.protocol", desc: "Enum: NEC, SONY, RC5, SAMSUNG, ... Bij UNKNOWN: protocol niet herkend, maar raw-data wel — kan ook." },
+          { term: "decodedIRData.address", desc: "16-bit identifier voor 'welk apparaat'. Vaak hetzelfde voor alle knoppen op één remote." },
+          { term: "decodedIRData.command", desc: "8-bit identifier voor 'welke knop'. Dit verschilt per knop op de remote." },
+          { term: "IRDATA_FLAGS_IS_REPEAT", desc: "Flag = 1 als dit een 'auto-repeat'-frame is (knop ingedrukt gehouden). Negeren maakt logs leesbaar." },
+          { term: "getProtocolString(...)", desc: "Vertaalt het protocol-enum naar leesbare tekst voor in Serial." },
+        ],
+        assignment: "Upload. Druk op je remote: aan/uit, vol+, vol-, mute. NOTEER van elk: adres + commando (in HEX). Die ga je in stap 3 invullen. Voorbeeld-uitvoer: `Protocol: NEC adres: 0xFF00 commando: 0x40`.",
+        challenge: "Probeer 2 verschillende remotes (TV én airco). Hebben ze hetzelfde protocol? Hetzelfde adres?",
+        reflection: "Waarom heeft IRremote dat 'flags & IRDATA_FLAGS_IS_REPEAT'-systeem? (Hint: TV-volume ophogen werkt door knop ingedrukt te HOUDEN — dat moet meermaals een puls geven. Maar voor 'aan/uit' wil je ALLEEN de eerste druk. De flag laat de programmeur kiezen.)",
+      },
+      {
+        id: "ir-s3",
+        title: "Codes opslaan in een struct-array",
+        content: "Nu we onze 4 codes hebben: opslaan in code zodat we ze kunnen herkennen en straks terugzenden. We gebruiken een `struct` met een naam + adres + commando, en een array van die structs als 'whitelist'.\n\n**Belangrijk**: vervang de voorbeeld-codes (`0x00FF`, `0x40` etc.) door JOUW eigen waarden uit stap 2. Anders herkent het systeem niets en zendt-ie straks codes voor een TV die niemand heeft.\n\nIn de loop checken we elke ontvangen code tegen de whitelist. Match → naam printen. Geen match → adres+commando printen zodat je nieuwe codes kunt toevoegen.",
+        code: ir_s3,
+        legend: [
+          { term: "struct OpgenomenCode { ... }", desc: "Eigen data-type met meerdere velden. Net als een mini-class zonder methodes. Heel handig voor 'records' van data." },
+          { term: "OpgenomenCode codes[] = { ... }", desc: "Array van structs. Compiler bepaalt zelf de lengte uit het aantal items tussen de accolades." },
+          { term: "sizeof(codes) / sizeof(codes[0])", desc: "Klassieke C-truc om de array-lengte uit te rekenen. Werkt alleen op echte arrays, niet op pointers." },
+          { term: "for (int i = 0; i < AANTAL; i++)", desc: "Doorzoek de whitelist. Stop zodra er een match is. O(N) is prima voor maximaal ~50 codes." },
+          { term: "0x00FF, 0x40 (vervangen!)", desc: "Voorbeeld-codes — voor jouw remote ZIJN DEZE FOUT. Gebruik de waarden die je in stap 2 in de Serial Monitor zag." },
+        ],
+        assignment: "Vervang de 4 voorbeeld-codes door JOUW eigen waarden uit stap 2. Upload. Druk op je remote: bekende knoppen → naam printen. Onbekende knoppen → 'Onbekend: 0x.../0x...' printen.",
+        challenge: "Voeg een 5e knop toe ('Channel +') aan de array. Doe je dit door alleen de codes-array uit te breiden? Wat verandert er nog? (Hint: niks! AANTAL wordt automatisch herberekend door sizeof.)",
+        reflection: "Waarom zit de knop-naam in de struct in plaats van een aparte parallelle array (`const char* namen[] = ...`)? (Hint: 1 plek per knop = onmogelijk om uit sync te raken. Bij parallelle arrays vergeet je een keer iets bij te werken en dan klopt 'naam[2]' niet meer bij 'codes[2]'.)",
+      },
+      {
+        id: "ir-s4",
+        title: "Knoppen → IR-codes uitzenden via IR-LED",
+        content: "Eindversie: 4 knoppen, elke knop zendt z'n bijbehorende code via een **IR-LED**. Je hebt nu een werkende mini-universele afstandsbediening.\n\n**Cruciaal — pin 3 verplicht!** IRremote v3+/v4 gebruikt op de Uno **standaard pin 3** voor zenden. Pin 3 is een TIMER2-PWM-pin; de bibliotheek genereert daarop het 38 kHz draaggolfsignaal. Andere pinnen werken NIET zonder extra config. Onthoud: receiver kan elke pin, **zender moet pin 3** op de Uno.\n\n**IR-LED ALTIJD met 220Ω weerstand!** De LED kan tot 100mA pulsen, en zonder weerstand brandt-ie binnen seconden door. Lange poot (anode) → pin 3 via 220Ω, korte poot (kathode) → GND.\n\n**Edge-detectie op de knoppen**: bij vasthouden zou je 50× per seconde zenden — irritant + spam. We onthouden `wasIngedrukt[]` en zenden alleen op de los→ingedrukt-overgang.",
+        diagram: true,
+        code: ir_s4,
+        legend: [
+          { term: "int irLedPin = 3", desc: "VERPLICHT pin 3 op de Uno. Andere pinnen kunnen geen 38 kHz PWM. Via 220Ω in serie naar de IR-LED-anode (lange poot)." },
+          { term: "IrSender.begin(irLedPin)", desc: "Start de 38 kHz-PWM-carrier op pin 3. Daarna kun je sendNEC(), sendSony() etc. aanroepen." },
+          { term: "IrSender.sendNEC(adres, commando, 0)", desc: "Zend in NEC-protocol. Laatste 0 = geen herhalingen (alleen 1 puls). Voor andere protocollen: sendSony(), sendRC5(), etc." },
+          { term: "wasIngedrukt[i] = nu", desc: "Edge-detectie: alleen op overgang los→ingedrukt zenden. Voorkomt 50 verzonden codes per seconde bij vasthouden." },
+          { term: "IR-LED 220Ω verplicht", desc: "Zonder weerstand: doorgebrand binnen seconden. IR-LED ziet er normaal uit maar zendt 940nm — onzichtbaar voor het oog (wel zichtbaar via een telefooncamera!)." },
+        ],
+        assignment: "Sluit aan: IR-LED anode→pin 3 (via 220Ω), kathode→GND. 4 knoppen op pin 4..7 (andere pin van elke knop → GND). Vul JOUW codes uit stap 2 in. Upload. Houd de IR-LED dichtbij je TV (1-2 meter), druk op een Arduino-knop → de TV moet reageren.",
+        challenge: "**Werkt-ie niet?** Test of de IR-LED écht zendt: richt 'm op je smartphone-camera (achter-camera) en druk op een knop. De LED hoort PAARS/WIT te flitsen door de camera. Veel telefoon-camera's filteren IR niet weg — handige debug-truc.",
+        reflection: "Waarom werkt deze 'universele afstandsbediening' wel voor TV's en airco's, maar niet voor moderne Apple TV's / Chromecasts? (Hint: die gebruiken Bluetooth of WiFi, geen IR. IR vereist line-of-sight + werkt alleen op klassieke apparaten met IR-ontvanger.)",
+        optionalCodeTitle: "Snippet: zend dezelfde code in andere protocollen",
+        optionalCode: `// Niet elk apparaat is NEC. Voorbeelden voor andere veelgebruikte protocollen:
+
+// Sony TV (12-bit commando)
+IrSender.sendSony(commando, 12);
+
+// RC5 (Philips, oudere apparaten)
+IrSender.sendRC5(adres, commando);
+
+// Samsung TVs
+IrSender.sendSamsung(adres, commando, 0);
+
+// Onbekend protocol — zend de raw decode terug:
+IrSender.sendNECRaw(IrReceiver.decodedIRData.decodedRawData, 0);`
       }
     ]
   }

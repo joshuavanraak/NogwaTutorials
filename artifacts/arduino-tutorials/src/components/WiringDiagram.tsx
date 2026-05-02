@@ -17,6 +17,10 @@ type ComponentType =
   | "stepper"
   | "encoder"
   | "lcd_i2c"
+  | "oled_ssd1306"
+  | "mpu6050"
+  | "ir_recv"
+  | "ir_led"
   | "matrix8x8"
   | "relay"
   | "reed"
@@ -125,6 +129,9 @@ function classifyName(name: string): ComponentType | null {
   if (n.includes("reed")) return "reed";
   if (n.includes("soil") || n.includes("bodem") || (n.includes("vocht") && !n.includes("dht"))) return "soil";
   if (n.includes("mq") || n.includes("co2") || n.includes("ppm") || (n.includes("gas") && n.includes("pin"))) return "mq";
+  // IR moet vóór "led" staan: irLedPin bevat anders óók "led".
+  if (n.includes("irrecv") || n.includes("ir_recv") || n.includes("ir_receive") || n.includes("irreceive")) return "ir_recv";
+  if (n.includes("irled") || n.includes("ir_led") || n.includes("ir_send") || n.includes("irsend") || n.includes("ir_tx") || n.includes("irtx")) return "ir_led";
   if (n.includes("led")) return "led";
   if (n.includes("pot")) return "potmeter";
   if (n.includes("pir")) return "pir";
@@ -154,15 +161,29 @@ function buildDiagram(code: string): DiagramData {
   const signalRows: WiringRow[] = [];
   const detectedComponents = new Set<ComponentType>();
 
-  // Detect I2C LCD usage. Default I2C pins: Arduino A4/A5, ESP32 GPIO 21/22.
+  // Detect I2C devices: LCD, OLED (SSD1306 / U8g2), MPU6050. Allemaal delen ze SDA/SCL.
+  // Default I2C pins: Arduino A4/A5, ESP32 GPIO 21/22.
+  const i2cDeviceLabels: string[] = [];
   if (/#include\s*<LiquidCrystal_I2C\.h>|LiquidCrystal_I2C\s+\w+\s*\(/.test(code)) {
     detectedComponents.add("lcd_i2c");
+    i2cDeviceLabels.push("LCD");
+  }
+  if (/#include\s*<Adafruit_SSD1306\.h>|#include\s*<U8g2lib\.h>|#include\s*<U8x8lib\.h>|Adafruit_SSD1306\s+\w+\s*\(|U8G2_\w+/.test(code)) {
+    detectedComponents.add("oled_ssd1306");
+    i2cDeviceLabels.push("OLED");
+  }
+  if (/#include\s*<MPU6050\.h>|#include\s*<Adafruit_MPU6050\.h>|#include\s*<MPU6050_light\.h>|MPU6050\s+\w+\s*[;(]|Adafruit_MPU6050\s+\w+/.test(code)) {
+    detectedComponents.add("mpu6050");
+    i2cDeviceLabels.push("MPU6050");
+  }
+  if (i2cDeviceLabels.length > 0) {
+    const label = i2cDeviceLabels.join(" + ");
     if (esp32) {
-      signalRows.push({ from: "GPIO 21 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
-      signalRows.push({ from: "GPIO 22 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
+      signalRows.push({ from: "GPIO 21 (SDA)", to: `${label} SDA`, color: "blue", direction: "out" });
+      signalRows.push({ from: "GPIO 22 (SCL)", to: `${label} SCL`, color: "blue", direction: "out" });
     } else {
-      signalRows.push({ from: "Pin A4 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
-      signalRows.push({ from: "Pin A5 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
+      signalRows.push({ from: "Pin A4 (SDA)", to: `${label} SDA`, color: "blue", direction: "out" });
+      signalRows.push({ from: "Pin A5 (SCL)", to: `${label} SCL`, color: "blue", direction: "out" });
     }
   }
 
@@ -286,6 +307,12 @@ function buildDiagram(code: string): DiagramData {
       case "pump":
         signalRows.push({ from: label, to: "Relais IN (stuurt 5V-pomp)", color: "rose", direction: "out" });
         break;
+      case "ir_recv":
+        signalRows.push({ from: label, to: "VS1838B IR-receiver OUT (data)", color: "amber", direction: "in" });
+        break;
+      case "ir_led":
+        signalRows.push({ from: label, resistance: "220Ω", to: "IR-LED + (anode, lange poot)", color: "rose", direction: "out" });
+        break;
     }
   }
 
@@ -348,6 +375,21 @@ function buildDiagram(code: string): DiagramData {
       case "lcd_i2c":
         powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "LCD VCC (op I2C-backpack)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "LCD GND (op I2C-backpack)", color: "slate" });
+        break;
+      case "oled_ssd1306":
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "OLED VCC (3.3V of 5V — check je module)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "OLED GND", color: "slate" });
+        break;
+      case "mpu6050":
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "MPU6050 VCC (3.3V of 5V via on-board regelaar)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "MPU6050 GND", color: "slate" });
+        break;
+      case "ir_recv":
+        powerRows.push({ arduinoPin: BOARD_VCC_LOGIC(esp32), componentPin: "VS1838B VCC (let op pin-volgorde!)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "VS1838B GND", color: "slate" });
+        break;
+      case "ir_led":
+        gndRows.push({ arduinoPin: "GND", componentPin: "IR-LED − (kathode, korte poot)", color: "slate" });
         break;
       case "matrix8x8":
         powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "MAX7219 VCC (5V)", color: "rose" });

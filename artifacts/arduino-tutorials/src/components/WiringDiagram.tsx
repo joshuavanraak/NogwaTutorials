@@ -19,7 +19,11 @@ type ComponentType =
   | "lcd_i2c"
   | "matrix8x8"
   | "relay"
-  | "reed";
+  | "reed"
+  | "soil"
+  | "mq"
+  | "rfid"
+  | "pump";
 
 type ColorKey = "teal" | "yellow" | "amber" | "blue" | "rose" | "violet" | "orange" | "slate" | "green";
 
@@ -116,8 +120,11 @@ function parsePins(code: string): ParsedPin[] {
 function classifyName(name: string): ComponentType | null {
   const n = name.toLowerCase();
   if (n === "data_pin" || n.startsWith("datapin") || n === "data") return "neopixel";
+  if (n.includes("pomp") || n.includes("pump")) return "pump";
   if (n.includes("relay") || n.includes("relais") || n.includes("lamp")) return "relay";
   if (n.includes("reed")) return "reed";
+  if (n.includes("soil") || n.includes("bodem") || (n.includes("vocht") && !n.includes("dht"))) return "soil";
+  if (n.includes("mq") || n.includes("co2") || n.includes("ppm") || (n.includes("gas") && n.includes("pin"))) return "mq";
   if (n.includes("led")) return "led";
   if (n.includes("pot")) return "potmeter";
   if (n.includes("pir")) return "pir";
@@ -156,6 +163,26 @@ function buildDiagram(code: string): DiagramData {
     } else {
       signalRows.push({ from: "Pin A4 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
       signalRows.push({ from: "Pin A5 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
+    }
+  }
+
+  // Detect RC522 RFID module via MFRC522 library (SPI bus, fixed wiring on Uno).
+  if (/#include\s*<MFRC522\.h>|MFRC522\s+\w+\s*\(/.test(code)) {
+    detectedComponents.add("rfid");
+    if (esp32) {
+      signalRows.push({ from: "GPIO 5 (SS / SDA)",   to: "RC522 SDA (SS)",                 color: "amber", direction: "out" });
+      signalRows.push({ from: "GPIO 18 (SCK)",       to: "RC522 SCK",                      color: "amber", direction: "out" });
+      signalRows.push({ from: "GPIO 23 (MOSI)",      to: "RC522 MOSI",                     color: "amber", direction: "out" });
+      signalRows.push({ from: "GPIO 19 (MISO)",      to: "RC522 MISO",                     color: "amber", direction: "in"  });
+      signalRows.push({ from: "GPIO 4 (RST)",        to: "RC522 RST",                      color: "amber", direction: "out" });
+      signalRows.push({ from: "GPIO 21 (IRQ — optioneel)", to: "RC522 IRQ (niet vereist in basiscode)", color: "amber", direction: "in"  });
+    } else {
+      signalRows.push({ from: "Pin 10 (SS / SDA)",   to: "RC522 SDA (SS)",                 color: "amber", direction: "out" });
+      signalRows.push({ from: "Pin 13 (SCK)",        to: "RC522 SCK",                      color: "amber", direction: "out" });
+      signalRows.push({ from: "Pin 11 (MOSI)",       to: "RC522 MOSI",                     color: "amber", direction: "out" });
+      signalRows.push({ from: "Pin 12 (MISO)",       to: "RC522 MISO",                     color: "amber", direction: "in"  });
+      signalRows.push({ from: "Pin 9 (RST)",         to: "RC522 RST",                      color: "amber", direction: "out" });
+      signalRows.push({ from: "Pin 2 (IRQ — optioneel)", to: "RC522 IRQ (niet vereist in basiscode)", color: "amber", direction: "in"  });
     }
   }
 
@@ -250,6 +277,15 @@ function buildDiagram(code: string): DiagramData {
       case "relay":
         signalRows.push({ from: label, to: "Relais IN (control)", color: "rose", direction: "out" });
         break;
+      case "soil":
+        signalRows.push({ from: label, to: "Bodemvocht-sensor AOUT", color: "blue", direction: "in" });
+        break;
+      case "mq":
+        signalRows.push({ from: label, to: "MQ-135 AOUT (analoge waarde)", color: "amber", direction: "in" });
+        break;
+      case "pump":
+        signalRows.push({ from: label, to: "Relais IN (stuurt 5V-pomp)", color: "rose", direction: "out" });
+        break;
     }
   }
 
@@ -323,6 +359,23 @@ function buildDiagram(code: string): DiagramData {
         break;
       case "reed":
         gndRows.push({ arduinoPin: "GND", componentPin: "Reed-schakelaar (andere pin)", color: "slate" });
+        break;
+      case "soil":
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "Bodemvocht VCC (5V)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "Bodemvocht GND", color: "slate" });
+        break;
+      case "mq":
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "MQ-135 VCC (5V — heater!)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "MQ-135 GND", color: "slate" });
+        break;
+      case "rfid":
+        powerRows.push({ arduinoPin: "3.3V", componentPin: "RC522 3.3V (NIET 5V!)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "RC522 GND", color: "slate" });
+        break;
+      case "pump":
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "Relais-module VCC (5V)", color: "rose" });
+        powerRows.push({ arduinoPin: "Externe 5V (apart!)", componentPin: "Pomp + via Relais NO/COM", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "Relais-module GND + pomp − (gemeenschappelijk)", color: "slate" });
         break;
     }
   }

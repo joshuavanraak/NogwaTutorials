@@ -4232,6 +4232,725 @@ void loop() {
 }`;
 
 // ─────────────────────────────────────────────
+// TUTORIAL 28: Magic 8-Ball met servo (Beginner)
+// ─────────────────────────────────────────────
+
+const m8_s1 = `#include <Servo.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+Servo servo1;
+int knopPin = 7;     // drukknop (andere kant naar GND)
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  servo1.attach(9);    // signaal-draadje van de servo op pin 9
+  pinMode(knopPin, INPUT_PULLUP);
+
+  servo1.write(90);    // middenstand
+  lcd.setCursor(0, 0); lcd.print("Magic 8-Ball");
+  lcd.setCursor(0, 1); lcd.print("Druk de knop...");
+}
+
+void loop() {
+  // Hardware-test: druk je de knop, dan wiebelt de servo.
+  if (digitalRead(knopPin) == LOW) {
+    servo1.write(60);  delay(150);
+    servo1.write(120); delay(150);
+    servo1.write(90);
+  }
+}`;
+
+const m8_s2 = `#include <Servo.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+Servo servo1;
+int knopPin = 7;
+
+// 8 antwoorden — een echte Magic 8-Ball heeft er 20, maar voor de demo is 8 prima.
+const int AANTAL_ANTW = 8;
+String antwoorden[AANTAL_ANTW] = {
+  "Zeker weten!",
+  "Beter van niet",
+  "Vraag later",
+  "Dat klopt!",
+  "Hmm... nee",
+  "Heel waarschijnlijk",
+  "Twijfelachtig",
+  "Onmogelijk"
+};
+
+void toonAntwoord(int i) {
+  lcd.clear();
+  lcd.setCursor(0, 0); lcd.print("De 8-Ball zegt:");
+  lcd.setCursor(0, 1); lcd.print(antwoorden[i]);
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  servo1.attach(9);
+  pinMode(knopPin, INPUT_PULLUP);
+  servo1.write(90);
+  randomSeed(analogRead(A0));   // ruis als zaadje, anders elke keer hetzelfde
+  lcd.print("Stel een vraag!");
+}
+
+void loop() {
+  if (digitalRead(knopPin) == LOW) {
+    int keuze = random(0, AANTAL_ANTW);   // 0..7
+    toonAntwoord(keuze);
+    delay(2000);   // even laten staan
+  }
+}`;
+
+const m8_s3 = `#include <Servo.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+Servo servo1;
+int knopPin = 7;
+
+const int AANTAL_ANTW = 8;
+String antwoorden[AANTAL_ANTW] = {
+  "Zeker weten!", "Beter van niet", "Vraag later", "Dat klopt!",
+  "Hmm... nee", "Heel waarschijnlijk", "Twijfelachtig", "Onmogelijk"
+};
+
+int vorigeKnop = HIGH;
+
+void rollen() {
+  // Drie keer heen-en-weer = "schudden" van de bal
+  for (int i = 0; i < 3; i++) {
+    servo1.write(45);  delay(120);
+    servo1.write(135); delay(120);
+  }
+  servo1.write(90);    // weer netjes in midden
+}
+
+void toonAntwoord(int i) {
+  lcd.clear();
+  lcd.setCursor(0, 0); lcd.print("De 8-Ball zegt:");
+  lcd.setCursor(0, 1); lcd.print(antwoorden[i]);
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  servo1.attach(9);
+  pinMode(knopPin, INPUT_PULLUP);
+  servo1.write(90);
+  randomSeed(analogRead(A0));
+  lcd.print("Stel een vraag!");
+}
+
+void loop() {
+  int huidig = digitalRead(knopPin);
+  // Edge: alleen op het MOMENT dat de knop wordt ingedrukt
+  if (vorigeKnop == HIGH && huidig == LOW) {
+    rollen();
+    int keuze = random(0, AANTAL_ANTW);
+    toonAntwoord(keuze);
+  }
+  vorigeKnop = huidig;
+  delay(20);   // simpele debounce
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 29: Slim plantenwater-systeem (Gemiddeld)
+// ─────────────────────────────────────────────
+
+const plant_s1 = `int soilPin = A0;     // bodemvocht-sensor (analoge uitgang AOUT)
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Bodemvocht-kalibratie. Houd de sensor in de lucht (=droog),");
+  Serial.println("en daarna in een glas water (=nat). Noteer de waardes!");
+}
+
+void loop() {
+  int ruw = analogRead(soilPin);
+  Serial.print("Sensor: ");
+  Serial.println(ruw);
+  delay(500);
+}`;
+
+const plant_s2 = `int soilPin = A0;
+
+// Vul hier in wat JIJ in stap 1 hebt gemeten:
+const int DROOG = 880;   // sensor in lucht
+const int NAT   = 380;   // sensor in glas water
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int ruw = analogRead(soilPin);
+  // map(): hoe hoger de waarde, hoe droger. We willen 0% (droog) .. 100% (nat).
+  int procent = map(ruw, DROOG, NAT, 0, 100);
+  procent = constrain(procent, 0, 100);   // klem tussen 0 en 100
+
+  Serial.print("Ruw: "); Serial.print(ruw);
+  Serial.print("  Vocht: "); Serial.print(procent);
+  Serial.println(" %");
+
+  if (procent < 30) Serial.println(" -> TE DROOG, water geven!");
+  delay(1000);
+}`;
+
+const plant_s3 = `int soilPin = A0;
+int pompPin = 7;     // stuurt het 5V-relais aan dat de pomp schakelt
+
+const int DROOG = 880;
+const int NAT   = 380;
+const int DREMPEL_PROCENT = 30;            // onder dit percentage: water geven
+
+const unsigned long POMP_MAX_MS  = 3000UL; // VEILIGHEID: pomp NOOIT langer dan 3 sec aan
+const unsigned long COOLDOWN_MS  = 60000UL; // 1 min wachten voor de volgende beurt
+
+unsigned long laatstePompTijd = 0;
+bool pompHeeftGedraaid = false;
+
+void pompAan()  { digitalWrite(pompPin, LOW);  }   // de meeste hobby-relais zijn ACTIVE-LOW
+void pompUit()  { digitalWrite(pompPin, HIGH); }
+
+void setup() {
+  Serial.begin(9600);
+  // Volgorde is CRUCIAAL bij active-LOW relais:
+  // 1) Eerst HIGH 'voorinstellen' (activeert interne pull-up zolang pin nog INPUT is),
+  // 2) Pas DAARNA pinMode(OUTPUT). Zo komt de pin direct als HIGH uit de switch.
+  // Andere volgorde = korte LOW-glitch tijdens elke reset = pomp tikt aan.
+  digitalWrite(pompPin, HIGH);
+  pinMode(pompPin, OUTPUT);
+}
+
+void loop() {
+  int ruw = analogRead(soilPin);
+  int procent = constrain(map(ruw, DROOG, NAT, 0, 100), 0, 100);
+  unsigned long nu = millis();
+
+  bool tijdGenoegGewacht = (nu - laatstePompTijd) > COOLDOWN_MS;
+
+  if (procent < DREMPEL_PROCENT && tijdGenoegGewacht) {
+    Serial.println("Te droog -> pomp 3 sec aan");
+    pompAan();
+    delay(POMP_MAX_MS);       // hard begrensde max-runtime
+    pompUit();
+    laatstePompTijd = nu;
+    pompHeeftGedraaid = true;
+  }
+
+  delay(1000);
+}`;
+
+const plant_s4 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int soilPin = A0;
+int pompPin = 7;
+
+const int DROOG = 880;
+const int NAT   = 380;
+const int DREMPEL_PROCENT = 30;
+
+const unsigned long POMP_MAX_MS  = 3000UL;
+const unsigned long COOLDOWN_MS  = 60000UL;
+
+unsigned long laatstePompTijd = 0;
+String laatsteActie = "Geen";   // wat zag de plant het laatst?
+
+void pompAan() { digitalWrite(pompPin, LOW); }
+void pompUit() { digitalWrite(pompPin, HIGH); }
+
+void setup() {
+  Serial.begin(9600);
+  // Active-LOW relais: HIGH voorinstellen VOOR pinMode(OUTPUT)
+  // anders korte LOW-glitch tijdens reset = pomp tikt aan.
+  digitalWrite(pompPin, HIGH);
+  pinMode(pompPin, OUTPUT);
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Plantenwater 1.0");
+  delay(1000);
+}
+
+void toonStatus(int procent) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Vocht: ");
+  lcd.print(procent);
+  lcd.print(" %");
+
+  lcd.setCursor(0, 1);
+  lcd.print(laatsteActie);
+}
+
+void loop() {
+  int ruw = analogRead(soilPin);
+  int procent = constrain(map(ruw, DROOG, NAT, 0, 100), 0, 100);
+  unsigned long nu = millis();
+
+  if (procent < DREMPEL_PROCENT && (nu - laatstePompTijd) > COOLDOWN_MS) {
+    pompAan();
+    delay(POMP_MAX_MS);
+    pompUit();
+    laatstePompTijd = nu;
+    laatsteActie = "Net water gehad";
+  } else if (procent < DREMPEL_PROCENT) {
+    laatsteActie = "Cooldown actief";
+  } else {
+    laatsteActie = "Nat genoeg :)";
+  }
+
+  toonStatus(procent);
+  delay(2000);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 30: CO₂-meter voor het klaslokaal (Gemiddeld)
+// ─────────────────────────────────────────────
+
+const co2_s1 = `int mqPin = A0;     // MQ-135 AOUT
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("MQ-135 opwarmen... wacht ~2 minuten voor stabiele waardes.");
+}
+
+void loop() {
+  int ruw = analogRead(mqPin);
+  Serial.print("MQ-135 ruw: ");
+  Serial.println(ruw);
+  delay(1000);
+}`;
+
+const co2_s2 = `int mqPin = A0;
+
+// Heel ruwe schatting: bij verse buitenlucht (~400 ppm) lees je iets als 100..200,
+// bij slechte lucht (>1500 ppm) eerder 500+. Voor exacte ppm heb je een SCD30 nodig
+// (échte NDIR-sensor). Voor school-context is dit prima om "te slecht" aan te geven.
+int co2Schatting(int ruw) {
+  // map(ruw 100..900 -> 400..2000 ppm)  (klem voor veiligheid)
+  int ppm = map(ruw, 100, 900, 400, 2000);
+  if (ppm < 400)  ppm = 400;
+  if (ppm > 5000) ppm = 5000;
+  return ppm;
+}
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int ruw = analogRead(mqPin);
+  int ppm = co2Schatting(ruw);
+
+  Serial.print("Ruw: "); Serial.print(ruw);
+  Serial.print("  ~ppm: "); Serial.println(ppm);
+  delay(1000);
+}`;
+
+const co2_s3 = `#include <Adafruit_NeoPixel.h>
+
+int mqPin = A0;
+int dataPin = 6;
+const int LEDS = 8;
+Adafruit_NeoPixel strip(LEDS, dataPin, NEO_GRB + NEO_KHZ800);
+
+int co2Schatting(int ruw) {
+  int ppm = map(ruw, 100, 900, 400, 2000);
+  if (ppm < 400)  ppm = 400;
+  if (ppm > 5000) ppm = 5000;
+  return ppm;
+}
+
+uint32_t kleurZone(int ppm) {
+  if (ppm < 800)  return strip.Color(0, 80, 0);     // groen
+  if (ppm < 1200) return strip.Color(120, 60, 0);   // oranje
+  return strip.Color(120, 0, 0);                    // rood
+}
+
+void setup() {
+  Serial.begin(9600);
+  strip.begin();
+  strip.show();
+}
+
+void loop() {
+  int ruw = analogRead(mqPin);
+  int ppm = co2Schatting(ruw);
+  uint32_t kleur = kleurZone(ppm);
+
+  // vul alle LEDs met dezelfde kleur — een soort "stoplicht-strip"
+  for (int i = 0; i < LEDS; i++) strip.setPixelColor(i, kleur);
+  strip.show();
+
+  Serial.print("ppm: "); Serial.println(ppm);
+  delay(1000);
+}`;
+
+const co2_s4 = `#include <Adafruit_NeoPixel.h>
+
+int mqPin = A0;
+int dataPin = 6;
+int buzzerPin = 8;
+int snoozeKnopPin = 4;     // knop tegen GND, INPUT_PULLUP
+
+const int LEDS = 8;
+Adafruit_NeoPixel strip(LEDS, dataPin, NEO_GRB + NEO_KHZ800);
+
+const unsigned long SNOOZE_MS = 5UL * 60UL * 1000UL;  // 5 min stil na druk
+unsigned long snoozeTotMillis = 0;
+int vorigeKnop = HIGH;
+
+int co2Schatting(int ruw) {
+  int ppm = map(ruw, 100, 900, 400, 2000);
+  if (ppm < 400)  ppm = 400;
+  if (ppm > 5000) ppm = 5000;
+  return ppm;
+}
+
+uint32_t kleurZone(int ppm) {
+  if (ppm < 800)  return strip.Color(0, 80, 0);
+  if (ppm < 1200) return strip.Color(120, 60, 0);
+  return strip.Color(120, 0, 0);
+}
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(snoozeKnopPin, INPUT_PULLUP);
+  strip.begin();
+  strip.show();
+}
+
+void loop() {
+  int ruw = analogRead(mqPin);
+  int ppm = co2Schatting(ruw);
+
+  for (int i = 0; i < LEDS; i++) strip.setPixelColor(i, kleurZone(ppm));
+  strip.show();
+
+  // Snooze-knop: bij druk 5 min geen alarm meer
+  int huidig = digitalRead(snoozeKnopPin);
+  if (vorigeKnop == HIGH && huidig == LOW) {
+    snoozeTotMillis = millis() + SNOOZE_MS;
+    Serial.println("Snooze: 5 min stil");
+  }
+  vorigeKnop = huidig;
+
+  bool inSnooze = millis() < snoozeTotMillis;
+
+  if (ppm > 1200 && !inSnooze) {
+    // korte piepjes — niet hard genoeg om af te leiden, wel hoorbaar
+    tone(buzzerPin, 1200, 80);
+  } else {
+    noTone(buzzerPin);
+  }
+
+  delay(1000);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 31: Slim slot met RFID-pas (Gemiddeld)
+// ─────────────────────────────────────────────
+
+const rfid_s1 = `// Bibliotheken: SPI is standaard. Installeer 'MFRC522' van GithubCommunity
+// via Schets -> Bibliotheek beheren -> zoek "MFRC522".
+#include <SPI.h>
+#include <MFRC522.h>
+
+#define SS_PIN  10
+#define RST_PIN 9
+
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  rfid.PCD_Init();
+  Serial.println("Houd een pas/tag voor de lezer...");
+}
+
+void loop() {
+  // Geen kaart aanwezig? Niets doen.
+  if (!rfid.PICC_IsNewCardPresent()) return;
+  if (!rfid.PICC_ReadCardSerial())   return;
+
+  Serial.println("Kaart gedetecteerd!");
+  rfid.PICC_HaltA();
+}`;
+
+const rfid_s2 = `#include <SPI.h>
+#include <MFRC522.h>
+
+#define SS_PIN  10
+#define RST_PIN 9
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+// Print de UID als reeks van bytes in HEX. Dit is wat we straks vergelijken.
+void printUID(byte *uid, byte len) {
+  for (byte i = 0; i < len; i++) {
+    if (uid[i] < 0x10) Serial.print("0");
+    Serial.print(uid[i], HEX);
+    if (i < len - 1) Serial.print(" ");
+  }
+  Serial.println();
+}
+
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  rfid.PCD_Init();
+  Serial.println("Houd jouw pas voor de lezer en noteer de UID:");
+}
+
+void loop() {
+  if (!rfid.PICC_IsNewCardPresent()) return;
+  if (!rfid.PICC_ReadCardSerial())   return;
+
+  Serial.print("UID: ");
+  printUID(rfid.uid.uidByte, rfid.uid.size);
+  rfid.PICC_HaltA();
+  delay(800);   // anti-dubbel-lezen van dezelfde kaart
+}`;
+
+const rfid_s3 = `#include <SPI.h>
+#include <MFRC522.h>
+
+#define SS_PIN  10
+#define RST_PIN 9
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+// VUL HIER JOUW UIDs IN (uit stap 2). Elke pas = 4 bytes (vaak) of 7 bytes.
+// Voorbeeld voor een 4-byte tag:
+const int AANTAL_PASSEN = 2;
+const int UID_LEN = 4;
+byte toegestaan[AANTAL_PASSEN][UID_LEN] = {
+  { 0xDE, 0xAD, 0xBE, 0xEF },   // pas van de leraar
+  { 0x12, 0x34, 0x56, 0x78 }    // pas van de leerling
+};
+
+bool zelfdeUID(byte *gelezen, byte len, byte *kandidaat) {
+  if (len != UID_LEN) return false;
+  for (byte i = 0; i < UID_LEN; i++) {
+    if (gelezen[i] != kandidaat[i]) return false;
+  }
+  return true;
+}
+
+bool isToegestaan(byte *gelezen, byte len) {
+  for (int i = 0; i < AANTAL_PASSEN; i++) {
+    if (zelfdeUID(gelezen, len, toegestaan[i])) return true;
+  }
+  return false;
+}
+
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  rfid.PCD_Init();
+}
+
+void loop() {
+  if (!rfid.PICC_IsNewCardPresent()) return;
+  if (!rfid.PICC_ReadCardSerial())   return;
+
+  if (isToegestaan(rfid.uid.uidByte, rfid.uid.size)) {
+    Serial.println("TOEGANG OK");
+  } else {
+    Serial.println("TOEGANG GEWEIGERD");
+  }
+  rfid.PICC_HaltA();
+  delay(800);
+}`;
+
+const rfid_s4 = `#include <SPI.h>
+#include <MFRC522.h>
+#include <Servo.h>
+
+#define SS_PIN  10
+#define RST_PIN 9
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+Servo servo1;
+int groenLedPin = 6;
+int rodeLedPin  = 7;
+
+const int AANTAL_PASSEN = 2;
+const int UID_LEN = 4;
+byte toegestaan[AANTAL_PASSEN][UID_LEN] = {
+  { 0xDE, 0xAD, 0xBE, 0xEF },
+  { 0x12, 0x34, 0x56, 0x78 }
+};
+
+bool zelfdeUID(byte *a, byte len, byte *b) {
+  if (len != UID_LEN) return false;
+  for (byte i = 0; i < UID_LEN; i++) if (a[i] != b[i]) return false;
+  return true;
+}
+
+bool isToegestaan(byte *uid, byte len) {
+  for (int i = 0; i < AANTAL_PASSEN; i++)
+    if (zelfdeUID(uid, len, toegestaan[i])) return true;
+  return false;
+}
+
+void slotOpen() {
+  servo1.write(180);   // 180° = "open" stand
+  digitalWrite(groenLedPin, HIGH);
+  delay(5000);         // 5 sec open
+  digitalWrite(groenLedPin, LOW);
+  servo1.write(0);     // weer dicht
+}
+
+void afgewezen() {
+  for (int i = 0; i < 3; i++) {
+    digitalWrite(rodeLedPin, HIGH); delay(150);
+    digitalWrite(rodeLedPin, LOW);  delay(150);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  rfid.PCD_Init();
+  servo1.attach(3);
+  servo1.write(0);     // start: dicht
+  pinMode(groenLedPin, OUTPUT);
+  pinMode(rodeLedPin,  OUTPUT);
+}
+
+void loop() {
+  if (!rfid.PICC_IsNewCardPresent()) return;
+  if (!rfid.PICC_ReadCardSerial())   return;
+
+  if (isToegestaan(rfid.uid.uidByte, rfid.uid.size)) {
+    Serial.println("OK -> open");
+    slotOpen();
+  } else {
+    Serial.println("GEWEIGERD");
+    afgewezen();
+  }
+  rfid.PICC_HaltA();
+  delay(500);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 32: Aanwezigheidssensor met auto-licht (Beginner)
+// ─────────────────────────────────────────────
+
+const auto_s1 = `int pirPin    = 2;    // PIR sensor OUT
+int relaisPin = 7;    // 5V-relais module IN
+
+void relaisAan()  { digitalWrite(relaisPin, LOW);  }   // active-LOW relais
+void relaisUit()  { digitalWrite(relaisPin, HIGH); }
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(pirPin, INPUT);
+  // CRUCIAAL bij active-LOW relais: HIGH voorinstellen VOOR pinMode(OUTPUT),
+  // anders korte LOW-glitch bij reset = lamp ploft kort aan.
+  digitalWrite(relaisPin, HIGH);
+  pinMode(relaisPin, OUTPUT);
+}
+
+void loop() {
+  int beweging = digitalRead(pirPin);
+  if (beweging == HIGH) {
+    relaisAan();
+    Serial.println("Beweging -> licht aan");
+  } else {
+    relaisUit();
+  }
+  delay(50);
+}`;
+
+const auto_s2 = `int pirPin    = 2;
+int relaisPin = 7;
+
+const unsigned long NA_LICHT_AAN_MS = 30UL * 1000UL;   // 30 sec stil = uit
+unsigned long laatsteBewegingMs = 0;
+bool lichtAan = false;
+
+void relaisAan() { digitalWrite(relaisPin, LOW);  lichtAan = true;  }
+void relaisUit() { digitalWrite(relaisPin, HIGH); lichtAan = false; }
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(pirPin, INPUT);
+  // Active-LOW relais: HIGH VOOR pinMode(OUTPUT) (anti-reset-glitch).
+  digitalWrite(relaisPin, HIGH);
+  pinMode(relaisPin, OUTPUT);
+}
+
+void loop() {
+  if (digitalRead(pirPin) == HIGH) {
+    laatsteBewegingMs = millis();
+    if (!lichtAan) {
+      relaisAan();
+      Serial.println("Beweging -> aan");
+    }
+  }
+
+  // Geen beweging meer voor 30 sec? -> uit
+  if (lichtAan && (millis() - laatsteBewegingMs) > NA_LICHT_AAN_MS) {
+    relaisUit();
+    Serial.println("Stil -> uit");
+  }
+
+  delay(50);
+}`;
+
+const auto_s3 = `int pirPin    = 2;
+int relaisPin = 7;
+int ldrPin    = A0;            // LDR via spanningsdeler met 10kΩ -> GND
+
+const unsigned long NA_LICHT_AAN_MS = 30UL * 1000UL;
+const int DAGLICHT_DREMPEL = 600;     // boven dit getal: het is overdag licht genoeg
+
+unsigned long laatsteBewegingMs = 0;
+bool lichtAan = false;
+
+void relaisAan() { digitalWrite(relaisPin, LOW);  lichtAan = true;  }
+void relaisUit() { digitalWrite(relaisPin, HIGH); lichtAan = false; }
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(pirPin, INPUT);
+  // Active-LOW relais: HIGH VOOR pinMode(OUTPUT) (anti-reset-glitch).
+  digitalWrite(relaisPin, HIGH);
+  pinMode(relaisPin, OUTPUT);
+}
+
+void loop() {
+  int licht = analogRead(ldrPin);
+  bool overdag = (licht > DAGLICHT_DREMPEL);
+
+  if (digitalRead(pirPin) == HIGH && !overdag) {
+    laatsteBewegingMs = millis();
+    if (!lichtAan) relaisAan();
+  }
+
+  if (lichtAan && (millis() - laatsteBewegingMs) > NA_LICHT_AAN_MS) {
+    relaisUit();
+  }
+
+  // Als het overdag licht wordt terwijl het kunstlicht aanstaat -> direct uit
+  if (lichtAan && overdag) relaisUit();
+
+  delay(100);
+}`;
+
+// ─────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────
 
@@ -6216,6 +6935,411 @@ void sonarPuls() {
   delay(500);          // toon de sonar-cellen 0,5 sec
   // Daarna: tekenVeld() in volgende loop herstelt de echte stand.
 }`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 28: Magic 8-Ball met servo (Beginner)
+  // ─────────────────────────────────────────────
+  {
+    id: "magic-8-ball",
+    title: "Magic 8-Ball met servo",
+    description: "De klassieke schud-en-vraag 'orakel-bal' nagebouwd: druk op de knop, de servo schudt heen en weer, en het LCD toont een willekeurig antwoord. Perfect als gimmick op je bureau of als grappige opener voor een les.",
+    difficulty: "Beginner",
+    materials: "Arduino Uno, breadboard + jumpers, 1× I2C 16x2 LCD-display, 1× SG90 servo, 1× drukknop. Optioneel: een leuk balletje of doosje waarin de servo het 'antwoord' onthult.",
+    learningGoal: "Een array van strings gebruiken voor willekeurige antwoorden, `random()` met `randomSeed()` correct toepassen, een servo aansturen voor 'mechanische feedback', en edge-detectie op een knop doen.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "m8-s1",
+        title: "Hardware-test: servo + LCD + knop",
+        content: "Voor we de logica bouwen, eerst de hardware testen. Sluit aan: I2C-LCD (4 draadjes — VCC, GND, SDA→A4, SCL→A5), SG90 servo (rood→5V, bruin→GND, oranje→pin 9) en een drukknop op pin 7 (andere kant naar GND, we gebruiken `INPUT_PULLUP`). Bij elke knopdruk wiebelt de servo van 60° naar 120° en terug. Werkt dat? Dan zit alles correct.\n\n**Real-life toepassing:** in een lokaal-deurbel of attentie-systeem doe je hetzelfde — knop indrukken triggert een mechanische actie + visuele melding.",
+        diagram: true,
+        code: m8_s1,
+        legend: [
+          { term: "servo1.attach(9)", desc: "Vertel de Servo-bibliotheek dat ons servo-signaal op pin 9 zit. Pin 9/10 zijn de meest gebruikte." },
+          { term: "servo1.write(90)", desc: "Stuur de servo naar 90° (midden). Bereik: 0..180°." },
+          { term: "INPUT_PULLUP", desc: "Interne pull-up: pin standaard HIGH, ingedrukt = LOW. Geen extra weerstand nodig." },
+          { term: "LiquidCrystal_I2C lcd(0x27, 16, 2)", desc: "I2C-adres 0x27 (vaak), 16 kolommen × 2 rijen. Werkt het niet? Probeer 0x3F." },
+        ],
+        assignment: "Sluit alles aan, upload. Druk de knop = servo wiebelt + LCD blijft 'Druk de knop...' tonen. Werkt de servo niet? Check je 5V/GND-aansluitingen — een SG90 trekt korte stroompiekjes en mag GEEN 3.3V krijgen.",
+        challenge: "Pas de 'wiebel'-animatie aan: van 30° naar 150° = grotere zwaai. Wat voelt natuurlijker?",
+        reflection: "Waarom `INPUT_PULLUP` in plaats van een externe pull-down weerstand? (Hint: minder bedrading = minder kans op 'losse contact'-fouten.)",
+      },
+      {
+        id: "m8-s2",
+        title: "Lijst van antwoorden + random kiezen",
+        content: "Nu maken we het écht een Magic 8-Ball. We slaan 8 antwoorden op in een **String-array** `antwoorden[]`. Elke knopdruk kiest `random(0, AANTAL_ANTW)` een willekeurige index en toont dat antwoord op het LCD. Cruciaal: `randomSeed(analogRead(A0))` — een ongebruikte analoge pin geeft elektrische ruis als 'zaadje', anders krijg je elke keer dezelfde 'willekeurige' reeks na een Arduino-reset.",
+        code: m8_s2,
+        legend: [
+          { term: "String antwoorden[AANTAL_ANTW]", desc: "Een array van strings — elke plek bevat één antwoord-zin." },
+          { term: "random(0, 8)", desc: "Random getal: 0..7 (8 is exclusief). Past perfect bij onze 8 antwoorden." },
+          { term: "randomSeed(analogRead(A0))", desc: "Lees ruis van een ongebruikte analoge pin. Zonder dit elke keer dezelfde reeks na reset." },
+          { term: "lcd.clear()", desc: "Wis het hele scherm voor we het nieuwe antwoord tonen — anders mengen letters door elkaar." },
+        ],
+        assignment: "Upload. Druk de knop — er verschijnt elke keer een ander antwoord. Druk 10x: krijg je een leuke verdeling, of valt hij vaak op hetzelfde?",
+        challenge: "Vervang de 8 antwoorden door eigen tekst (bijv. inside-jokes met je klas). Tip: het LCD heeft maar 16 tekens per regel — langere zinnen worden afgekapt.",
+        reflection: "Waarom telt `random(0, 8)` t/m 7 en niet t/m 8? Zoek 'zero-based indexing' op — het is een patroon dat in álle programmeertalen terugkomt.",
+      },
+      {
+        id: "m8-s3",
+        title: "Schud-animatie met edge-detectie",
+        content: "Eindversie: voor het antwoord verschijnt schudt de servo 3 keer heftig heen en weer — net als een echte 8-Ball voor je hem omdraait. Dit voelt bevredigender dan 'instant antwoord'. We gebruiken **edge-detectie** zodat één lange knopdruk niet honderd worpen geeft: alleen op de exacte OVERGANG van HIGH→LOW triggeren we.",
+        code: m8_s3,
+        legend: [
+          { term: "void rollen()", desc: "Helper-functie: 3x heen-en-weer + terug naar midden. Herbruikbaar als je later meer 'schud'-momenten wilt." },
+          { term: "vorigeKnop == HIGH && huidig == LOW", desc: "Edge-detectie: trigger alleen op het MOMENT van indrukken. Niet zolang ingedrukt." },
+          { term: "delay(120)", desc: "120 ms per zwaai = ~4 zwaaien per seconde. Sneller voelt nerveuzer, langzamer voelt majestueuzer." },
+          { term: "delay(20)  // debounce", desc: "Knoppen 'stuiteren' bij indrukken. 20 ms wachten filtert die ruis weg." },
+        ],
+        assignment: "Upload. Bij elke knopdruk: servo schudt eerst, dan komt het antwoord. Voelt veel echter, toch?",
+        challenge: "Voeg een **'thinking'-animatie** toe op het LCD: tijdens de schud-fase tekent het LCD 3 puntjes die één voor één verschijnen ('.', '..', '...').",
+        reflection: "De animatie heeft geen invloed op de uitkomst — die wordt pas erna bepaald. Waarom voelt de gebruiker hem dan toch 'eerlijker'? (Dit is het hart van game-feedback design.)",
+        optionalCodeTitle: "Snippet: tilt-switch in plaats van een knop",
+        optionalCode: `// Een tilt-switch (kogeltje in een buisje) maakt contact als je de bal kantelt.
+// Sluit aan zoals een knop (één pin -> pin 7, andere -> GND).
+// Code blijft IDENTIEK: de tilt-switch geeft net als een knop een LOW.
+// Voordeel: voelt nog meer als een echte 8-Ball — gewoon kantelen!`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 29: Slim plantenwater-systeem (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "plantenwater-systeem",
+    title: "Slim plantenwater-systeem",
+    description: "Je plant water-geven vergeten? Niet meer! Een capacitieve bodemvocht-sensor meet de aarde, en bij te droog schakelt een relais een 5V-pompje aan voor exact 3 sec. Met max-runtime + cooldown — dus geen ondergelopen klaslokaal.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, breadboard + jumpers, 1× capacitieve bodemvocht-sensor (v1.2 — niet de roest-gevoelige resistieve!), 1× 5V-relais module (1-kanaals), 1× klein 5V-aquarium-pompje (~5W), 1× I2C 16x2 LCD-display, een waterreservoir + slangetje. **Veiligheid: ALLES op 5V/12V DC. Géén 230V in deze tutorial!**",
+    learningGoal: "Een analoge sensor kalibreren en `map()` gebruiken om naar percentages te converteren, een relais correct ACTIVE-LOW aansturen, en kritische veiligheid (max-runtime + cooldown) in code afdwingen.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "plant-s1",
+        title: "Bodemvocht-kalibratie (droog vs nat)",
+        content: "De sensor geeft een **ruwe analoge waarde** (0..1023), niet een percentage. We moeten 'm eerst kalibreren: hoe hoog is de waarde als-ie volledig droog is (in de lucht), en hoe laag in een glas water? Die twee uitersten gebruiken we straks om naar 0..100 % te schalen.\n\n**Real-life toepassing:** elke planten-soort heeft een ander 'ideaal' vochtgehalte. Cactussen 10–20%, varens 60+%. Door zelf te kalibreren past je systeem zich aan.",
+        diagram: true,
+        code: plant_s1,
+        legend: [
+          { term: "int soilPin = A0", desc: "De sensor's AOUT zit op analoge pin A0. Analoog = waarde 0..1023." },
+          { term: "analogRead(soilPin)", desc: "Lees de spanning. Hoge waarde = droog, lage waarde = nat (bij capacitieve sensor)." },
+          { term: "Serial.println(ruw)", desc: "Print 1 keer per halve seconde de waarde. Open Serial Monitor (9600 baud)." },
+          { term: "capacitief vs resistief", desc: "Capacitief gaat NIET roesten in vochtige aarde. Resistief (de blote koperen prongs) wel — ga voor capacitief." },
+        ],
+        assignment: "Sluit aan: VCC→5V, GND→GND, AOUT→A0. Upload. Open Serial Monitor. **Houd de sensor in de lucht** = noteer de waarde (= DROOG). **Stop 'm in een glas water tot net onder het lijntje** = noteer (= NAT). Bij de meesten: DROOG ≈ 850–900, NAT ≈ 350–400.",
+        challenge: "Kalibreer ook in echte (vochtige) aarde versus echte (droge) aarde. Past de mapping nog?",
+        reflection: "Waarom kalibreer je per sensor en niet één keer voor altijd? (Hint: tolerantie tussen sensoren, en aarde verschilt qua mineraal-gehalte → invloed op de meting.)",
+      },
+      {
+        id: "plant-s2",
+        title: "Procent-conversie + drempel-logica",
+        content: "Met de twee kalibratie-getallen schalen we naar percentages met `map()`. We klemmen het resultaat met `constrain()` zodat negatieve of 100+%-waardes niet voorkomen (kan gebeuren als de sensor net in een andere positie zit). Onder een drempel (bijv. 30%) printen we 'water geven nodig'. **Nog niets pompen!** Eerst de logica testen op de Serial Monitor.",
+        code: plant_s2,
+        legend: [
+          { term: "const int DROOG = 880", desc: "JOUW gemeten droog-waarde uit stap 1. Aanpassen naar wat jij hebt!" },
+          { term: "map(ruw, DROOG, NAT, 0, 100)", desc: "Lineair omschalen: DROOG (hoog ruw) → 0 %, NAT (laag ruw) → 100 %. De volgorde van argumenten klopt!" },
+          { term: "constrain(procent, 0, 100)", desc: "Veiligheid: klem tussen 0 en 100. Anders kun je negatieve % zien." },
+          { term: "DREMPEL_PROCENT = 30", desc: "Onder 30% vocht = water geven. Tweak per plantsoort." },
+        ],
+        assignment: "Upload. Houd de sensor in lucht → ~0%. Stop in nat papier of vochtige aarde → 50–80%. Werkt de berekening? Pas DROOG/NAT aan als je waardes raar zijn.",
+        challenge: "Voeg een **3-zone label** toe: <30% = 'TE DROOG', 30..70% = 'OK', >70% = 'TE NAT' (root rot risico voor sommige planten).",
+        reflection: "Waarom is `constrain()` belangrijk? Wat zou `map()` teruggeven als de sensor in een onmogelijk droge omgeving (waarde > DROOG) zit?",
+      },
+      {
+        id: "plant-s3",
+        title: "Relais + pomp veilig aansturen",
+        content: "Nu het 'doe-iets'-deel: bij te droog → pomp aan via relais. **Drie cruciale veiligheids-regels** in deze stap:\n\n1. **`pinMode(...)` + `digitalWrite(HIGH)` IN setup()**: de meeste hobby-relais zijn ACTIVE-LOW. Zonder dit klikt het relais aan tijdens elke Arduino-reset = ongewilde 3 sec pomp.\n2. **Max-runtime van 3 sec hard-coded**: als de sensor stuk gaat en altijd 'droog' meldt, mag de pomp NOOIT eindeloos doorpompen.\n3. **Cooldown van 1 minuut**: na elke beurt 60 sec wachten — de aarde moet de tijd krijgen om het water te absorberen vóór we opnieuw meten.",
+        diagram: true,
+        code: plant_s3,
+        legend: [
+          { term: "int pompPin = 7", desc: "Sluit aan op IN-pin van het relais. Het relais schakelt vervolgens de 5V-pomp." },
+          { term: "digitalWrite(pompPin, HIGH)  // = UIT", desc: "ACTIVE-LOW: HIGH = relais open = pomp uit. LOW = dicht = pomp aan. **Verwarrend, dus expliciet noteren!**" },
+          { term: "POMP_MAX_MS = 3000UL", desc: "Hard begrensde max-runtime. Sensor-defect mag NOOIT een aquarium veroorzaken." },
+          { term: "COOLDOWN_MS = 60000UL", desc: "1 min wachten tussen beurten. Geeft de aarde tijd om water op te nemen." },
+          { term: "(nu - laatstePompTijd) > COOLDOWN_MS", desc: "Klassieke `millis()`-pattern: vergelijk verstreken tijd, nooit blokkerend." },
+        ],
+        assignment: "Sluit het relais aan: IN→pin 7, VCC→5V, GND→GND. Sluit de pomp aan via de NO/COM-contacten van het relais (apart 5V-voeding raden we aan — Arduino USB kan een pomp niet altijd voeden). Upload. Bij 'droge' sensor: pomp gaat 3 sec aan, dan 1 min stilte ook al blijft de sensor droog.",
+        challenge: "Voeg een **handmatige knop** toe op pin 4: druk = direct 1 sec extra water (in noodgeval), zonder de cooldown te negeren.",
+        reflection: "Waarom is de combinatie 'max-runtime + cooldown' veiliger dan alleen max-runtime? (Hint: stel een sensor blijft 'droog' melden — wat zou er zonder cooldown elk loopje gebeuren?)",
+      },
+      {
+        id: "plant-s4",
+        title: "LCD-status: laatste actie + sensor-waarde",
+        content: "De plant kan zijn eigen status laten zien op een LCD. Eerste regel: huidige vochtigheid in %. Tweede regel: wat het systeem het laatst gedaan heeft ('Net water gehad', 'Cooldown actief', 'Nat genoeg :)'). Zo zie je in één oogopslag of het systeem werkt — handig voor klas-demonstratie of als zelf-check zonder Serial Monitor.",
+        code: plant_s4,
+        legend: [
+          { term: "String laatsteActie", desc: "Onthoud wat we het laatst deden. Toont op rij 2 van het LCD." },
+          { term: "lcd.clear()", desc: "Volledig scherm leegmaken voor we opnieuw schrijven. Voorkomt 'spookletters'." },
+          { term: "lcd.setCursor(0, 0)", desc: "Cursor naar kolom 0, rij 0 (eerste regel). 0-indexed." },
+          { term: "delay(2000)", desc: "Update om de 2 sec — snel genoeg om responsief te voelen, langzaam genoeg om af te lezen." },
+        ],
+        assignment: "Upload. Het LCD toont nu live de status. Test: laat de plant droog worden, kijk of de pomp aanslaat én of het LCD de actie netjes meldt.",
+        challenge: "Voeg een vierde status toe: 'NOODSTOP' als de pomp 5 keer achter elkaar in 10 min aan moest (= sensor of plant heeft een groter probleem). Pomp-aansturen wordt dan tijdelijk uitgeschakeld tot reset.",
+        reflection: "Welke 3 reële risico's blijven er nog over zelfs met deze veiligheid? (Voorbeelden: pomp die droog loopt, slang die loskomt, kabel die loslaat...) Hoe zou je die kunnen detecteren?",
+        optionalCodeTitle: "Snippet: water-bijhouden via een tweede sensor",
+        optionalCode: `// Tweede sensor in de waterbak: detecteer wanneer er bijgevuld moet worden.
+// Sluit aan op A1, gebruik dezelfde droog/nat-mapping.
+int waterbakPin = A1;
+int waterRuw = analogRead(waterbakPin);
+if (waterRuw > 800) {
+  // bak bijna leeg
+  lcd.setCursor(0, 0);
+  lcd.print("WATER BIJVULLEN!");
+  // pomp uitschakelen tot bijgevuld
+}`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 30: CO₂-meter voor het klaslokaal (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "co2-meter-klaslokaal",
+    title: "CO₂-meter voor het klaslokaal",
+    description: "Slechte lucht in het lokaal? Een MQ-135-sensor + NeoPixel-strip toont in één oogopslag: groen (frisse lucht), oranje (raam open!), rood (raam open NU + buzzer). Met snooze-knop voor als de leraar al weet dat het slecht is.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, breadboard + jumpers, 1× MQ-135 gas-sensor (budget), 1× WS2812B NeoPixel-strip (8 LEDs is genoeg), 1× passieve buzzer, 1× drukknop (snooze). Optioneel duurder alternatief: SCD30 met échte NDIR-meting (zie 'reflectie' in stap 1 voor uitleg).",
+    learningGoal: "Het verschil tussen een goedkope (MQ-135) en een precieze (SCD30) sensor begrijpen, een analoge waarde naar betekenisvolle eenheden mappen, een NeoPixel-strip gebruiken als zone-indicator, en een snooze-mechanisme implementeren met `millis()`.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "co2-s1",
+        title: "MQ-135 opwarmen + ruwe waardes",
+        content: "**Belangrijk om te weten**: de MQ-135 is een budget-sensor (~€3) die *meerdere* gassen detecteert (CO₂, NH₃, NOx, alcohol...). Hij geeft GEEN exacte ppm — alleen een ruwe analoge waarde die hoger wordt bij meer 'vieze' lucht. Voor échte CO₂-metingen is een SCD30 (~€50, NDIR-technologie) precies. Voor school-context met budget: MQ-135 is voldoende om 'frisse vs slechte lucht' te onderscheiden.\n\n**Cruciaal**: de sensor heeft een **opwarm-tijd van ~1-2 minuten** nodig. De heater binnenin moet op temperatuur komen voor stabiele waardes. Eerste minuut zie je rare schommelingen — die negeren!",
+        diagram: true,
+        code: co2_s1,
+        legend: [
+          { term: "int mqPin = A0", desc: "AOUT van de MQ-135 op analoge pin A0." },
+          { term: "MQ-135 vs SCD30", desc: "MQ-135 = goedkoop, ruw, niet-CO₂-specifiek. SCD30 = duur, exacte ppm, échte CO₂-meting." },
+          { term: "opwarm-tijd 1-2 min", desc: "De interne heater moet op temperatuur komen. Negeer waardes in de eerste minuut!" },
+          { term: "5V op VCC", desc: "MQ-135 trekt redelijk veel stroom (~150 mA) door de heater. 3.3V is NIET voldoende." },
+        ],
+        assignment: "Sluit aan: VCC→5V, GND→GND, AOUT→A0. Upload, open Serial Monitor (9600). Wacht 2 min en let op: waardes stabiliseren rond een vast getal (~150-300 in frisse lucht). Adem dan eens vlak over de sensor — waardes schieten omhoog.",
+        challenge: "Houd een fles azijn vlakbij de sensor (NIET aanraken!). Wat gebeurt er? (Spoiler: MQ-135 reageert ook op damp van zuren/alcohol.)",
+        reflection: "Waarom is MQ-135 'goed genoeg' voor klaslokaal-monitoring, ook al meet hij niet écht CO₂? (Hint: in een vol lokaal stijgen ALLE menselijke uitstoot tegelijk: CO₂, vocht, lichaamsgeur. Wat de MQ-135 meet correleert sterk met 'aantal mensen × tijd'.)",
+      },
+      {
+        id: "co2-s2",
+        title: "Ruwe waarde -> ppm-schatting",
+        content: "We zetten de ruwe waarde om naar een ruwe ppm-schatting met `map()`. **Dit is geen wetenschappelijke meting** — de schaal is alleen een hulpmiddel om grenswaardes (800/1200 ppm) te kunnen instellen. Frisse buitenlucht ≈ 400 ppm, ventileer-grens in scholen ≈ 800 ppm, alarm ≈ 1200 ppm.",
+        code: co2_s2,
+        legend: [
+          { term: "int co2Schatting(int ruw)", desc: "Helper-functie. Door 'm los te schrijven kun je 'm hergebruiken in alle volgende stappen." },
+          { term: "map(ruw, 100, 900, 400, 2000)", desc: "Ruw 100 -> 400 ppm (frisse lucht), Ruw 900 -> 2000 ppm (slecht). Lineair daartussen." },
+          { term: "if (ppm < 400) ppm = 400", desc: "Klemmen: ppm onder 400 is fysiek raar — buitenlucht is altijd ≥400. Voorkom verwarrende negatieve schattingen." },
+          { term: "drempels 800 / 1200", desc: "Wereldwijde guideline: <800 = goed, 800-1200 = ventileer, >1200 = NU ventileren." },
+        ],
+        assignment: "Upload. Wacht 2 min opwarm. Lees in Serial Monitor: rond welke ppm zit jouw lokaal? Adem 30 sec vlak op de sensor — hoe hoog ga je?",
+        challenge: "Maak de mapping accurater: meet bij echt-frisse-buitenlucht (raam open, sensor naar buiten houden 5 min) en kalibreer met DAT als '400 ppm' nul-punt.",
+        reflection: "Waarom is een lineaire `map()` een **slechte benadering** van de echte ppm-verhouding? (Hint: gas-sensoren zijn meestal logaritmisch in werkelijkheid. De fout kan ±300 ppm zijn — wel goed genoeg voor 'rood/oranje/groen', niet voor wetenschap.)",
+      },
+      {
+        id: "co2-s3",
+        title: "Drie kleurzones op de NeoPixel-strip",
+        content: "Nu maken we het **visueel direct duidelijk**: alle 8 LEDs op de strip krijgen één kleur op basis van de zone. Groen <800 ppm (oké), oranje 800-1200 ppm (ventileer), rood >1200 ppm (NU openzetten). Een 'stoplicht-strip' die je in je ooghoek ziet zonder een display te hoeven lezen.",
+        code: co2_s3,
+        legend: [
+          { term: "Adafruit_NeoPixel strip(LEDS, dataPin, NEO_GRB + NEO_KHZ800)", desc: "Standaard NeoPixel-init. 8 LEDs in serie volstaat." },
+          { term: "uint32_t kleurZone(int ppm)", desc: "Helper-functie geeft de juiste kleur terug op basis van de drempels — herbruikbaar." },
+          { term: "strip.Color(0, 80, 0)  // groen", desc: "Niet 0,255,0 — 80 is fel genoeg én voorkomt overbelasting van de USB-stroom met 8 felle LEDs." },
+          { term: "strip.show()", desc: "Stuur de buffer naar de strip. Zonder dit zie je niets veranderen." },
+        ],
+        assignment: "Sluit aan: 5V→strip 5V, GND→strip GND, pin 6→strip Din. Upload. Strip is groen in frisse lucht. Adem 30 sec op de sensor → oranje → rood.",
+        challenge: "Maak 'm 'gradient': bij 600 ppm 1 LED rood + 7 groen, bij 800 ppm 4 rood + 4 groen, etc. Visueel veel mooier dan 'alle of niets'.",
+        reflection: "Waarom kies je voor een NeoPixel-strip i.p.v. een LCD? (Hint: kunt je zonder lezen herkennen, ook vanaf de andere kant van het lokaal, ook met je rug ernaartoe.)",
+      },
+      {
+        id: "co2-s4",
+        title: "Buzzer-alarm bij rood + snooze-knop",
+        content: "Eindversie: bij 'rood' (>1200 ppm) speelt een korte hoge piep elke seconde. Maar — leraar wéét al dat het slecht is en wil het pauzeren. Snooze-knop op pin 4: druk = 5 minuten geen alarm, maar de strip blijft wel rood. Na 5 min: weer hoorbaar tot iemand het raam open zet.",
+        diagram: true,
+        code: co2_s4,
+        legend: [
+          { term: "SNOOZE_MS = 5UL * 60UL * 1000UL", desc: "5 minuten in milliseconden. `UL`-suffix verplicht — anders int-overflow op Arduino Uno." },
+          { term: "snoozeTotMillis = millis() + SNOOZE_MS", desc: "Sla het exacte 'einde'-moment op. Vergelijk later met `millis() < snoozeTotMillis`." },
+          { term: "tone(buzzerPin, 1200, 80)", desc: "80ms-piep op 1200 Hz — kort genoeg om niet vervelend te zijn, hoog genoeg om aandacht te trekken." },
+          { term: "edge-detectie op snooze-knop", desc: "Eén druk = één snooze, niet 100x per seconde zolang ingedrukt." },
+          { term: "noTone(buzzerPin)", desc: "Stop alle tonen. Belangrijk in de else-tak om 'hangende' tonen te voorkomen." },
+        ],
+        assignment: "Sluit aan: buzzer + → pin 8, buzzer − → GND. Snooze-knop pin 4 ↔ GND. Upload. Adem op de sensor tot rood + buzzer piept. Druk snooze: 5 min stil. Adem nog meer → strip blijft rood, geen geluid. Na 5 min: weer piep.",
+        challenge: "Voeg **3 alarm-niveaus** toe: rood = korte piep, zeer-rood (>1800 ppm) = continue toon, gevaarlijk (>2500 ppm) = snel-knipperen + alarm dat niet snooze-baar is.",
+        reflection: "Waarom is een snooze-knop pedagogisch belangrijk? (Hint: zonder snooze gaan leraren het systeem uitschakelen of negeren = doel verloren. Met snooze = systeem blijft acceptabel = wordt langer gebruikt.)",
+        optionalCodeTitle: "Snippet: upgrade naar SCD30 (échte NDIR-CO₂)",
+        optionalCode: `// Voor een serieuze schoolopstelling: vervang MQ-135 door SCD30 (~€50).
+// Bibliotheek: 'SparkFun SCD30 Arduino Library'.
+#include <SparkFun_SCD30_Arduino_Library.h>
+SCD30 sensor;
+
+void setup() {
+  Wire.begin();   // SDA->A4, SCL->A5
+  sensor.begin();
+}
+
+void loop() {
+  if (sensor.dataAvailable()) {
+    int ppm = sensor.getCO2();   // ECHTE CO2 in ppm
+    // Verder identiek: kleurZone(ppm), buzzer, snooze...
+  }
+}
+
+// Voordeel: ±30 ppm nauwkeurigheid, geen opwarmtijd, alleen CO2 (geen kruisreactie).`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 31: Slim slot met RFID-pas (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "rfid-slot",
+    title: "Slim slot met RFID-pas",
+    description: "Een RC522-lezer + servo = werkend RFID-slot. Bekende pas → groene LED + servo opent 5 sec. Onbekende pas → rode LED knippert 3x. Met uitleg hoe je je eigen pas-UID ontdekt en in de 'whitelist' zet.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, breadboard + jumpers, 1× RC522 RFID-module + 1 RFID-tag/kaart (vaak 2 stuks meegeleverd), 1× SG90 servo, 1× groene LED + 220Ω, 1× rode LED + 220Ω. **Demo/leerproject — niet voor échte huisdeuren!** Een SG90 + UID-vergelijking is niet veilig genoeg voor een woning.",
+    learningGoal: "Een SPI-module aansluiten en initialiseren, ruwe byte-arrays vergelijken, een 'whitelist' van toegestane UIDs hard-coderen, en de **veiligheidsbeperkingen** van simpele RFID begrijpen.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "rfid-s1",
+        title: "RC522 opzetten via SPI",
+        content: "De RC522 communiceert via **SPI** — een vast communicatie-protocol met 4 vaste pinnen (SDA/SS, SCK, MOSI, MISO) plus een RST (reset) en een VCC. Op de Arduino Uno zijn SPI-pinnen vast: SCK=13, MOSI=11, MISO=12. SDA(SS) en RST mag je kiezen — wij nemen 10 en 9.\n\n**LET OP — voeding 3.3V, NIET 5V!** Sluit je VCC op 5V aan, dan brand je de chip door. **En de datapinnen?** De meeste hobby-RC522-breakouts zijn NIET officieel 5V-tolerant op de SPI-lijnen — ook al werkt het vaak 'gewoon' op een Uno, je kan de chip beschadigen of onbetrouwbaar maken. Voor lange-termijn-projecten gebruik je een **logic-level shifter** (paar euro extra) of een 3.3V-microcontroller (ESP32, Pro Mini 3.3V). Voor een korte schooldemo op de Uno: meestal werkt het, maar weet dat het officieel buiten spec is.\n\n**Disclaimer**: dit blijft een **demo-/leerproject** — niet voor échte sloten (zie ook materialen).",
+        diagram: true,
+        code: rfid_s1,
+        legend: [
+          { term: "#include <SPI.h>", desc: "SPI-bibliotheek (standaard, hoeft niet geïnstalleerd). Vereist voor RC522." },
+          { term: "MFRC522 rfid(SS_PIN, RST_PIN)", desc: "Maak een rfid-object aan. SS=10, RST=9 in onze opstelling." },
+          { term: "rfid.PCD_Init()", desc: "Initialiseer de chip. Zonder dit reageert de RC522 op niets." },
+          { term: "rfid.PICC_IsNewCardPresent()", desc: "Check of er een nieuwe kaart vóór de antenne is. Returnt false als er niets ligt." },
+          { term: "VCC = 3.3V !!!", desc: "Cruciaal: de RC522 op 3.3V aansluiten, NIET 5V. 5V brandt de chip door binnen seconden." },
+        ],
+        assignment: "Sluit alles aan volgens het schema (5 SPI-draadjes + VCC + GND). Installeer de 'MFRC522' bibliotheek (Bibliotheekbeheer → 'MFRC522' van GithubCommunity). Upload. Open Serial Monitor — bij 'tag voor de lezer houden' verschijnt 'Kaart gedetecteerd!'.",
+        challenge: "Probeer een bankpas of OV-chipkaart. Werkt het ook? (Sommige wel, sommige niet — afhankelijk van het type.)",
+        reflection: "Waarom heeft de RC522 6 dataverbindingen nodig terwijl een knop er maar 1 nodig heeft? (Hint: SPI is een vol communicatieprotocol, géén simpel signaal — het stuurt complete commando's heen en weer.)",
+      },
+      {
+        id: "rfid-s2",
+        title: "UID uitlezen + tonen via Serial",
+        content: "Elke RFID-tag heeft een **uniek serienummer (UID)** — meestal 4 of 7 bytes. Dat is wat we straks gebruiken om te bepalen of een pas 'bekend' is. Eerst: lees je eigen pasje uit en noteer de UID. We printen elke byte als 2-cijferige HEX (bijv. `DE AD BE EF`).\n\n**Ontwerp-keuze**: we gebruiken `delay(800)` na elke uitlezing — anders leest dezelfde kaart 100x per seconde uit zolang hij voor de antenne ligt.",
+        code: rfid_s2,
+        legend: [
+          { term: "rfid.uid.uidByte", desc: "Array van bytes met de UID. Lengte staat in `rfid.uid.size`." },
+          { term: "rfid.uid.size", desc: "Hoeveel bytes de UID heeft. Vaak 4, soms 7 (afhankelijk van het type tag)." },
+          { term: "Serial.print(byte, HEX)", desc: "Print als hexadecimaal. Cruciaal: anders zie je decimale getallen die niet overeenkomen met datasheets." },
+          { term: "if (uid[i] < 0x10) Serial.print(\"0\")", desc: "Padding: byte 0x07 wordt anders '7' i.p.v. '07'. Voorkomt verwarring." },
+          { term: "rfid.PICC_HaltA()", desc: "Vertel de kaart 'klaar, slaap weer'. Anders blijft hij actief en heb je rare loops." },
+        ],
+        assignment: "Upload. Houd JOUW pas voor de lezer. Noteer de UID die in Serial Monitor verschijnt (4 bytes, bijv. `A3 5F 12 E7`). Doe hetzelfde voor de tweede tag uit het pakket. Bewaar deze 2 UIDs voor stap 3!",
+        challenge: "Een ander persoon laat zijn OV-chipkaart of bankpas lezen. Welk UID-formaat heeft die? (Vaak 7 bytes — meer 'echte' tags hebben langere UIDs.)",
+        reflection: "Waarom is een UID **NIET hetzelfde als een wachtwoord**? (Hint: UIDs zijn niet geheim — bedoeld als sticker op een doos. Iedereen kan jouw UID met een goedkope reader uitlezen en hem klonen.)",
+      },
+      {
+        id: "rfid-s3",
+        title: "Toegestane lijst vergelijken",
+        content: "Nu de logica: bij elke uitgelezen UID checken of-ie in onze 'toegestane' lijst staat. We slaan de UIDs op in een **2D-array** `toegestaan[AANTAL][UID_LEN]`. De helper-functie `zelfdeUID()` vergelijkt twee UIDs byte voor byte. `isToegestaan()` loopt alle whitelisted UIDs langs en returnt true bij een match.\n\n**Belangrijk**: vervang de voorbeeld-UIDs (`DE AD BE EF` etc.) door JOUW echte UIDs uit stap 2! Anders herkent het systeem niets.",
+        code: rfid_s3,
+        legend: [
+          { term: "byte toegestaan[AANTAL_PASSEN][UID_LEN]", desc: "2D-array: rij per pas, 4 bytes per pas. Vergelijkbaar met een tabel." },
+          { term: "0xDE, 0xAD, 0xBE, 0xEF", desc: "Voorbeeld-UID (knipoog naar hex-grappen). VERVANG DEZE door jouw echte UIDs uit stap 2!" },
+          { term: "if (gelezen[i] != kandidaat[i]) return false", desc: "Vroeg-terug: zodra één byte verschilt, is het GEEN match — geen verdere check nodig." },
+          { term: "for (int i = 0; i < AANTAL_PASSEN; i++)", desc: "Loop alle whitelist-UIDs langs. Stop zodra er een match is." },
+        ],
+        assignment: "Vervang de twee voorbeeld-UIDs in de code door jouw eigen UIDs uit stap 2. Upload. Houd jouw pas voor de lezer = 'TOEGANG OK'. Houd een onbekende kaart (een willekeurige andere RFID-tag) = 'TOEGANG GEWEIGERD'.",
+        challenge: "Verbreed naar 5 toegestane passen. Tip: alleen `AANTAL_PASSEN` aanpassen + 3 extra UIDs toevoegen aan de array.",
+        reflection: "Waarom is hard-coden van UIDs in code 'verschrikkelijk' voor een echt slot? (Hint: nieuwe pas? Code wijzigen + heruploaden. Pas verloren? Diegene heeft nog steeds toegang tot ALLE plekken waar zijn UID staat.)",
+      },
+      {
+        id: "rfid-s4",
+        title: "Servo + LEDs voor toegang/geweigerd",
+        content: "Eindversie: bij OK → groene LED aan + servo draait naar 180° (open) + 5 sec wachten + servo terug naar 0° (dicht). Bij geweigerd → rode LED knippert 3x. Dit is een werkend demonstratie-slot.\n\n**Disclaimer voor leerlingen**: dit is een **demo**. Een SG90 servo is niet sterk genoeg om een echte deur dicht te houden, en UID-vergelijking is binnen 1 minuut te omzeilen met een $5 USB-RFID-cloner. Voor échte sloten heb je smartlocks met cryptografische authenticatie nodig.",
+        diagram: true,
+        code: rfid_s4,
+        legend: [
+          { term: "servo1.attach(3)", desc: "Servo op pin 3 (servo niet op 9 — pin 9 is RST voor de RFID)." },
+          { term: "servo1.write(180) / servo1.write(0)", desc: "180° = 'open' positie, 0° = 'dicht'. Pas aan voor jouw mechaniek." },
+          { term: "groenLedPin = 6, rodeLedPin = 7", desc: "Aparte LEDs voor visuele feedback. 220Ω in serie verplicht." },
+          { term: "afgewezen() blink-loop", desc: "3x knipperen = duidelijk 'NEE' signaal. Geen servo-beweging." },
+          { term: "DEMO ONLY", desc: "Servo + UID-vergelijking is niet veilig voor een echte deur. Klonen kan in seconden, mechaniek is zwak." },
+        ],
+        assignment: "Sluit aan: servo signal→pin 3, groene LED→pin 6 (via 220Ω), rode LED→pin 7 (via 220Ω). Upload. Bekende pas: groene LED + servo opent 5 sec. Onbekende pas: rode LED knippert 3x.",
+        challenge: "Voeg een **buzzer** toe op pin 5: korte hoge bevestigings-toon bij OK (`tone(5, 2000, 100)`), lage 'fout'-toon bij geweigerd (`tone(5, 200, 200)`).",
+        reflection: "Welke 3 dingen zou je móeten toevoegen om dit een 'echt' slot te maken? (Voorbeelden: encrypted authentication via DESFire-tags, log van alle pogingen in EEPROM, anti-tamper-sensor, batterij-back-up...)",
+        optionalCodeTitle: "Snippet: log laatste 10 toegangs-pogingen",
+        optionalCode: `// Houd in EEPROM bij wie wanneer toegang kreeg/geweigerd werd.
+// Geheel gebruik: bij elke poging schrijf 1 byte (tag-index) naar circular buffer.
+#include <EEPROM.h>
+
+const int LOG_START = 0;
+const int LOG_LEN = 10;
+int logIndex = 0;
+
+void logToegang(int tagIndex, bool ok) {
+  byte entry = ok ? (tagIndex + 1) : 99;  // 99 = geweigerd
+  EEPROM.write(LOG_START + logIndex, entry);
+  logIndex = (logIndex + 1) % LOG_LEN;
+}
+
+// Lees terug via Serial om te zien wie de laatste 10 pogingen waren.`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 32: Aanwezigheidssensor met auto-licht (Beginner)
+  // ─────────────────────────────────────────────
+  {
+    id: "pir-auto-licht",
+    title: "Aanwezigheidssensor met auto-licht",
+    description: "WC binnenlopen = licht aan. 30 sec stilte = licht uit. Klassiek 'beweging-trigger'-systeem dat je in elk huis terugziet. Optioneel: een LDR-extensie zodat het licht overdag uitblijft.",
+    difficulty: "Beginner",
+    materials: "Arduino Uno, breadboard + jumpers, 1× PIR-sensor (HC-SR501), 1× 5V-relais module (1-kanaals) + 5V/12V LED-strip OF gewoon een Arduino-LED voor demo. Optioneel: 1× LDR + 10kΩ. **Veiligheid: alleen 5V/12V DC. Geen 230V-lampen!**",
+    learningGoal: "Een PIR-sensor combineren met een relais voor 'doe-iets-bij-beweging'-projecten, een non-blocking timer met `millis()` schrijven, en relais correct ACTIVE-LOW initialiseren tegen 'reset-flikkering'.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "auto-s1",
+        title: "PIR + relais aansluiten en testen",
+        content: "Eerst de basics: zodra de PIR beweging detecteert (uitgang gaat HIGH), schakelen we het relais aan = lamp aan. Geen beweging meer = relais uit = lamp uit. Heel direct.\n\n**Cruciaal in `setup()`**: `digitalWrite(relaisPin, HIGH)` als eerste, vóór alles anders. Hobby-relais zijn ACTIVE-LOW: standaard IDLE = HIGH. Doe je dit niet, dan klikt het relais aan tijdens elke Arduino-reset = lamp ploft kort aan, slecht voor de relais én verwarrend.\n\n**Real-life toepassing**: precies hoe automatische gangverlichting werkt in nieuwe huizen.",
+        diagram: true,
+        code: auto_s1,
+        legend: [
+          { term: "int pirPin = 2", desc: "PIR OUT op digitale pin 2. PIR geeft HIGH bij beweging, LOW erbuiten." },
+          { term: "int relaisPin = 7", desc: "Relais IN op pin 7. Het relais schakelt vervolgens de eigenlijke lamp/strip." },
+          { term: "digitalWrite(relaisPin, HIGH) // = UIT", desc: "ACTIVE-LOW relais: HIGH = aan-gewone-stand = lamp UIT. CRUCIAAL als allereerste in setup()." },
+          { term: "PIR HC-SR501 dipswitches", desc: "Op de PIR zelf: 2 draaiknopjes (gevoeligheid + tijd). Tijd kun je hier laag zetten omdat we zelf de duur in code regelen." },
+        ],
+        assignment: "Sluit aan: PIR VCC→5V, PIR GND→GND, PIR OUT→pin 2. Relais IN→pin 7, VCC→5V, GND→GND. Lamp via NO/COM van relais (gebruik een LED-strip met aparte 5V-voeding voor demo). Upload. Beweeg je hand → lamp aan. Stilstaan → lamp uit.",
+        challenge: "Vervang de relais-aansturing door een gewone Arduino-LED op pin 13 voor snelle test zonder relais. Werkt de PIR-detectie?",
+        reflection: "Waarom maakt de PIR een 'klik'-geluid de eerste keer dat je het systeem aanzet? (Hint: PIR heeft ~1 min opwarm/kalibratie. Eerste minuut: vals-positieven mogelijk.)",
+      },
+      {
+        id: "auto-s2",
+        title: "Auto-uit na 30 sec stilte (millis-timer)",
+        content: "Nu de slimme versie: bij beweging → lamp aan + onthoud het tijdstip. Bij elke beweging: tijdstip 'verversen' (de 'aanwezig'-timer reset). Als er 30 sec lang GEEN beweging meer is → lamp uit. We gebruiken `millis()` non-blocking — dan blijft de PIR continu reageerbaar.\n\n**Dit is een fundamenteel patroon**: 'tijd sinds laatste actie'. Je vindt het overal terug — auto's die zelf-vergrendelen na 5 min, tv's die uit gaan na geen-druk-meer-op-de-afstandsbediening, schermsavers...",
+        code: auto_s2,
+        legend: [
+          { term: "NA_LICHT_AAN_MS = 30UL * 1000UL", desc: "30 sec in milliseconden. UL-suffix verplicht — anders int-overflow." },
+          { term: "laatsteBewegingMs = millis()", desc: "'Tijdstip-stempel' van de laatste beweging. Continu verfrissen zolang er beweging is." },
+          { term: "(millis() - laatsteBewegingMs) > NA_LICHT_AAN_MS", desc: "Klassiek niet-blokkerend pattern. Kijkt of er genoeg tijd verstreken is." },
+          { term: "bool lichtAan", desc: "State-flag. Voorkomt onnodig herhaald 'relaisAan()' aanroepen — én logging-spam." },
+        ],
+        assignment: "Upload. Beweeg je hand. Lamp aan. Sta stil. Na 30 sec: lamp uit. Beweeg weer (of na 25 sec): timer reset, lamp blijft aan. Test ook: beweeg 1 sec, sta dan 35 sec stil — moet uitgaan.",
+        challenge: "Maak de duur instelbaar via een potmeter op A1: `NA_LICHT_AAN_MS = map(analogRead(A1), 0, 1023, 5000, 120000);` — geeft een instelbare timer van 5 sec tot 2 min.",
+        reflection: "Waarom gebruiken we `millis()` met aftrekken in plaats van een teller die we elke seconde ophogen? (Hint: probeer eens 'als beweging dan tellerWeer = 0; loop: teller++; delay(1000);' — wat gebeurt er met de PIR-respons tijdens de delay?)",
+      },
+      {
+        id: "auto-s3",
+        title: "LDR-uitbreiding: alleen 's avonds aan",
+        content: "Laatste verfijning: overdag gaat het licht NIET aan, ook al is er beweging. Voeg een LDR toe op A0 (via spanningsdeler met 10kΩ → GND). Hoe meer licht → hoge waarde. Onder een drempel (~600) is het 'nacht' → systeem werkt normaal. Boven de drempel = overdag → blijft uit.\n\n**Bonus-logica**: als het licht aanstaat én plotseling overdag licht wordt (zon op), gaat het direct uit. Bespaart energie.",
+        diagram: true,
+        code: auto_s3,
+        legend: [
+          { term: "int ldrPin = A0", desc: "LDR via spanningsdeler op analoge pin A0. Drempel-instelling per ruimte/tijd." },
+          { term: "DAGLICHT_DREMPEL = 600", desc: "Boven dit getal = overdag, niets doen. Tweak voor JOUW ruimte (test met de Serial Monitor)." },
+          { term: "bool overdag = (licht > DAGLICHT_DREMPEL)", desc: "Boolean variabele leest een stuk lekkerder dan overal de check herhalen." },
+          { term: "if (lichtAan && overdag) relaisUit()", desc: "Bonus: als het licht aanstond + de zon komt op = direct uit. Energie-besparing." },
+        ],
+        assignment: "Sluit de LDR aan: één pootje → 5V, andere pootje → A0 én via 10kΩ naar GND. Upload. Test in donker (hand over LDR): beweging → lamp aan zoals voorheen. Test in fel licht: beweging → lamp blijft uit.",
+        challenge: "Voeg **'schemering-overgang'** toe: tussen waarde 500 en 700 = 'twilight'-zone waarin het licht maar half-helder aangaat (PWM op een MOSFET i.p.v. relais).",
+        reflection: "Waarom wordt PIR-met-auto-licht overal gebruikt in trappenhuizen, maar nooit in slaapkamers? (Hint: bewust uitgaan ≠ in slaap vallen — PIR triggert niet op stille slaap, dus systeem zou middenin de nacht uitschakelen. Slaapkamers gebruiken meestal handmatige schakelaars of dim-cycli.)",
       }
     ]
   }

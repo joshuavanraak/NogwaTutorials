@@ -1317,9 +1317,10 @@ void loop() {
   delay(2000);
 }`;
 
-const cam_s2 = `#include "esp_camera.h"
-
-// AI Thinker ESP32-CAM pin-mapping (vaste hardware-bedrading van het bord)
+// Gedeelde AI-Thinker ESP32-CAM bouwstenen. Eén bron van waarheid voor de
+// pin-mapping en de initCamera()-helper, geïnjecteerd in elke sketch hieronder
+// zodat elke stap nog steeds standalone te kopiëren en te compileren is.
+const camPinDefines = `// AI Thinker ESP32-CAM pin-mapping (vaste hardware-bedrading van het bord)
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
 #define XCLK_GPIO_NUM      0
@@ -1335,9 +1336,9 @@ const cam_s2 = `#include "esp_camera.h"
 #define Y2_GPIO_NUM        5
 #define VSYNC_GPIO_NUM    25
 #define HREF_GPIO_NUM     23
-#define PCLK_GPIO_NUM     22
+#define PCLK_GPIO_NUM     22`;
 
-void initCamera() {
+const camInitFunction = `void initCamera() {
   camera_config_t cfg = {};
   cfg.ledc_channel = LEDC_CHANNEL_0;
   cfg.ledc_timer   = LEDC_TIMER_0;
@@ -1369,7 +1370,13 @@ void initCamera() {
     return;
   }
   Serial.println("Camera klaar!");
-}
+}`;
+
+const cam_s2 = `#include "esp_camera.h"
+
+${camPinDefines}
+
+${camInitFunction}
 
 void setup() {
   Serial.begin(115200);
@@ -1391,45 +1398,14 @@ const cam_s3 = `#include "esp_camera.h"
 #include <WiFi.h>
 #include <WebServer.h>
 
-// Pin-definities uit stap 2 weggelaten voor leesbaarheid -
-// kopieer ze hierboven in je eigen sketch.
-#define PWDN_GPIO_NUM     32
-#define RESET_GPIO_NUM    -1
-#define XCLK_GPIO_NUM      0
-#define SIOD_GPIO_NUM     26
-#define SIOC_GPIO_NUM     27
-#define Y9_GPIO_NUM       35
-#define Y8_GPIO_NUM       34
-#define Y7_GPIO_NUM       39
-#define Y6_GPIO_NUM       36
-#define Y5_GPIO_NUM       21
-#define Y4_GPIO_NUM       19
-#define Y3_GPIO_NUM       18
-#define Y2_GPIO_NUM        5
-#define VSYNC_GPIO_NUM    25
-#define HREF_GPIO_NUM     23
-#define PCLK_GPIO_NUM     22
+${camPinDefines}
 
 const char* ssid     = "JouwWiFiNaam";
 const char* password = "JouwWiFiWachtwoord";
 
 WebServer server(80);
 
-void initCamera() { /* identiek aan stap 2 */ 
-  camera_config_t cfg = {};
-  cfg.ledc_channel = LEDC_CHANNEL_0; cfg.ledc_timer = LEDC_TIMER_0;
-  cfg.pin_d0=Y2_GPIO_NUM; cfg.pin_d1=Y3_GPIO_NUM; cfg.pin_d2=Y4_GPIO_NUM; cfg.pin_d3=Y5_GPIO_NUM;
-  cfg.pin_d4=Y6_GPIO_NUM; cfg.pin_d5=Y7_GPIO_NUM; cfg.pin_d6=Y8_GPIO_NUM; cfg.pin_d7=Y9_GPIO_NUM;
-  cfg.pin_xclk=XCLK_GPIO_NUM; cfg.pin_pclk=PCLK_GPIO_NUM;
-  cfg.pin_vsync=VSYNC_GPIO_NUM; cfg.pin_href=HREF_GPIO_NUM;
-  cfg.pin_sscb_sda=SIOD_GPIO_NUM; cfg.pin_sscb_scl=SIOC_GPIO_NUM;
-  cfg.pin_pwdn=PWDN_GPIO_NUM; cfg.pin_reset=RESET_GPIO_NUM;
-  cfg.xclk_freq_hz=20000000;
-  cfg.pixel_format=PIXFORMAT_JPEG;
-  cfg.frame_size=FRAMESIZE_VGA;
-  cfg.jpeg_quality=12; cfg.fb_count=1;
-  esp_camera_init(&cfg);
-}
+${camInitFunction}
 
 void connectWifi() {
   WiFi.begin(ssid, password);
@@ -1476,23 +1452,7 @@ const cam_s4 = `#include "esp_camera.h"
 #include <WiFi.h>
 #include <WebServer.h>
 
-// Pin-definities en initCamera() uit stap 2/3 weggelaten voor leesbaarheid.
-#define PWDN_GPIO_NUM     32
-#define RESET_GPIO_NUM    -1
-#define XCLK_GPIO_NUM      0
-#define SIOD_GPIO_NUM     26
-#define SIOC_GPIO_NUM     27
-#define Y9_GPIO_NUM 35
-#define Y8_GPIO_NUM 34
-#define Y7_GPIO_NUM 39
-#define Y6_GPIO_NUM 36
-#define Y5_GPIO_NUM 21
-#define Y4_GPIO_NUM 19
-#define Y3_GPIO_NUM 18
-#define Y2_GPIO_NUM  5
-#define VSYNC_GPIO_NUM 25
-#define HREF_GPIO_NUM  23
-#define PCLK_GPIO_NUM  22
+${camPinDefines}
 
 const char* ssid     = "JouwWiFiNaam";
 const char* password = "JouwWiFiWachtwoord";
@@ -1503,20 +1463,7 @@ int pirPin = 13;            // PIR-sensor OUT op GPIO 13
 bool laatstePir = false;
 unsigned long laatsteMelding = 0;
 
-void initCamera() { /* zie stap 2 */ 
-  camera_config_t cfg = {};
-  cfg.ledc_channel=LEDC_CHANNEL_0; cfg.ledc_timer=LEDC_TIMER_0;
-  cfg.pin_d0=Y2_GPIO_NUM; cfg.pin_d1=Y3_GPIO_NUM; cfg.pin_d2=Y4_GPIO_NUM; cfg.pin_d3=Y5_GPIO_NUM;
-  cfg.pin_d4=Y6_GPIO_NUM; cfg.pin_d5=Y7_GPIO_NUM; cfg.pin_d6=Y8_GPIO_NUM; cfg.pin_d7=Y9_GPIO_NUM;
-  cfg.pin_xclk=XCLK_GPIO_NUM; cfg.pin_pclk=PCLK_GPIO_NUM;
-  cfg.pin_vsync=VSYNC_GPIO_NUM; cfg.pin_href=HREF_GPIO_NUM;
-  cfg.pin_sscb_sda=SIOD_GPIO_NUM; cfg.pin_sscb_scl=SIOC_GPIO_NUM;
-  cfg.pin_pwdn=PWDN_GPIO_NUM; cfg.pin_reset=RESET_GPIO_NUM;
-  cfg.xclk_freq_hz=20000000;
-  cfg.pixel_format=PIXFORMAT_JPEG; cfg.frame_size=FRAMESIZE_VGA;
-  cfg.jpeg_quality=12; cfg.fb_count=1;
-  esp_camera_init(&cfg);
-}
+${camInitFunction}
 
 void connectWifi() {
   WiFi.begin(ssid, password);

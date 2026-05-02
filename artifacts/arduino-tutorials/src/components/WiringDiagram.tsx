@@ -17,7 +17,8 @@ type ComponentType =
   | "stepper"
   | "encoder"
   | "lcd_i2c"
-  | "relay";
+  | "relay"
+  | "reed";
 
 type ColorKey = "teal" | "yellow" | "amber" | "blue" | "rose" | "violet" | "orange" | "slate" | "green";
 
@@ -52,7 +53,11 @@ const colors: Record<ColorKey, { bg: string; text: string; border: string }> = {
 // ─── Board detection ──────────────────────────────────────────────────────────
 
 function isEsp32(code: string): boolean {
-  return /#include\s*<WiFi\.h>|#include\s*<WebServer\.h>|#include\s*<HTTPClient\.h>|#include\s*<WiFiClientSecure\.h>|#include\s*<BLEDevice\.h>|#include\s*<BleKeyboard\.h>|esp_camera_init|esp_sleep_enable_ext0_wakeup/.test(code);
+  return /#include\s*<WiFi\.h>|#include\s*<WebServer\.h>|#include\s*<HTTPClient\.h>|#include\s*<WiFiClientSecure\.h>|#include\s*<BLEDevice\.h>|#include\s*<BleKeyboard\.h>|esp_camera|esp_sleep|esp_deep_sleep/.test(code);
+}
+
+function isEsp32Cam(code: string): boolean {
+  return /esp_camera|PWDN_GPIO_NUM|AI[\s_-]?Thinker/i.test(code);
 }
 
 function pinLabel(pin: string, esp32: boolean): string {
@@ -111,6 +116,7 @@ function classifyName(name: string): ComponentType | null {
   const n = name.toLowerCase();
   if (n === "data_pin" || n.startsWith("datapin") || n === "data") return "neopixel";
   if (n.includes("relay") || n.includes("relais") || n.includes("lamp")) return "relay";
+  if (n.includes("reed")) return "reed";
   if (n.includes("led")) return "led";
   if (n.includes("pot")) return "potmeter";
   if (n.includes("pir")) return "pir";
@@ -190,6 +196,9 @@ function buildDiagram(code: string): DiagramData {
         signalRows.push({ from: label, to: lbl, color: "slate", direction: "in" });
         break;
       }
+      case "reed":
+        signalRows.push({ from: label, to: "Reed-schakelaar (andere pin → GND)", color: "slate", direction: "in" });
+        break;
       case "servo": {
         const servoLabel = name.toLowerCase().includes("servo2") || name.toLowerCase().includes("_2")
           ? "Servo 2 Signaal (Oranje)"
@@ -294,11 +303,26 @@ function buildDiagram(code: string): DiagramData {
         powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "Relais-module VCC (5V)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "Relais-module GND", color: "slate" });
         break;
+      case "reed":
+        gndRows.push({ arduinoPin: "GND", componentPin: "Reed-schakelaar (andere pin)", color: "slate" });
+        break;
     }
   }
 
   return { signalRows, powerRows, gndRows, esp32 };
 }
+
+// ─── ESP32-CAM FTDI programmer wiring (fixed) ─────────────────────────────────
+
+type CamRow = { from: string; to: string; note?: string };
+
+const FTDI_ROWS: CamRow[] = [
+  { from: "FTDI 5V",   to: "ESP32-CAM 5V" },
+  { from: "FTDI GND",  to: "ESP32-CAM GND" },
+  { from: "FTDI TX",   to: "ESP32-CAM U0R (RX, GPIO 3)" },
+  { from: "FTDI RX",   to: "ESP32-CAM U0T (TX, GPIO 1)" },
+  { from: "GND-rail",  to: "ESP32-CAM IO0", note: "alleen tijdens uploaden" },
+];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -339,10 +363,11 @@ function Row({ left, middle, right }: { left: ReactNode; middle?: ReactNode; rig
 
 export function WiringDiagram({ code }: { code: string }) {
   const { signalRows, powerRows, gndRows, esp32 } = buildDiagram(code);
+  const cam = isEsp32Cam(code);
 
-  if (signalRows.length === 0) return null;
+  if (signalRows.length === 0 && !cam) return null;
 
-  const board = esp32 ? "ESP32" : "Arduino";
+  const board = cam ? "ESP32-CAM" : esp32 ? "ESP32" : "Arduino";
 
   return (
     <div className="my-6 bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -353,14 +378,35 @@ export function WiringDiagram({ code }: { code: string }) {
         </h4>
         {esp32 && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            <Wifi className="w-3 h-3" /> ESP32
+            <Wifi className="w-3 h-3" /> {cam ? "ESP32-CAM" : "ESP32"}
           </span>
         )}
       </div>
 
       <div className="p-5 flex flex-col gap-3">
+        {cam && (
+          <>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              FTDI-programmer ↔ ESP32-CAM (alleen tijdens uploaden)
+            </p>
+            {FTDI_ROWS.map((row, i) => (
+              <Row
+                key={`ftdi-${i}`}
+                left={<ChipBadge label={row.from} color="violet" />}
+                middle={row.note}
+                right={<ChipBadge label={row.to} color="violet" />}
+              />
+            ))}
+            <div className="bg-amber-50/80 border border-amber-200 rounded-lg px-3 py-2 text-[12px] text-amber-800 leading-relaxed">
+              <strong>Upload-procedure:</strong> Houd <code className="bg-amber-100 px-1 rounded">IO0 → GND</code> vast, druk op de RESET-knop op de ESP32-CAM, klik op Upload in de Arduino IDE. Wanneer je <em>"Connecting..."</em> ziet → laat <code className="bg-amber-100 px-1 rounded">IO0</code> los. Na uploaden: koppel <code className="bg-amber-100 px-1 rounded">IO0</code> volledig los en druk RESET om het programma te starten.
+            </div>
+          </>
+        )}
+
         {signalRows.length > 0 && (
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Data / signaal</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            {cam ? "Extra sensoren (ESP32-CAM GPIOs)" : "Data / signaal"}
+          </p>
         )}
         {signalRows.map((row, i) => (
           <Row

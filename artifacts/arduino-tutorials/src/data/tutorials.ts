@@ -1104,6 +1104,830 @@ void loop() {
 }`;
 
 // ─────────────────────────────────────────────
+// TUTORIAL 18: Buienradar-strook met NeoPixels (Batch 2)
+// ─────────────────────────────────────────────
+
+const br_s1 = `#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+// Pas lat/lon aan naar jouw locatie. Voorbeeld: Utrecht.
+const char* buienradarUrl =
+  "http://gpsgadget.buienradar.nl/data/raintext?lat=52.09&lon=5.12";
+
+void connectWifi() {
+  Serial.print("Verbinden met ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.println("Verbonden!");
+}
+
+void haalRegen() {
+  HTTPClient http;
+  http.begin(buienradarUrl);
+  int code = http.GET();
+  Serial.print("Status: ");
+  Serial.println(code);
+  if (code == 200) {
+    Serial.println("Ruwe respons:");
+    Serial.println(http.getString());
+  }
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+  haalRegen();
+}
+
+void loop() {}`;
+
+const br_s2 = `#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+const char* buienradarUrl =
+  "http://gpsgadget.buienradar.nl/data/raintext?lat=52.09&lon=5.12";
+
+int regenWaarden[24];   // 24 metingen = 2 uur (één per 5 min)
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void parseRegen(String body) {
+  // Formaat per regel: "127|14:35"
+  // Eerste getal = regen-intensiteit (0 = droog, 255 = stortregen).
+  int idx = 0;
+  int start = 0;
+  while (idx < 24 && start < (int)body.length()) {
+    int eind = body.indexOf('\\n', start);
+    if (eind < 0) eind = body.length();
+
+    String regel = body.substring(start, eind);
+    int pipe = regel.indexOf('|');
+    if (pipe > 0) {
+      regenWaarden[idx] = regel.substring(0, pipe).toInt();
+      Serial.print(regenWaarden[idx]);
+      Serial.print(' ');
+      idx++;
+    }
+    start = eind + 1;
+  }
+  Serial.println();
+}
+
+void haalRegen() {
+  HTTPClient http;
+  http.begin(buienradarUrl);
+  if (http.GET() == 200) {
+    parseRegen(http.getString());
+  }
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  connectWifi();
+  haalRegen();
+}
+
+void loop() {}`;
+
+const br_s3 = `#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Adafruit_NeoPixel.h>
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+const char* buienradarUrl =
+  "http://gpsgadget.buienradar.nl/data/raintext?lat=52.09&lon=5.12";
+
+int dataPin = 5;            // GPIO 5 op de ESP32
+int aantalLeds = 24;        // 24 LEDs = 2 uur vooruit
+
+Adafruit_NeoPixel strip(aantalLeds, dataPin, NEO_GRB + NEO_KHZ800);
+
+unsigned long laatsteFetch = 0;
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+uint32_t kleurVoor(int waarde) {
+  // Kleur-mapping: droog -> regen
+  if (waarde < 30)  return strip.Color(  0,  40,   0); // zacht groen
+  if (waarde < 80)  return strip.Color(120, 120,   0); // geel
+  if (waarde < 140) return strip.Color(180,  60,   0); // oranje
+  return                strip.Color(200,   0,   0);    // rood
+}
+
+void updateLeds() {
+  HTTPClient http;
+  http.begin(buienradarUrl);
+  if (http.GET() != 200) { http.end(); return; }
+  String body = http.getString();
+  http.end();
+
+  int idx = 0;
+  int start = 0;
+  while (idx < aantalLeds && start < (int)body.length()) {
+    int eind = body.indexOf('\\n', start);
+    if (eind < 0) eind = body.length();
+    String regel = body.substring(start, eind);
+    int pipe = regel.indexOf('|');
+    if (pipe > 0) {
+      int waarde = regel.substring(0, pipe).toInt();
+      strip.setPixelColor(idx, kleurVoor(waarde));
+      idx++;
+    }
+    start = eind + 1;
+  }
+  strip.show();
+}
+
+void setup() {
+  Serial.begin(115200);
+  strip.begin();
+  strip.setBrightness(40);   // beperkt totale stroom (24 LEDs!)
+  strip.show();
+  connectWifi();
+  updateLeds();
+  laatsteFetch = millis();
+}
+
+void loop() {
+  unsigned long nu = millis();
+  if (nu - laatsteFetch > 5UL * 60UL * 1000UL) {  // elke 5 min opnieuw
+    laatsteFetch = nu;
+    updateLeds();
+  }
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 19: ESP32-CAM webcam + bewegingsdetectie (Batch 2)
+// ─────────────────────────────────────────────
+
+const cam_s1 = `// ESP32-CAM eerste sketch.
+// Doel: bewijzen dat het bord upload + draait. We gebruiken esp_camera nog niet,
+// maar laden de header al om te checken dat de Arduino IDE correct is ingesteld.
+//
+// In Arduino IDE: Tools -> Board -> "AI Thinker ESP32-CAM"
+//                 Tools -> Partition Scheme -> "Huge APP (3MB No OTA / 1MB SPIFFS)"
+
+#include "esp_camera.h"   // alleen om te bewijzen dat de library aanwezig is
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+  Serial.println();
+  Serial.println("ESP32-CAM is gestart!");
+  Serial.println("Volgende stap: esp_camera_init() configureren.");
+}
+
+void loop() {
+  Serial.println("Nog steeds aan...");
+  delay(2000);
+}`;
+
+const cam_s2 = `#include "esp_camera.h"
+
+// AI Thinker ESP32-CAM pin-mapping (vaste hardware-bedrading van het bord)
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
+
+void initCamera() {
+  camera_config_t cfg = {};
+  cfg.ledc_channel = LEDC_CHANNEL_0;
+  cfg.ledc_timer   = LEDC_TIMER_0;
+  cfg.pin_d0       = Y2_GPIO_NUM;
+  cfg.pin_d1       = Y3_GPIO_NUM;
+  cfg.pin_d2       = Y4_GPIO_NUM;
+  cfg.pin_d3       = Y5_GPIO_NUM;
+  cfg.pin_d4       = Y6_GPIO_NUM;
+  cfg.pin_d5       = Y7_GPIO_NUM;
+  cfg.pin_d6       = Y8_GPIO_NUM;
+  cfg.pin_d7       = Y9_GPIO_NUM;
+  cfg.pin_xclk     = XCLK_GPIO_NUM;
+  cfg.pin_pclk     = PCLK_GPIO_NUM;
+  cfg.pin_vsync    = VSYNC_GPIO_NUM;
+  cfg.pin_href     = HREF_GPIO_NUM;
+  cfg.pin_sscb_sda = SIOD_GPIO_NUM;
+  cfg.pin_sscb_scl = SIOC_GPIO_NUM;
+  cfg.pin_pwdn     = PWDN_GPIO_NUM;
+  cfg.pin_reset    = RESET_GPIO_NUM;
+  cfg.xclk_freq_hz = 20000000;
+  cfg.pixel_format = PIXFORMAT_JPEG;
+  cfg.frame_size   = FRAMESIZE_VGA;   // 640x480
+  cfg.jpeg_quality = 12;              // 10-15 is een goede range
+  cfg.fb_count     = 1;
+
+  esp_err_t err = esp_camera_init(&cfg);
+  if (err != ESP_OK) {
+    Serial.printf("Camera init mislukt: 0x%x\\n", err);
+    return;
+  }
+  Serial.println("Camera klaar!");
+}
+
+void setup() {
+  Serial.begin(115200);
+  initCamera();
+}
+
+void loop() {
+  // Maak één foto en print alleen de bestandsgrootte (de bytes zelf
+  // willen we niet door de Serial Monitor pompen).
+  camera_fb_t* fb = esp_camera_fb_get();
+  if (fb) {
+    Serial.printf("Foto ok - %u bytes\\n", fb->len);
+    esp_camera_fb_return(fb);     // ALTIJD teruggeven anders raakt het geheugen op
+  }
+  delay(2000);
+}`;
+
+const cam_s3 = `#include "esp_camera.h"
+#include <WiFi.h>
+#include <WebServer.h>
+
+// Pin-definities uit stap 2 weggelaten voor leesbaarheid -
+// kopieer ze hierboven in je eigen sketch.
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+WebServer server(80);
+
+void initCamera() { /* identiek aan stap 2 */ 
+  camera_config_t cfg = {};
+  cfg.ledc_channel = LEDC_CHANNEL_0; cfg.ledc_timer = LEDC_TIMER_0;
+  cfg.pin_d0=Y2_GPIO_NUM; cfg.pin_d1=Y3_GPIO_NUM; cfg.pin_d2=Y4_GPIO_NUM; cfg.pin_d3=Y5_GPIO_NUM;
+  cfg.pin_d4=Y6_GPIO_NUM; cfg.pin_d5=Y7_GPIO_NUM; cfg.pin_d6=Y8_GPIO_NUM; cfg.pin_d7=Y9_GPIO_NUM;
+  cfg.pin_xclk=XCLK_GPIO_NUM; cfg.pin_pclk=PCLK_GPIO_NUM;
+  cfg.pin_vsync=VSYNC_GPIO_NUM; cfg.pin_href=HREF_GPIO_NUM;
+  cfg.pin_sscb_sda=SIOD_GPIO_NUM; cfg.pin_sscb_scl=SIOC_GPIO_NUM;
+  cfg.pin_pwdn=PWDN_GPIO_NUM; cfg.pin_reset=RESET_GPIO_NUM;
+  cfg.xclk_freq_hz=20000000;
+  cfg.pixel_format=PIXFORMAT_JPEG;
+  cfg.frame_size=FRAMESIZE_VGA;
+  cfg.jpeg_quality=12; cfg.fb_count=1;
+  esp_camera_init(&cfg);
+}
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Open in je browser: http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/stream");
+}
+
+void handleStream() {
+  WiFiClient client = server.client();
+  // MJPEG = een eindeloze stroom JPEG-frames met een 'boundary' ertussen.
+  client.print(
+    "HTTP/1.1 200 OK\\r\\n"
+    "Content-Type: multipart/x-mixed-replace; boundary=frame\\r\\n\\r\\n");
+
+  while (client.connected()) {
+    camera_fb_t* fb = esp_camera_fb_get();
+    if (!fb) break;
+    client.printf(
+      "--frame\\r\\nContent-Type: image/jpeg\\r\\nContent-Length: %u\\r\\n\\r\\n",
+      fb->len);
+    client.write(fb->buf, fb->len);
+    client.print("\\r\\n");
+    esp_camera_fb_return(fb);
+    delay(50);   // ~20 fps
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  initCamera();
+  connectWifi();
+  server.on("/stream", handleStream);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}`;
+
+const cam_s4 = `#include "esp_camera.h"
+#include <WiFi.h>
+#include <WebServer.h>
+
+// Pin-definities en initCamera() uit stap 2/3 weggelaten voor leesbaarheid.
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+#define Y9_GPIO_NUM 35
+#define Y8_GPIO_NUM 34
+#define Y7_GPIO_NUM 39
+#define Y6_GPIO_NUM 36
+#define Y5_GPIO_NUM 21
+#define Y4_GPIO_NUM 19
+#define Y3_GPIO_NUM 18
+#define Y2_GPIO_NUM  5
+#define VSYNC_GPIO_NUM 25
+#define HREF_GPIO_NUM  23
+#define PCLK_GPIO_NUM  22
+
+const char* ssid     = "JouwWiFiNaam";
+const char* password = "JouwWiFiWachtwoord";
+
+WebServer server(80);
+
+int pirPin = 13;            // PIR-sensor OUT op GPIO 13
+bool laatstePir = false;
+unsigned long laatsteMelding = 0;
+
+void initCamera() { /* zie stap 2 */ 
+  camera_config_t cfg = {};
+  cfg.ledc_channel=LEDC_CHANNEL_0; cfg.ledc_timer=LEDC_TIMER_0;
+  cfg.pin_d0=Y2_GPIO_NUM; cfg.pin_d1=Y3_GPIO_NUM; cfg.pin_d2=Y4_GPIO_NUM; cfg.pin_d3=Y5_GPIO_NUM;
+  cfg.pin_d4=Y6_GPIO_NUM; cfg.pin_d5=Y7_GPIO_NUM; cfg.pin_d6=Y8_GPIO_NUM; cfg.pin_d7=Y9_GPIO_NUM;
+  cfg.pin_xclk=XCLK_GPIO_NUM; cfg.pin_pclk=PCLK_GPIO_NUM;
+  cfg.pin_vsync=VSYNC_GPIO_NUM; cfg.pin_href=HREF_GPIO_NUM;
+  cfg.pin_sscb_sda=SIOD_GPIO_NUM; cfg.pin_sscb_scl=SIOC_GPIO_NUM;
+  cfg.pin_pwdn=PWDN_GPIO_NUM; cfg.pin_reset=RESET_GPIO_NUM;
+  cfg.xclk_freq_hz=20000000;
+  cfg.pixel_format=PIXFORMAT_JPEG; cfg.frame_size=FRAMESIZE_VGA;
+  cfg.jpeg_quality=12; cfg.fb_count=1;
+  esp_camera_init(&cfg);
+}
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+  Serial.print("Snapshot: http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/snapshot");
+}
+
+void handleSnapshot() {
+  camera_fb_t* fb = esp_camera_fb_get();
+  if (!fb) {
+    server.send(500, "text/plain", "Camera fout");
+    return;
+  }
+  WiFiClient client = server.client();
+  client.printf(
+    "HTTP/1.1 200 OK\\r\\nContent-Type: image/jpeg\\r\\nContent-Length: %u\\r\\n\\r\\n",
+    fb->len);
+  client.write(fb->buf, fb->len);
+  esp_camera_fb_return(fb);
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(pirPin, INPUT);
+  initCamera();
+  connectWifi();
+  server.on("/snapshot", handleSnapshot);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+
+  bool nu = digitalRead(pirPin);
+  unsigned long t = millis();
+  // Edge: van LOW naar HIGH = nieuwe beweging gedetecteerd
+  if (nu && !laatstePir && t - laatsteMelding > 10000UL) {
+    laatsteMelding = t;
+    Serial.println("Beweging! Open /snapshot om de foto te zien.");
+  }
+  laatstePir = nu;
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 20: Bluetooth-toetsenbord emulator (Batch 2)
+// ─────────────────────────────────────────────
+
+const ble_s1 = `// Installeer de bibliotheek 'ESP32 BLE Keyboard' van T-vK via:
+// Sketch -> Include Library -> Manage Libraries -> zoek 'ble keyboard'.
+#include <BleKeyboard.h>
+
+BleKeyboard kb("ESP32 Knop", "Nogwa", 100);   // naam, fabrikant, batterij%
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Start BLE-toetsenbord, koppel via Bluetooth-instellingen...");
+  kb.begin();
+}
+
+void loop() {
+  if (kb.isConnected()) {
+    Serial.println("Verbonden! Tik 'Hallo!'");
+    kb.print("Hallo!");
+    delay(5000);
+  }
+  delay(100);
+}`;
+
+const ble_s2 = `#include <BleKeyboard.h>
+
+BleKeyboard kb("ESP32 Knop", "Nogwa", 100);
+
+int buttonPin = 4;        // knop tussen GPIO 4 en GND
+int vorigeStaat = HIGH;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(buttonPin, INPUT_PULLUP);
+  kb.begin();
+  Serial.println("Wacht op verbinding...");
+}
+
+void loop() {
+  int huidig = digitalRead(buttonPin);
+
+  // Edge-detectie: alleen reageren op overgang HIGH -> LOW (= net ingedrukt)
+  if (vorigeStaat == HIGH && huidig == LOW) {
+    if (kb.isConnected()) {
+      kb.print("Mijn-Wachtwoord-123");
+      Serial.println("Tekst getypt.");
+    } else {
+      Serial.println("Niet verbonden, knop genegeerd.");
+    }
+  }
+
+  vorigeStaat = huidig;
+  delay(20);   // simpele debounce
+}`;
+
+const ble_s3 = `#include <BleKeyboard.h>
+
+BleKeyboard kb("ESP32 Media", "Nogwa", 100);
+
+int buttonPin = 4;
+int vorigeStaat = HIGH;
+
+void setup() {
+  pinMode(buttonPin, INPUT_PULLUP);
+  kb.begin();
+}
+
+void loop() {
+  int huidig = digitalRead(buttonPin);
+
+  if (vorigeStaat == HIGH && huidig == LOW) {
+    if (kb.isConnected()) {
+      // Stuur een 'play/pauze' media-toets (werkt op Spotify, YouTube, ...).
+      kb.write(KEY_MEDIA_PLAY_PAUSE);
+    }
+  }
+
+  vorigeStaat = huidig;
+  delay(20);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 21: Pakketmelder voor de brievenbus (Batch 2)
+// ─────────────────────────────────────────────
+
+const pak_s1 = `int reedPin = 4;          // reed-schakelaar tussen GPIO 4 en GND
+int vorigeStaat = HIGH;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(reedPin, INPUT_PULLUP);
+  Serial.println("Beweeg de magneet langs de reed-schakelaar...");
+}
+
+void loop() {
+  int huidig = digitalRead(reedPin);
+
+  if (huidig != vorigeStaat) {
+    if (huidig == LOW) {
+      Serial.println("GESLOTEN  (magneet aanwezig - klepje dicht)");
+    } else {
+      Serial.println("OPEN      (magneet weg - klepje is geopend)");
+    }
+    vorigeStaat = huidig;
+  }
+  delay(20);
+}`;
+
+const pak_s2 = `#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid       = "JouwWiFiNaam";
+const char* password   = "JouwWiFiWachtwoord";
+// Maak de webhook in Discord (zie tutorial 'Discord-melding bij beweging').
+const char* webhookUrl = "https://discord.com/api/webhooks/JOUW_ID/JOUW_TOKEN";
+
+int reedPin = 4;
+int vorigeStaat = HIGH;
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void stuurDiscord(String bericht) {
+  HTTPClient http;
+  http.begin(webhookUrl);
+  http.addHeader("Content-Type", "application/json");
+  String json = String(R"({"content":")") + bericht + R"("})";
+  int code = http.POST(json);
+  Serial.print("Discord status: ");
+  Serial.println(code);
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(reedPin, INPUT_PULLUP);
+  connectWifi();
+}
+
+void loop() {
+  int huidig = digitalRead(reedPin);
+
+  // Edge LOW -> HIGH = klepje net opengegaan = post!
+  if (vorigeStaat == LOW && huidig == HIGH) {
+    stuurDiscord("Post is er!");
+  }
+  vorigeStaat = huidig;
+  delay(20);
+}`;
+
+const pak_s3 = `#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid       = "JouwWiFiNaam";
+const char* password   = "JouwWiFiWachtwoord";
+const char* webhookUrl = "https://discord.com/api/webhooks/JOUW_ID/JOUW_TOKEN";
+
+// We gebruiken GPIO_NUM_4 (de typed variant) zodat esp_sleep hem accepteert.
+#define REED_GPIO GPIO_NUM_4
+
+void connectWifi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println();
+}
+
+void stuurDiscord(String bericht) {
+  HTTPClient http;
+  http.begin(webhookUrl);
+  http.addHeader("Content-Type", "application/json");
+  String json = String(R"({"content":")") + bericht + R"("})";
+  http.POST(json);
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(200);
+  Serial.println("Wakker geworden!");
+
+  // Waarom werd ik wakker? (Eerste keer = power-on, daarna = de klep)
+  esp_sleep_wakeup_cause_t reden = esp_sleep_get_wakeup_cause();
+  if (reden == ESP_SLEEP_WAKEUP_EXT0) {
+    Serial.println("Reed-schakelaar triggerde de wake-up -> melding sturen.");
+    connectWifi();
+    stuurDiscord("Post is er!");
+    delay(500);   // kleine buffer zodat de POST helemaal vertrokken is
+  } else {
+    Serial.println("Eerste opstart, geen melding nodig.");
+  }
+
+  // Configureer de pin als wake-up bron: wakker bij HIGH (klepje open).
+  pinMode(REED_GPIO, INPUT_PULLUP);
+  esp_sleep_enable_ext0_wakeup(REED_GPIO, 1);   // 1 = wek bij HIGH
+
+  Serial.println("Slapen tot de volgende post...");
+  delay(100);
+  esp_deep_sleep_start();
+}
+
+void loop() {
+  // Onbereikbaar - na deep sleep start setup() opnieuw.
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 22: Reactietijd-tester (Batch 2 - Beginner)
+// ─────────────────────────────────────────────
+
+const rt_s1 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int ledPin = 9;             // LED op pin 9 (PWM-pin, met 220 ohm)
+int buttonPin = 7;          // knop tussen pin 7 en GND
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  lcd.setCursor(0, 0);
+  lcd.print("Reactietijd!");
+  lcd.setCursor(0, 1);
+  lcd.print("Druk knop start");
+}
+
+void loop() {
+  // Test: LED brandt zolang de knop ingedrukt is.
+  if (digitalRead(buttonPin) == LOW) {
+    digitalWrite(ledPin, HIGH);
+  } else {
+    digitalWrite(ledPin, LOW);
+  }
+}`;
+
+const rt_s2 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int ledPin = 9;
+int buttonPin = 7;
+
+void wachtTotIngedrukt() {
+  while (digitalRead(buttonPin) == HIGH) { delay(10); }
+}
+
+void wachtTotLosgelaten() {
+  while (digitalRead(buttonPin) == LOW)  { delay(10); }
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  randomSeed(analogRead(A0));    // ruis op A0 = goede zaad-bron
+}
+
+void loop() {
+  lcd.clear();
+  lcd.print("Druk om te");
+  lcd.setCursor(0, 1);
+  lcd.print("starten...");
+
+  wachtTotIngedrukt();
+  wachtTotLosgelaten();
+
+  lcd.clear();
+  lcd.print("Wacht op licht..");
+
+  long wacht = random(1500, 4000);    // 1,5 - 4 sec willekeurig
+  delay(wacht);
+
+  digitalWrite(ledPin, HIGH);
+  unsigned long start = millis();
+
+  wachtTotIngedrukt();
+  unsigned long reactie = millis() - start;
+
+  digitalWrite(ledPin, LOW);
+
+  lcd.clear();
+  lcd.print("Reactietijd:");
+  lcd.setCursor(0, 1);
+  lcd.print(reactie);
+  lcd.print(" ms");
+
+  wachtTotLosgelaten();
+  delay(2000);
+}`;
+
+const rt_s3 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int ledPin = 9;
+int buttonPin = 7;
+
+unsigned long besteTijd = 0;        // 0 = nog geen score
+
+void wachtTotIngedrukt() {
+  while (digitalRead(buttonPin) == HIGH) { delay(10); }
+}
+void wachtTotLosgelaten() {
+  while (digitalRead(buttonPin) == LOW)  { delay(10); }
+}
+
+void toonStartscherm() {
+  lcd.clear();
+  lcd.print("Best: ");
+  if (besteTijd == 0) lcd.print("- ms");
+  else { lcd.print(besteTijd); lcd.print(" ms"); }
+  lcd.setCursor(0, 1);
+  lcd.print("Druk om start");
+}
+
+void setup() {
+  lcd.init(); lcd.backlight();
+  pinMode(ledPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  randomSeed(analogRead(A0));
+}
+
+void loop() {
+  toonStartscherm();
+  wachtTotIngedrukt();
+  wachtTotLosgelaten();
+
+  lcd.clear();
+  lcd.print("Wacht op licht..");
+  long wacht = random(1500, 4000);
+
+  // Te-vroeg-detectie: tijdens de wachttijd mag je NIET drukken.
+  unsigned long deadline = millis() + wacht;
+  bool teVroeg = false;
+  while (millis() < deadline) {
+    if (digitalRead(buttonPin) == LOW) { teVroeg = true; break; }
+    delay(5);
+  }
+
+  if (teVroeg) {
+    lcd.clear();
+    lcd.print("Te vroeg! :(");
+    wachtTotLosgelaten();
+    delay(2000);
+    return;
+  }
+
+  digitalWrite(ledPin, HIGH);
+  unsigned long start = millis();
+  wachtTotIngedrukt();
+  unsigned long reactie = millis() - start;
+  digitalWrite(ledPin, LOW);
+
+  lcd.clear();
+  lcd.print("Tijd: ");
+  lcd.print(reactie);
+  lcd.print(" ms");
+
+  if (besteTijd == 0 || reactie < besteTijd) {
+    besteTijd = reactie;
+    lcd.setCursor(0, 1);
+    lcd.print("NIEUW RECORD!");
+  }
+
+  wachtTotLosgelaten();
+  delay(2500);
+}`;
+
+// ─────────────────────────────────────────────
 // TUTORIAL 9: Stappenmotor Basis (A4988 / DRV8825)
 // ─────────────────────────────────────────────
 
@@ -3233,6 +4057,342 @@ void loop() {
         assignment: "Upload. Het LCD moet elke 5 sec wisselen tussen 3 verschillende vertrekken, en elke minuut nieuwe data ophalen.",
         challenge: "Maak de wisseltijd instelbaar via een fysieke knop op GPIO 4: kort drukken → handmatig één verder, lang drukken → pauze (geen auto-rotation).",
         reflection: "Waarom is dit non-blocking patroon beter dan `delay()`? Wat kun je nu doen tijdens de wachttijd dat je niet kon met `delay`? (Hint: knoppen lezen, status-LED knipperen, ...)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 18: Buienradar-strook met NeoPixels
+  // ─────────────────────────────────────────────
+  {
+    id: "buienradar-strip",
+    title: "Buienradar-strook met NeoPixels (ESP32)",
+    description: "Laat een ring van 24 NeoPixels de regen-voorspelling van Buienradar zien — elke LED is 5 minuten in de toekomst, kleur loopt van groen (droog) naar rood (stortregen).",
+    difficulty: "Gevorderd",
+    materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× NeoPixel-ring of -strip met 24 WS2812B LEDs, externe 5V-voeding (1A+) aanbevolen voor full brightness.",
+    learningGoal: "Een open HTTP-API uitlezen en parsen, sensorwaarden mappen op een visuele schaal (kleurgradient), en NeoPixels veilig aansturen vanaf een ESP32 (3.3V signaal, 5V power).",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "br-s1",
+        title: "Eerste GET naar Buienradar",
+        content: "Buienradar biedt een **gratis, sleutelloze** endpoint voor regen-voorspelling op coördinaten: `gpsgadget.buienradar.nl/data/raintext`. Je krijgt 24 regels terug, elke regel is een meting voor de komende 2 uur (één per 5 min). Pas `lat` en `lon` aan naar jouw locatie (Google → 'mijn coördinaten') en upload deze sketch. In de Serial Monitor zie je de ruwe respons.",
+        diagram: false,
+        code: br_s1,
+        legend: [
+          { term: "#include <HTTPClient.h>", desc: "ESP32-bibliotheek voor HTTP-requests. http:// is voldoende — Buienradar serveert ook over plain HTTP." },
+          { term: "gpsgadget.buienradar.nl/data/raintext", desc: "Open endpoint: geen API-key, geen rate-limit voor normaal gebruik. Ideaal voor leerprojecten." },
+          { term: "?lat=52.09&lon=5.12", desc: "Latitude/longitude als query-parameters. Hoe dichter bij jouw locatie, hoe accurater de voorspelling." },
+          { term: "http.GET()", desc: "Stuur de request, returnt de HTTP-statuscode. 200 = OK." },
+        ],
+        assignment: "Vul je WiFi-gegevens in, pas lat/lon aan naar jouw locatie, upload. In de Serial Monitor moet je 24 regels zien zoals `127|14:35` — getal voor de pipe = regen-intensiteit.",
+        challenge: "Probeer een lat/lon van een plek waar het op dit moment regent (kijk eerst op buienradar.nl). Zie je hogere getallen?",
+        reflection: "Waarom is een open endpoint zonder authenticatie zowel handig als kwetsbaar voor de aanbieder? Wat kunnen ze doen om misbruik te beperken?",
+      },
+      {
+        id: "br-s2",
+        title: "Respons parsen tot 24 getallen",
+        content: "De respons is een tekst die we regel voor regel doorlopen. Per regel pakken we het getal vóór de `|` met `substring()` en `toInt()`. We slaan ze op in een array `regenWaarden[24]`. Het patroon `indexOf('\\n')` om regels te knippen is universeel: het werkt voor elk regel-gebaseerd protocol.",
+        diagram: false,
+        code: br_s2,
+        legend: [
+          { term: "int regenWaarden[24]", desc: "Vaste-grootte array — 24 metingen passen er altijd in. Geen heap-allocaties." },
+          { term: "body.indexOf('\\n', start)", desc: "Vind de volgende newline vanaf positie `start`. -1 als er geen meer is." },
+          { term: "regel.substring(0, pipe)", desc: "Pak het stukje vóór de `|` — dat is het regen-getal als string." },
+          { term: ".toInt()", desc: "Converteer string naar int. Bij ongeldige tekst returnt het 0 — geen exception." },
+          { term: "(int)body.length()", desc: "Cast naar int omdat `length()` een `unsigned int` returnt — vergelijk met int gaat anders mis." },
+        ],
+        assignment: "Upload, kijk in de Serial Monitor: je moet één regel zien met 24 getallen tussen 0 en ~250.",
+        challenge: "Print ook de tijd-strings (na de `|`) zodat je weet voor welk uur+minuut elke voorspelling geldt.",
+        reflection: "Waarom een vaste array van 24 in plaats van een dynamische lijst? Wat zijn de voor- en nadelen op een microcontroller met weinig RAM?",
+      },
+      {
+        id: "br-s3",
+        title: "Kleur-mapping op de NeoPixel-strook",
+        content: "Tijd voor de visuele kers. We voegen de Adafruit_NeoPixel-bibliotheek toe en bouwen een `kleurVoor()`-helper die het regen-getal afbeeldt op groen → geel → oranje → rood. **Belangrijk over voeding:** 24 NeoPixels op vol wit trekt ~1.4A — meer dan een ESP32 via USB kan leveren. Daarom `setBrightness(40)` (~16% van max) en/of een externe 5V-voeding. Het data-signaal is op 3.3V (ESP32-niveau): voor een korte draad werkt dat meestal direct, anders een 74AHCT125 level-shifter ertussen.",
+        diagram: true,
+        code: br_s3,
+        legend: [
+          { term: "Adafruit_NeoPixel strip(aantalLeds, dataPin, NEO_GRB + NEO_KHZ800)", desc: "Maak het strip-object aan. NEO_GRB = kleurvolgorde voor WS2812B." },
+          { term: "strip.setBrightness(40)", desc: "Globale dimmer (0-255). Beperkt het stroomverbruik én voorkomt brown-outs op USB-voeding." },
+          { term: "kleurVoor(int waarde)", desc: "Mapping-functie: een getal omzetten in een kleur. Hier handmatige if-laddern; je kunt ook lineair interpoleren tussen twee kleuren." },
+          { term: "5UL * 60UL * 1000UL", desc: "5 minuten in ms. UL-suffix voorkomt overflow tijdens vermenigvuldigen (16-bit getallen lopen over bij ~32k)." },
+          { term: "millis()", desc: "Aantal ms sinds opstart. Gebruikt voor non-blocking timing — geen `delay()` in de loop." },
+        ],
+        assignment: "Sluit de NeoPixel-ring aan (zie schema), upload, wacht ~10 sec tot de eerste fetch klaar is. De ring moet de regen-voorspelling tonen voor de komende 2 uur.",
+        challenge: "Voeg een 'gemiddelde'-LED toe op een eigen pin: één losse LED die rood knippert als de gemiddelde regen-waarde over alle 24 metingen > 50 is.",
+        reflection: "Welk dagelijks moment zou jij hier beter door kunnen plannen? (Hond uitlaten, fietsritje, was buiten hangen, ...)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 19: ESP32-CAM webcam met bewegingsdetectie
+  // ─────────────────────────────────────────────
+  {
+    id: "esp32-cam-webcam",
+    title: "ESP32-CAM webcam + bewegingsdetectie",
+    description: "Bouw een mini-webcam die live MJPEG streamt naar je browser, en in stap 4 automatisch een snapshot beschikbaar maakt zodra de PIR-sensor beweging detecteert.",
+    difficulty: "Gevorderd",
+    materials: "ESP32-CAM (AI Thinker), FTDI USB-naar-Serial-adapter (3.3V/5V), breadboard + jumpers, 1× PIR bewegingssensor (HC-SR501) voor stap 4. Optioneel: externe 5V-voeding (de USB van de FTDI is soms te zwak).",
+    learningGoal: "Werken met een bord zonder USB (FTDI-programmeren), de OV2640-camera initialiseren, een MJPEG-stream serveren via WebServer, en een fysieke trigger (PIR) koppelen aan een snapshot-endpoint.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "cam-s1",
+        title: "Hardware aansluiten en eerste upload",
+        content: "De ESP32-CAM **heeft geen USB-aansluiting** — je hebt een FTDI USB-naar-Serial-adapter nodig om te programmeren. Belangrijke regels:\n\n1. **Bedrading:** zie het schema hiernaast. FTDI 5V → CAM 5V, FTDI GND → CAM GND, FTDI TX → CAM U0R, FTDI RX → CAM U0T, en GPIO 0 → GND **alleen tijdens uploaden**.\n2. **Board kiezen:** Tools → Board → 'AI Thinker ESP32-CAM'. Tools → Partition Scheme → 'Huge APP'.\n3. **Upload-procedure:** houd IO0 aan GND, druk op de RESET-knop op de CAM, klik Upload, wacht tot 'Connecting...', laat IO0 los. Na uploaden: **koppel IO0 helemaal los** en druk RESET om de sketch te starten.\n\nDeze eerste sketch print alleen iets in de Serial Monitor — als dat lukt, weet je dat je hardware en upload-flow werken.",
+        diagram: true,
+        code: cam_s1,
+        legend: [
+          { term: "FTDI 5V → CAM 5V", desc: "De ESP32-CAM heeft een 5V-pin die intern wordt geregeld naar 3.3V. Met FTDI op 5V is de stroom meestal net genoeg." },
+          { term: "FTDI TX → CAM U0R", desc: "TX van de FTDI gaat naar RX van de CAM (U0R = UART0 Receive). Een 'crossover' is normaal in seriële verbindingen." },
+          { term: "GPIO 0 → GND", desc: "Trigger boot-modus. Alleen verbinden tijdens uploaden, daarna LOSKOPPELEN voor normale boot." },
+          { term: "RESET-knopje", desc: "Witte knop op de achterkant van de ESP32-CAM. Reset = herstart het bord; nodig na elke modus-wisseling." },
+        ],
+        assignment: "Sluit de FTDI aan volgens het schema. Upload deze sketch (volg de IO0-procedure!). Na upload moet de Serial Monitor (115200 baud) elke 2 sec 'Nog steeds aan...' printen.",
+        challenge: "Probeer de upload te doen ZONDER IO0 aan GND — welke foutmelding krijg je in de IDE? (Hint: 'Failed to connect... wrong boot mode'.)",
+        reflection: "Waarom heeft de ESP32-CAM geen USB-poort terwijl een gewone ESP32 DevKit dat wel heeft? Denk aan: kostprijs, formaat, doelgroep.",
+      },
+      {
+        id: "cam-s2",
+        title: "Camera initialiseren en één foto pakken",
+        content: "Nu we kunnen uploaden, gaan we de camera aanzetten. De `camera_config_t`-struct heeft veel velden — het zijn bijna allemaal de pin-mappings van de OV2640-camera-chip naar de ESP32 GPIOs. Die zijn vast voor het AI-Thinker-bord; **kopieer ze 1-op-1**. Na `esp_camera_init()` kunnen we met `esp_camera_fb_get()` één frame ophalen — een JPEG-blob in geheugen. Vergeet niet hem altijd terug te geven met `esp_camera_fb_return()`!",
+        diagram: false,
+        code: cam_s2,
+        legend: [
+          { term: "camera_config_t cfg = {}", desc: "Initialiseer alle velden op 0. Daarna vullen we per veld in wat we nodig hebben." },
+          { term: "PIXFORMAT_JPEG", desc: "Camera comprimeert intern naar JPEG. Bespaart heel veel RAM én is direct verstuurbaar over HTTP." },
+          { term: "FRAMESIZE_VGA", desc: "640x480 — goede balans tussen kwaliteit en RAM-gebruik. Hogere modes (UXGA = 1600x1200) lukken alleen met PSRAM." },
+          { term: "jpeg_quality = 12", desc: "0 = best, 63 = slechtst. 10-15 is een sweet spot." },
+          { term: "esp_camera_fb_get()", desc: "Pak een 'frame buffer' = pointer naar een JPEG in RAM. NULL bij fout." },
+          { term: "esp_camera_fb_return(fb)", desc: "Geef het buffer terug aan de driver. Zonder dit: na ~3 frames krijg je NULL." },
+        ],
+        assignment: "Upload (denk aan de IO0-procedure!). De Serial Monitor moet 'Camera klaar!' tonen, en daarna elke 2 sec 'Foto ok - 12345 bytes' (het getal varieert).",
+        challenge: "Verander `FRAMESIZE_VGA` in `FRAMESIZE_QVGA` (320x240). Hoe veel kleiner worden de foto's? En `FRAMESIZE_SVGA` (800x600)?",
+        reflection: "Waarom is JPEG-output zoveel praktischer dan RAW pixels op een chip met 520kB RAM? (Tip: 640×480×3 bytes = 921 kB.)",
+      },
+      {
+        id: "cam-s3",
+        title: "Live MJPEG-stream via WiFi",
+        content: "Nu maken we er een echte webcam van. We voegen WiFi en `WebServer` toe en bouwen een `/stream`-endpoint. **MJPEG** = Motion JPEG: een eindeloze HTTP-respons waarin we steeds nieuwe JPEG-frames sturen, gescheiden door een `--frame`-marker. Browsers kennen `multipart/x-mixed-replace` en tonen de stream automatisch als bewegend beeld. Open de gegeven URL in je browser, op je telefoon, in VLC — overal werkt het.",
+        diagram: false,
+        code: cam_s3,
+        legend: [
+          { term: "WebServer server(80)", desc: "ESP32's ingebouwde HTTP-server, luistert op poort 80." },
+          { term: "multipart/x-mixed-replace; boundary=frame", desc: "MIME-type dat zegt: 'ik stuur meerdere parts; vervang het vorige beeld telkens'. Browsers tonen dit als video." },
+          { term: "--frame\\r\\nContent-Type: image/jpeg", desc: "Boundary-marker + per-frame headers. Letterlijke `\\r\\n` (Windows-line-endings) zijn vereist door de HTTP-spec." },
+          { term: "client.write(fb->buf, fb->len)", desc: "Stuur de ruwe JPEG-bytes. `write` (niet `print`) omdat het binaire data is." },
+          { term: "delay(50)", desc: "Cap op ~20 fps. Lager = soepeler maar meer CPU + WiFi-belasting." },
+        ],
+        assignment: "Upload, open de Serial Monitor om het IP-adres te lezen, ga naar `http://<IP>/stream` in je browser. Je moet live beeld zien.",
+        challenge: "Voeg een `/` route toe die een simpele HTML-pagina returnt met een `<img src='/stream'>` zodat je de stream in een nette layout ziet (met titel en eventueel een refresh-knop).",
+        reflection: "MJPEG is bandbreedte-vretend (elk frame is een complete foto). Welke videocodec zou efficiënter zijn? Waarom kan een ESP32 die typisch niet aan?",
+      },
+      {
+        id: "cam-s4",
+        title: "Snapshot bij beweging (PIR-sensor)",
+        content: "Slot-stap: koppel een PIR-sensor aan **GPIO 13** (één van de weinige vrije GPIOs op de CAM — de meeste zijn bezet door de camera-chip). Bij elke nieuwe beweging printen we een melding én bieden we via `/snapshot` de huidige foto aan. **Edge-detectie** (`nu && !laatstePir`) zorgt dat we maar één keer per beweging triggeren, niet 1000x zolang de sensor HIGH blijft. Een cooldown van 10 sec voorkomt spam.",
+        diagram: true,
+        code: cam_s4,
+        legend: [
+          { term: "int pirPin = 13", desc: "GPIO 13 is vrij op de AI-Thinker-CAM. GPIO 12 ook, maar die heeft een interne pull-down nodig bij boot." },
+          { term: "bool laatstePir", desc: "Vorige status onthouden — basis voor edge-detectie." },
+          { term: "nu && !laatstePir", desc: "TRUE alleen op de overgang LOW→HIGH (de millisecond dat beweging begint). Niet zolang het HIGH blijft." },
+          { term: "t - laatsteMelding > 10000UL", desc: "Cooldown van 10 sec. Anders triggert één voorbij-loopactie meerdere meldingen." },
+          { term: "/snapshot", desc: "Endpoint dat één verse JPEG returnt. Geen MJPEG-magie, gewoon één plaatje." },
+        ],
+        assignment: "Sluit de PIR aan (5V→VCC, GND→GND, OUT→GPIO 13). Upload. Loop voor de sensor: in de Serial Monitor verschijnt 'Beweging!'. Open `/snapshot` in je browser om de foto te zien.",
+        challenge: "Sla snapshots op in een ringbuffer in PSRAM (als je ESP32-CAM PSRAM heeft) en bouw een `/last5` endpoint die de 5 laatste snapshots achter elkaar toont.",
+        reflection: "Wat zijn drie nuttige toepassingen van deze setup thuis? En wat zijn de privacy-overwegingen als je dit ophangt in een gedeelde ruimte?",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 20: Bluetooth-toetsenbord emulator
+  // ─────────────────────────────────────────────
+  {
+    id: "ble-keyboard",
+    title: "Bluetooth-toetsenbord emulator (ESP32)",
+    description: "Maak van je ESP32 een echt Bluetooth-toetsenbord. Verbind met je laptop of telefoon en laat een fysieke knop een wachtwoord intypen, een sneltoets sturen of media bedienen.",
+    difficulty: "Gevorderd",
+    materials: "ESP32 DevKit V1, USB-kabel, breadboard + jumpers, 1× drukknop (geen weerstand nodig dankzij INPUT_PULLUP).",
+    learningGoal: "Een Bluetooth Low Energy HID (Human Interface Device) profiel implementeren, edge-detectie gebruiken om dubbele triggers te voorkomen, en het verschil tussen `print()` (typen) en `write()` (één-toets-press) op een BLE-keyboard begrijpen.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "ble-s1",
+        title: "Bibliotheek installeren en eerste verbinding",
+        content: "We gebruiken **'ESP32 BLE Keyboard'** van T-vK (te vinden via Library Manager, zoek 'ble keyboard'). Dat doet al het zware werk: BLE-stack, HID-protocol, herverbinden. Onze eerste sketch maakt een keyboard-object, start het, en zodra er een apparaat verbindt typt het elke 5 sec 'Hallo!'. **Koppelen op je laptop/telefoon:** Bluetooth-instellingen → Nieuw apparaat → kies 'ESP32 Knop'.",
+        diagram: false,
+        code: ble_s1,
+        legend: [
+          { term: "#include <BleKeyboard.h>", desc: "De T-vK-bibliotheek — installeer eerst via Library Manager. Werkt alleen op ESP32, niet op gewone Arduino." },
+          { term: "BleKeyboard kb(\"ESP32 Knop\", \"Nogwa\", 100)", desc: "Naam (zichtbaar bij koppelen), fabrikant, batterij-percentage (cosmetisch — wordt getoond op iOS/Mac)." },
+          { term: "kb.begin()", desc: "Start de BLE-stack en zet HID-advertising aan. Het apparaat is nu zichtbaar voor andere Bluetooth-devices." },
+          { term: "kb.isConnected()", desc: "TRUE als er een apparaat gekoppeld is. Vóór dat moet kb.print() niets doen — dus altijd checken." },
+          { term: "kb.print(\"Hallo!\")", desc: "Typ de tekst — het is alsof iemand op die toetsen drukt. Werkt waar de cursor ook staat." },
+        ],
+        assignment: "Upload, koppel je laptop met 'ESP32 Knop' via Bluetooth-instellingen, open een teksteditor en zet de cursor erin. Elke 5 sec moet 'Hallo!' verschijnen.",
+        challenge: "Voeg `kb.print(\"\\n\")` toe na 'Hallo!' zodat het een echte Enter-toets stuurt en op een nieuwe regel komt.",
+        reflection: "Welke beveiligingsrisico's brengt een 'altijd-gekoppeld' BLE-toetsenbord met zich mee? Wie kan jouw ESP32 als invoer-apparaat gebruiken?",
+      },
+      {
+        id: "ble-s2",
+        title: "Knop koppelen met edge-detectie",
+        content: "Continu typen is niet wat we willen. We voegen een knop toe op GPIO 4 (met `INPUT_PULLUP` — knop tussen pin en GND, geen weerstand nodig). Het cruciale truc is **edge-detectie**: we onthouden de vorige status en triggeren alleen op de overgang HIGH → LOW (het moment van indrukken). Anders typt hij dezelfde tekst 100x per seconde zolang je de knop ingedrukt houdt.",
+        diagram: true,
+        code: ble_s2,
+        legend: [
+          { term: "pinMode(buttonPin, INPUT_PULLUP)", desc: "Interne pull-up: pin leest standaard HIGH, wordt LOW als knop is ingedrukt (verbonden met GND)." },
+          { term: "vorigeStaat == HIGH && huidig == LOW", desc: "Edge-detectie: TRUE alleen op het moment van overgang naar ingedrukt. Niet zolang knop ingedrukt blijft." },
+          { term: "vorigeStaat = huidig", desc: "Update aan einde van loop. Kritisch — zonder dit werkt edge-detectie nooit." },
+          { term: "delay(20)", desc: "Simpele software-debounce. Knoppen 'bouncen' enkele ms bij contact; 20 ms is genoeg om de bounce uit te filteren." },
+        ],
+        assignment: "Sluit een knop aan tussen GPIO 4 en GND. Upload. Druk de knop één keer in: het wachtwoord moet één keer getypt worden, ongeacht hoe lang je drukt.",
+        challenge: "Maak een 'sneltoets' i.p.v. tekst: druk eerst CMD/CTRL ingedrukt, druk Z, los CMD/CTRL — undo dus. Hint: `kb.press(KEY_LEFT_CTRL)`, `kb.press('z')`, `kb.releaseAll()`.",
+        reflection: "Wat zijn drie nuttige knop-acties die je nu zou kunnen automatiseren? (Voorbeelden: e-mailadres invullen, programma openen via Spotlight, ...)",
+      },
+      {
+        id: "ble-s3",
+        title: "Media-toetsen (play/pauze)",
+        content: "BLE-toetsenborden kennen ook **media-toetsen** — die werken in Spotify, YouTube, Netflix, alles wat audio/video afspeelt. Met `kb.write(KEY_MEDIA_PLAY_PAUSE)` stuur je één 'klik' van de play/pauze-toets. Andere beschikbare toetsen: `KEY_MEDIA_NEXT_TRACK`, `KEY_MEDIA_PREVIOUS_TRACK`, `KEY_MEDIA_VOLUME_UP/DOWN`, `KEY_MEDIA_MUTE`. Heel handig als afstandsbediening voor bv. presentaties of muziek tijdens het koken.",
+        diagram: true,
+        code: ble_s3,
+        legend: [
+          { term: "kb.write(KEY_MEDIA_PLAY_PAUSE)", desc: "Verschil met `print`: `write` stuurt één key-press (één 'klik'). `print` stuurt een hele tekst-string." },
+          { term: "KEY_MEDIA_NEXT_TRACK", desc: "Volgende nummer. De constanten zijn gedefinieerd in BleKeyboard.h." },
+          { term: "KEY_MEDIA_VOLUME_UP", desc: "Volume hoger. Niet 'systeem-volume' op alle OS'en, maar wel app-volume in Spotify/YouTube." },
+          { term: "BleKeyboard kb(\"ESP32 Media\", ...)", desc: "Andere naam zodat hij verschijnt als apart apparaat in je Bluetooth-instellingen." },
+        ],
+        assignment: "Upload, koppel als 'ESP32 Media', open Spotify of YouTube, druk de knop. Muziek/video moet pauzeren/hervatten.",
+        challenge: "Bouw een **3-knops-afstandsbediening**: vorige nummer, play/pauze, volgende nummer. Dat is letterlijk drie knoppen op verschillende GPIOs met elk hun eigen edge-detectie-blok.",
+        reflection: "BLE-keyboards werken op iOS, macOS, Windows, Android en Linux zonder driver-installatie. Welk standaard-protocol maakt dat mogelijk en waarom is dat zo waardevol?",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 21: Pakketmelder voor de brievenbus
+  // ─────────────────────────────────────────────
+  {
+    id: "pakketmelder-brievenbus",
+    title: "Pakketmelder voor de brievenbus (ESP32 + reed-schakelaar)",
+    description: "Een batterij-aangedreven brievenbus-sensor: zodra het klepje opengaat, sluipt de ESP32 uit deep-sleep, stuurt 'Post is er!' naar Discord, en gaat weer slapen. Maandenlang op één lading.",
+    difficulty: "Gemiddeld",
+    materials: "ESP32 DevKit V1, USB-kabel of LiPo-batterij, breadboard + jumpers, 1× reed-schakelaar (NO-type, met magneet), Discord-account met eigen server (voor de webhook).",
+    learningGoal: "Een reed-schakelaar uitlezen als digitale input, edge-detectie correct toepassen, een Discord-webhook aanroepen, en deep sleep gebruiken voor jaren-lange batterijduur door alleen op een externe trigger wakker te worden.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "pak-s1",
+        title: "Reed-schakelaar uitlezen",
+        content: "Een **reed-schakelaar** is een glazen buisje met twee metalen contacten die naar elkaar toe gebogen worden door een naburige magneet. Geen elektronica, geen voeding nodig — gedraagt zich precies zoals een drukknop. Sluit aan tussen GPIO 4 en GND, met `INPUT_PULLUP`. Beweeg een magneet ernaartoe en in de Serial Monitor zie je de status wisselen.\n\n**Plaatsing in de brievenbus:** schakelaar op de vaste rand, magneet op het bewegende klepje. Als het klepje dicht is = magneet dichtbij = schakelaar gesloten = pin LOW.",
+        diagram: true,
+        code: pak_s1,
+        legend: [
+          { term: "int reedPin = 4", desc: "GPIO 4 is een veilige general-purpose pin op ESP32. Andere prima keuzes: GPIO 13, 14, 15." },
+          { term: "INPUT_PULLUP", desc: "Pin leest standaard HIGH (interne weerstand naar 3.3V). Wordt LOW als de schakelaar geleidt." },
+          { term: "huidig != vorigeStaat", desc: "Detecteer overgang. Print alleen bij verandering, niet 50x per seconde." },
+          { term: "delay(20)", desc: "Reed-schakelaars 'bouncen' nauwelijks (geen mechanisch contact tussen mensen-vingers), maar 20ms blijft veiligheidsmarge." },
+        ],
+        assignment: "Sluit de reed-schakelaar aan tussen GPIO 4 en GND. Upload. Beweeg een magneet langs de schakelaar — je moet GESLOTEN/OPEN zien wisselen in de Serial Monitor.",
+        challenge: "Pas het experiment aan: meet hoe ver (in cm) de magneet van de schakelaar mag zijn voordat hij niet meer triggert. Sterkte verschilt per magneet-type (ferriet vs. neodymium).",
+        reflection: "Waarom is een reed-schakelaar betrouwbaarder voor een buiten-toepassing dan een infrarood-sensor of microswitch? Denk aan: vocht, vuil, geen bewegende delen.",
+      },
+      {
+        id: "pak-s2",
+        title: "Discord-melding bij open klepje",
+        content: "Hergebruik van het webhook-patroon uit de **'Discord-melding bij beweging'**-tutorial: maak een webhook in Discord (Kanaal-instellingen → Integraties → Webhooks), kopieer de URL, plak hier. Op de overgang LOW→HIGH (klepje gaat open) sturen we 'Post is er!'. Edge-detectie zorgt dat we maar één melding per opening krijgen, niet één per polling-cyclus.",
+        diagram: true,
+        code: pak_s2,
+        legend: [
+          { term: "webhookUrl", desc: "Geheime URL met token. Zie de tutorial 'Discord-melding bij beweging' voor hoe je hem aanmaakt." },
+          { term: "vorigeStaat == LOW && huidig == HIGH", desc: "Edge-detectie: alleen TRUE op het moment dat het klepje opengaat. Niet bij sluiten." },
+          { term: "String(R\"({\"content\":\")\") + bericht + R\"(\"})", desc: "Raw strings + concatenatie bouwen het JSON-payload zonder dubbele-escape-hel." },
+          { term: "http.POST(json)", desc: "Returnt de HTTP-statuscode. 204 = succes, 401 = verkeerde URL, 429 = te veel requests." },
+        ],
+        assignment: "Maak een Discord-webhook, plak de URL en je WiFi-gegevens, upload. Beweeg de magneet weg → er moet 'Post is er!' in Discord verschijnen.",
+        challenge: "Voeg een tijdstempel toe aan het bericht, bv. via NTP (`configTime(0, 0, \"pool.ntp.org\")` + `getLocalTime()`). Output: 'Post is er! (14:32)'.",
+        reflection: "De ESP32 staat hier permanent aan WiFi en is altijd verbonden — dat trekt ~80mA. Hoe lang gaat een 2000mAh batterij dan ongeveer mee? (Hint: ~25 uur.) De volgende stap lost dat op.",
+      },
+      {
+        id: "pak-s3",
+        title: "Deep sleep voor maandenlange batterijduur",
+        content: "De truc: tussen meldingen door **slaapt** de ESP32. In deep sleep verbruikt hij ~10µA in plaats van 80mA — een factor 8000 minder. We gebruiken `esp_sleep_enable_ext0_wakeup()` om de chip te laten ontwaken zodra GPIO 4 HIGH wordt (= klepje opengaat = magneet gaat weg). Bij ontwaken start `setup()` opnieuw — we checken dan met `esp_sleep_get_wakeup_cause()` of we wakker werden door de pin (= melding sturen) of door power-on (= alleen slapen).\n\nMet 2000 mAh: ~50.000 uur = >5 jaar (in de praktijk minder door zelfontlading, maar maandenlang is realistisch).",
+        diagram: true,
+        code: pak_s3,
+        legend: [
+          { term: "GPIO_NUM_4", desc: "Typed enum-versie van GPIO 4. `esp_sleep_enable_ext0_wakeup()` accepteert alleen dit type, geen losse int." },
+          { term: "esp_sleep_enable_ext0_wakeup(REED_GPIO, 1)", desc: "Configureer EXT0 wake-up: ontwaak als REED_GPIO HIGH wordt. `0` zou wekken bij LOW." },
+          { term: "esp_sleep_get_wakeup_cause()", desc: "Vraag op WAAROM we wakker werden. ESP_SLEEP_WAKEUP_EXT0 = onze pin. ESP_SLEEP_WAKEUP_UNDEFINED = power-on/reset." },
+          { term: "esp_deep_sleep_start()", desc: "Ga in diepste slaap. Geen return — bij volgende wake-up start setup() vanaf het begin." },
+          { term: "loop() {}", desc: "Onbereikbaar. In dit deep-sleep-patroon doet alle logica zich in setup() af. De loop is leeg." },
+        ],
+        assignment: "Plak je WiFi en webhook in, upload, en open de Serial Monitor. Bij eerste opstart: 'Eerste opstart, geen melding nodig' → 'Slapen'. Beweeg de magneet weg → ESP32 ontwaakt → 'Post is er!' in Discord → slaapt weer.",
+        challenge: "Voeg een tweede wake-up bron toe: een timer die elke 24 uur ontwaakt om te controleren of de batterij nog vol genoeg is (`esp_sleep_enable_timer_wakeup`). Stuur 'Batterij laag!' als de spanning onder een drempel zakt.",
+        reflection: "Waarom is GPIO 4 hier wel maar GPIO 16 of 17 niet bruikbaar als wake-up bron? (Hint: ext0 vereist een 'RTC GPIO' — niet alle pins kwalificeren.)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 22: Reactietijd-tester (Beginner)
+  // ─────────────────────────────────────────────
+  {
+    id: "reactietijd-tester",
+    title: "Reactietijd-tester met LCD",
+    description: "Een klassiek arcade-spelletje: een willekeurig moment licht een LED op, jij drukt zo snel mogelijk een knop. Het LCD toont je reactietijd in milliseconden — en houdt je beste score bij.",
+    difficulty: "Beginner",
+    materials: "Arduino Uno, USB-kabel, breadboard + jumpers, 1× I2C 16x2 LCD-display (PCF8574 backpack), 1× LED, 1× 220Ω weerstand, 1× drukknop.",
+    learningGoal: "`millis()` gebruiken om duur te meten, `random()` voor onvoorspelbare timing, een knop met edge/blocking-detectie uitlezen, een I2C LCD aansturen, en een 'best score'-variabele bijhouden tussen rondes.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "rt-s1",
+        title: "Hardware-test: LCD, LED en knop",
+        content: "Voor we beginnen met spel-logica: even alles testen. Sluit aan volgens het schema. De I2C LCD heeft maar 4 draadjes (VCC, GND, SDA→A4, SCL→A5). De LED komt op pin 9 met een 220Ω weerstand in serie. De knop tussen pin 7 en GND (geen weerstand: we gebruiken `INPUT_PULLUP`).\n\nDeze sketch toont de start-tekst op het LCD en zet de LED aan zolang de knop wordt ingedrukt — handige sanity-check.",
+        diagram: true,
+        code: rt_s1,
+        legend: [
+          { term: "LiquidCrystal_I2C lcd(0x27, 16, 2)", desc: "Adres 0x27 is standaard voor PCF8574-backpacks. Werkt het niet? Probeer 0x3F." },
+          { term: "lcd.init() / lcd.backlight()", desc: "Initialiseer de display + zet de blauwe achtergrondverlichting aan." },
+          { term: "INPUT_PULLUP", desc: "Pin standaard HIGH. Bij ingedrukte knop: LOW. Geen externe pull-up-weerstand nodig." },
+          { term: "pin 9", desc: "PWM-pin (~). Voor deze tutorial alleen digitalWrite, maar pin 9 laat ook fade-effecten toe als challenge." },
+        ],
+        assignment: "Sluit alles aan volgens het schema. Upload. Het LCD moet 'Reactietijd!' tonen, en de LED moet aan/uit gaan met de knop.",
+        challenge: "Verander pin 9 naar een PWM-fade in plaats van vol-aan: gebruik `analogWrite(ledPin, 50)` voor een rustige helderheid.",
+        reflection: "Waarom heeft het LCD maar 2 datadraden (SDA, SCL) terwijl het 16 tekens × 2 regels = 32 plekken kan tonen? (Hint: I2C is een seriëel protocol.)",
+      },
+      {
+        id: "rt-s2",
+        title: "De spel-loop: random wachten + tijd meten",
+        content: "Nu de spel-logica. We wachten tot de speler op start drukt, dan een **willekeurige** tijd tussen 1,5 en 4 sec (anders is het te voorspelbaar). LED gaat aan, we noteren de exacte tijd met `millis()`, en zodra de speler de knop indrukt rekenen we het verschil. **`randomSeed(analogRead(A0))`** is essentieel: zonder dit krijg je elke keer dezelfde 'willekeurige' getallen omdat de Arduino bij start altijd in dezelfde state zit.",
+        diagram: true,
+        code: rt_s2,
+        legend: [
+          { term: "randomSeed(analogRead(A0))", desc: "Zaai het random-systeem met de elektrische ruis op een open analoge pin. Anders krijg je elke run dezelfde sequentie." },
+          { term: "random(1500, 4000)", desc: "Random getal tussen 1500 (incl) en 4000 (excl). Eenheid is hier ms." },
+          { term: "millis()", desc: "Aantal milliseconden sinds de Arduino opstartte. Het verschil tussen twee `millis()`-aanroepen = duur." },
+          { term: "wachtTotIngedrukt() / wachtTotLosgelaten()", desc: "Eigen helper-functies. Door ze samen te gebruiken voorkom je 'auto-repeat' wanneer de knop ingedrukt blijft." },
+          { term: "while (digitalRead(...) == HIGH) { delay(10); }", desc: "Blocking wachtlus. Mag hier omdat we tijdens deze fase bewust niets anders doen." },
+        ],
+        assignment: "Upload. Druk start, wacht tot de LED aangaat, druk zo snel mogelijk. De gemeten tijd in ms verschijnt op het LCD. Wat is jouw best haalbare?",
+        challenge: "Voeg een geluidseffect toe: een korte `tone(buzzerPin, 1000, 50)` op het moment dat de LED aangaat. Sluit een buzzer aan op pin 8.",
+        reflection: "Een typisch menselijke reactietijd op een visuele prikkel is 200-300 ms. Wat zijn factoren die jouw tijd kunnen verbeteren of verslechteren? (Slaap, cafeïne, leeftijd, ...)",
+      },
+      {
+        id: "rt-s3",
+        title: "Best score bijhouden + valsspeel-detectie",
+        content: "Twee verbeteringen voor een echte arcade-feel:\n\n1. **Best score** — variabele `besteTijd` die alleen wordt overschreven als de huidige tijd lager is. Op het start-scherm zie je je record.\n2. **Valsspeel-detectie** — wat als iemand de knop al ingedrukt houdt vóór de LED aangaat? We checken tijdens de wachttijd of er gedrukt wordt. Zo ja: 'Te vroeg!' en geen score.\n\n**Let op:** `besteTijd` reset als de Arduino uitgaat (geen EEPROM). Als challenge kun je hem opslaan met `EEPROM.put()` zodat hij een power-cycle overleeft.",
+        diagram: true,
+        code: rt_s3,
+        legend: [
+          { term: "unsigned long besteTijd = 0", desc: "0 = sentinel-waarde voor 'nog geen score'. Werkt omdat een echte reactietijd nooit 0 ms kan zijn." },
+          { term: "besteTijd == 0 || reactie < besteTijd", desc: "Update als nog geen score, OF als deze beter is. `||` is short-circuit: als links TRUE, wordt rechts niet geëvalueerd." },
+          { term: "millis() < deadline", desc: "Loop draait tot de deadline (= start + wacht-tijd). Tijdens die tijd checken we op valsspelen." },
+          { term: "if (digitalRead(buttonPin) == LOW) { teVroeg = true; break; }", desc: "Vroege druk = vals. Break uit de wachtlus, sla de meet-fase over." },
+          { term: "delay(5) in de polling-lus", desc: "Korte sleep zodat we niet 100% CPU gebruiken. 5 ms = ruim genoeg om een knopdruk niet te missen." },
+        ],
+        assignment: "Upload. Speel een aantal rondes. Bij verbetering: 'NIEUW RECORD!' op regel 2. Druk eens vroeg op de knop (vóór de LED aangaat) en check de 'Te vroeg!'-melding.",
+        challenge: "Sla `besteTijd` op in EEPROM zodat de score een uitschakeling overleeft. Hint: `#include <EEPROM.h>`, `EEPROM.put(0, besteTijd)` om te schrijven, `EEPROM.get(0, besteTijd)` in `setup()` om te lezen.",
+        reflection: "Welke andere games kun je met deze setup (LCD + LED + knop + Arduino) bouwen? Bedenk er drie. (Voorbeelden: Simon Says, Snake op tekst-scherm, ...)",
       }
     ]
   }

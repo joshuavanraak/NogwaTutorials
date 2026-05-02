@@ -3,6 +3,8 @@ import { useRoute, Link } from "wouter";
 import { tutorials } from "../data/tutorials";
 import { CodeBlock } from "../components/CodeBlock";
 import { WiringDiagram } from "../components/WiringDiagram";
+import { MaterialsList } from "../components/MaterialsList";
+import { PartsBasketFAB, PartsBasketModal, useBasket } from "../components/PartsBasket";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, CheckCircle2, ChevronRight, Code2, Lightbulb, PlayCircle, Sparkles, Terminal, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -21,6 +23,8 @@ export default function TutorialView() {
 
   const [activeStepId, setActiveStepId] = useState<string>("");
   const [currentCode, setCurrentCode] = useState<string>("");
+  const [basketOpen, setBasketOpen] = useState(false);
+  const basket = useBasket();
 
   const stepRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
@@ -188,10 +192,13 @@ export default function TutorialView() {
             <p className="text-slate-600 text-sm leading-relaxed">{tutorial.learningGoal}</p>
           </div>
 
-          <div className="bg-slate-100 rounded-xl px-5 py-3 border border-slate-200 text-sm">
-            <strong className="text-slate-700">Benodigdheden: </strong>
-            <span className="text-slate-600">{tutorial.materials}</span>
-          </div>
+          <MaterialsList
+            tutorialId={tutorial.id}
+            tutorialTitle={tutorial.title}
+            materials={tutorial.materials}
+            inBasket={basket.has(tutorial.id)}
+            onToggleBasket={() => basket.toggle(tutorial.id)}
+          />
         </div>
 
         {/* Steps */}
@@ -311,6 +318,15 @@ export default function TutorialView() {
           </div>
         </div>
       </div>
+
+      <PartsBasketFAB count={basket.ids.length} onClick={() => setBasketOpen(true)} />
+      <PartsBasketModal
+        open={basketOpen}
+        onClose={() => setBasketOpen(false)}
+        selectedIds={basket.ids}
+        onRemove={basket.remove}
+        onClear={basket.clear}
+      />
     </div>
   );
 }

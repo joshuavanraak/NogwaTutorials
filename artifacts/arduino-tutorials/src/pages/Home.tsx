@@ -3,7 +3,9 @@ import { Link } from "wouter";
 import { tutorials } from "../data/tutorials";
 import type { Board, TutorialTag } from "../data/tutorials";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, BookOpen, ListChecks, Search, Sparkles, X, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, ListChecks, Search, Sparkles, X, Zap, Check, Plus } from "lucide-react";
+import { PartsBasketFAB, PartsBasketModal, useBasket } from "../components/PartsBasket";
+import { cn } from "../lib/utils";
 
 function isNew(dateAdded?: string): boolean {
   if (!dateAdded) return false;
@@ -56,6 +58,8 @@ export default function Home() {
   const [activeDifficulty, setActiveDifficulty] = useState<Difficulty>("Alle");
   const [activeBoard, setActiveBoard] = useState<BoardFilter>("Alle");
   const [activeTheme, setActiveTheme] = useState<ThemeFilter>("Alle");
+  const [basketOpen, setBasketOpen] = useState(false);
+  const basket = useBasket();
 
   const trimmedSearch = search.trim();
   const normalizedSearch = normalize(trimmedSearch);
@@ -318,7 +322,35 @@ export default function Home() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ duration: 0.25, delay: idx * 0.03 }}
+                  className="relative"
                 >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      basket.toggle(tutorial.id);
+                    }}
+                    aria-pressed={basket.has(tutorial.id)}
+                    aria-label={
+                      basket.has(tutorial.id)
+                        ? `${tutorial.title} uit klassenlijst halen`
+                        : `${tutorial.title} aan klassenlijst toevoegen`
+                    }
+                    title={basket.has(tutorial.id) ? "In klassenlijst" : "Toevoegen aan klassenlijst"}
+                    className={cn(
+                      "absolute top-4 right-4 z-20 w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer border shadow-sm",
+                      basket.has(tutorial.id)
+                        ? "bg-primary text-white border-primary hover:bg-primary/90"
+                        : "bg-white/95 text-slate-500 border-slate-200 hover:text-primary hover:border-primary/40 backdrop-blur"
+                    )}
+                  >
+                    {basket.has(tutorial.id) ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                  </button>
                   <Link
                     href={`/tutorial/${tutorial.id}`}
                     className="group block h-full bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:border-primary/30 transition-all duration-300 relative overflow-hidden"
@@ -326,7 +358,7 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                     <div className="relative z-10">
-                      <div className="flex gap-2 mb-6 flex-wrap">
+                      <div className="flex gap-2 mb-6 flex-wrap pr-12">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${dc.bg} ${dc.text} ${dc.border}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${dc.dot}`} />
                           {tutorial.difficulty}
@@ -373,6 +405,15 @@ export default function Home() {
           </AnimatePresence>
         </div>
       </main>
+
+      <PartsBasketFAB count={basket.ids.length} onClick={() => setBasketOpen(true)} />
+      <PartsBasketModal
+        open={basketOpen}
+        onClose={() => setBasketOpen(false)}
+        selectedIds={basket.ids}
+        onRemove={basket.remove}
+        onClear={basket.clear}
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { tutorials } from "../data/tutorials";
 import type { Board, TutorialTag } from "../data/tutorials";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, BookOpen, ListChecks, Search, Sparkles, X, Zap, Check, Plus } from "lucide-react";
+import { ArrowRight, BookOpen, ListChecks, Search, Sparkles, X, Zap, Check, Plus, FileCode2 } from "lucide-react";
 import { PartsBasketFAB, PartsBasketModal, useBasket } from "../components/PartsBasket";
 import { cn } from "../lib/utils";
 
@@ -114,13 +114,23 @@ export default function Home() {
 
       {/* Header */}
       <header className="w-full px-6 py-8 md:px-12 md:py-12 relative z-10 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-12">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20">
-            <Zap className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between gap-3 mb-12">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-display font-bold text-slate-900 tracking-tight">
+              Nogwa arduino tutorials
+            </h1>
           </div>
-          <h1 className="text-2xl font-display font-bold text-slate-900 tracking-tight">
-            Nogwa arduino tutorials
-          </h1>
+          <Link
+            href="/cheatsheet"
+            aria-label="Open cheatsheet met herbruikbare Arduino-patronen"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-white text-slate-700 border border-slate-200 hover:border-primary/40 hover:text-primary shadow-sm transition-colors"
+          >
+            <FileCode2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Cheatsheet</span>
+          </Link>
         </div>
 
         <motion.div

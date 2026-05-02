@@ -96,6 +96,118 @@ void loop() {
   delay(100);
 }`;
 
+const lcd_s4 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int ldrPin = A0;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Lichtmeter");
+}
+
+void loop() {
+  int waarde = analogRead(ldrPin);
+
+  // Bepaal een vriendelijk label op basis van de waarde
+  String label;
+  if (waarde < 300)      label = "DONKER";
+  else if (waarde < 700) label = "SCHEMER";
+  else                   label = "FEL LICHT";
+
+  lcd.setCursor(0, 1);
+  lcd.print("                ");   // wis hele regel
+  lcd.setCursor(0, 1);
+  lcd.print(waarde);
+  lcd.print(" ");
+  lcd.print(label);
+
+  delay(200);
+}`;
+
+const lcd_s5 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int dht11Pin = 2;
+DHT dht(dht11Pin, DHT11);
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  dht.begin();
+}
+
+void loop() {
+  float temp = dht.readTemperature();
+  float vocht = dht.readHumidity();
+
+  // Soms mislukt een meting (vooral bij opstart) en geeft NaN terug.
+  // Vang dat netjes af zodat er geen "nan" op het scherm verschijnt.
+  if (isnan(temp) || isnan(vocht)) {
+    lcd.setCursor(0, 0);
+    lcd.print("Sensor fout!    ");
+    lcd.setCursor(0, 1);
+    lcd.print("Probeer opnieuw ");
+    delay(2000);
+    return;
+  }
+
+  // Eerste regel: temperatuur
+  lcd.setCursor(0, 0);
+  lcd.print("Temp:  ");
+  lcd.print(temp, 1);   // 1 cijfer achter de komma
+  lcd.print((char)223); // graden-symbool
+  lcd.print("C  ");
+
+  // Tweede regel: luchtvochtigheid
+  lcd.setCursor(0, 1);
+  lcd.print("Vocht: ");
+  lcd.print(vocht, 1);
+  lcd.print(" %    ");
+
+  delay(2000);  // DHT11 mag maar elke ~2 sec uitgelezen worden
+}`;
+
+const lcd_s6 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int buttonPin = 7;
+int teller = 0;
+int vorigeStaat = HIGH;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  pinMode(buttonPin, INPUT_PULLUP);
+  lcd.print("Druk op de knop:");
+}
+
+void loop() {
+  int huidig = digitalRead(buttonPin);
+
+  // Detecteer alleen de OVERGANG van los → ingedrukt
+  if (huidig == LOW && vorigeStaat == HIGH) {
+    teller++;
+  }
+  vorigeStaat = huidig;
+
+  lcd.setCursor(0, 1);
+  lcd.print("                ");
+  lcd.setCursor(0, 1);
+  lcd.print(teller);
+  lcd.print(" keer ingedrukt");
+
+  delay(20);  // simpele debounce
+}`;
+
 // ─────────────────────────────────────────────
 // TUTORIAL 9: Stappenmotor Basis (A4988 / DRV8825)
 // ─────────────────────────────────────────────
@@ -1716,10 +1828,10 @@ void beweegLineair(long stappenX, long stappenY) {
   {
     id: "i2c-lcd",
     title: "I2C LCD Display (16x2)",
-    description: "Toon tekst, getallen en sensorwaarden op een 16x2 LCD-display met I2C-backpack. Slechts 4 draadjes en je hebt een volwaardig scherm voor elk Arduino-project.",
+    description: "Toon tekst, getallen en live sensorwaarden op een 16x2 LCD-display met I2C-backpack. Compleet pakket: van 'Hallo wereld' tot lichtmeter, weerstation en knoppenteller — alles met maar 4 draadjes naar het scherm.",
     difficulty: "Gemiddeld",
-    learningGoal: "Ik kan een I2C LCD-display aansturen, de cursor verplaatsen en live sensorwaarden tonen op het scherm.",
-    materials: "Arduino Uno, 16x2 LCD-display met I2C-backpack (PCF8574, vaak adres 0x27 of 0x3F), 4 draadjes, breadboard, potmeter (voor stap 3). Bibliotheek: LiquidCrystal_I2C (te installeren via de Library Manager).",
+    learningGoal: "Ik kan een I2C LCD-display aansturen, de cursor verplaatsen en live sensorwaarden van verschillende sensoren (potmeter, LDR, DHT11) en knop-inputs op het scherm tonen.",
+    materials: "Arduino Uno, 16x2 LCD-display met I2C-backpack (PCF8574, vaak adres 0x27 of 0x3F), breadboard en draadjes. Voor de toepassingen: potmeter (stap 3), LDR + 10kΩ weerstand (stap 4), DHT11 temperatuur/vocht-sensor (stap 5), drukknop (stap 6). Bibliotheken: LiquidCrystal_I2C en DHT sensor library (beide via Schets → Bibliotheek beheren).",
     dateAdded: "2026-05-02",
     steps: [
       {
@@ -1784,6 +1896,103 @@ lcd.print(" C");
 // De vaste tekst "Temp: " hoef je niet elke loop opnieuw te schrijven —
 // die kun je ook één keer in setup() printen, en dan in loop()
 // alleen de positie van het getal updaten met setCursor(6, 0).`
+      },
+      {
+        id: "lcd-s4",
+        title: "Toepassing 1 — Lichtmeter met LDR",
+        content: "Tijd voor echte sensorprojecten! We sluiten een LDR (Light Dependent Resistor) aan via een spanningsdeler met een 10kΩ weerstand op pin A0 — precies zoals in de LDR-tutorial. De ruwe waarde (0–1023) is voor leerlingen niet erg betekenisvol, dus tonen we óók een vriendelijk label: DONKER, SCHEMER of FEL LICHT. Dit is een klassiek patroon voor sensor-uitlezing: ruwe meting + interpretatie naast elkaar.",
+        diagram: true,
+        code: lcd_s4,
+        legend: [
+          { term: "int ldrPin = A0", desc: "Analoge pin waar de LDR + spanningsdeler op zit." },
+          { term: "String label", desc: "Tekstvariabele die we per drempelwaarde een naam geven." },
+          { term: "if (waarde < 300)", desc: "Onder de 300 = donker. De drempels stem je af op je eigen LDR." },
+          { term: "lcd.print(waarde)", desc: "Print de ruwe meetwaarde (0–1023)." },
+          { term: "lcd.print(label)", desc: "Print het bijbehorende woord ernaast — veel leesbaarder dan alleen een getal." },
+        ],
+        assignment: "Sluit de LDR met spanningsdeler aan, upload de code en bedek de sensor met je hand. Het scherm moet meteen 'DONKER' tonen. Schijn met een lampje en het wordt 'FEL LICHT'.",
+        challenge: "Maak een 'lichtbalk' op de tweede regel: een rij # die langer wordt naarmate er meer licht is. Tip: bereken hoeveel #-tekens je wilt tonen met `int balklengte = map(waarde, 0, 1023, 0, 16);` en print dat aantal in een for-loop.",
+        reflection: "Waarom zijn de drempels (300 / 700) handig om aan te passen aan jouw eigen LDR? Wat verandert er als je de sensor in een andere kamer gebruikt?"
+      },
+      {
+        id: "lcd-s5",
+        title: "Toepassing 2 — Mini-weerstation met DHT11",
+        content: "De DHT11 meet zowel temperatuur als luchtvochtigheid en is perfect voor een mini-weerstation. We tonen beide waarden tegelijk: temperatuur op rij 1, vocht op rij 2. Twee dingen om op te letten: (1) de DHT11 is langzaam — niet vaker dan elke 2 seconden uitlezen, anders krijg je 'NaN' (Not a Number), (2) je hebt de bibliotheek 'DHT sensor library' van Adafruit nodig — installeer die via de Library Manager. We gebruiken `(char)223` als trucje om het graden-symbool ° op het scherm te krijgen.",
+        diagram: true,
+        code: lcd_s5,
+        legend: [
+          { term: "#include <DHT.h>", desc: "Bibliotheek die de DHT11 communicatie afhandelt." },
+          { term: "int dht11Pin = 2", desc: "Digitale pin waar de DATA-pin van de DHT11 op zit." },
+          { term: "DHT dht(dht11Pin, DHT11)", desc: "Maak een DHT-object op de juiste pin, type DHT11 (er bestaat ook DHT22)." },
+          { term: "dht.readTemperature()", desc: "Geeft de temperatuur in °C als een float (kommagetal)." },
+          { term: "dht.readHumidity()", desc: "Geeft de luchtvochtigheid in % als een float." },
+          { term: "lcd.print(temp, 1)", desc: "Print het kommagetal met 1 cijfer achter de komma." },
+          { term: "lcd.print((char)223)", desc: "Print het ° (graden) symbool — dat zit op tekenpositie 223 in het LCD-tekenset." },
+          { term: "isnan(temp)", desc: "Check of de meting mislukte (NaN = 'Not a Number'). Komt vooral voor bij opstart." },
+          { term: "delay(2000)", desc: "DHT11 heeft minimaal 2 seconden tussen metingen nodig." },
+        ],
+        assignment: "Sluit de DHT11 aan (VCC → 5V, DATA → pin 2 met 10kΩ pull-up, GND → GND). Upload en check of beide regels logische waardes tonen (kamertemperatuur ~20°C, vocht ~40–60%).",
+        challenge: "Voeg een 'min' en 'max' bij door de hoogste en laagste gemeten temperatuur in twee variabelen op te slaan. Toon ze afwisselend om de 5 seconden in plaats van de huidige meting.",
+        reflection: "Waarom is het belangrijk om een sensor met een vertraging uit te lezen? Wat zou er gebeuren als je elke 10 ms zou meten en printen?",
+        optionalCodeTitle: "Snippet: alleen updaten als de waarde echt veranderd is",
+        optionalCode: `// Onthoud de vorige meting en print alleen bij verandering -
+// dat scheelt flikkering en bespaart cycles
+float vorigeTemp = -999;
+
+void loop() {
+  float temp = dht.readTemperature();
+
+  if (abs(temp - vorigeTemp) >= 0.1) {  // alleen bij verschil ≥ 0.1°C
+    lcd.setCursor(0, 0);
+    lcd.print("Temp: ");
+    lcd.print(temp, 1);
+    lcd.print((char)223);
+    lcd.print("C  ");
+    vorigeTemp = temp;
+  }
+
+  delay(2000);
+}`
+      },
+      {
+        id: "lcd-s6",
+        title: "Toepassing 3 — Drukknop-teller (digitale input)",
+        content: "Tot nu toe lazen we analoge sensoren uit. Nu de andere kant: een digitale input. Een drukknop op pin 7 met `INPUT_PULLUP` (interne pull-up — geen externe weerstand nodig). Het belangrijke patroon hier is **edge-detection**: we willen niet *terwijl* de knop ingedrukt is keer op keer +1 doen (dan telt hij in een fractie van een seconde naar 1000), maar alleen op het exacte moment dat de knop van 'los' naar 'ingedrukt' overgaat. Daarvoor onthouden we de vorige stand in `vorigeStaat`.",
+        diagram: true,
+        code: lcd_s6,
+        legend: [
+          { term: "int buttonPin = 7", desc: "Digitale pin waar één pootje van de knop op zit (de andere → GND)." },
+          { term: "int vorigeStaat = HIGH", desc: "Onthoud wat de knop in de vorige loop deed. HIGH = los (door pull-up)." },
+          { term: "pinMode(buttonPin, INPUT_PULLUP)", desc: "Activeer de interne 20kΩ pull-up: knop los = HIGH, knop ingedrukt = LOW." },
+          { term: "if (huidig == LOW && vorigeStaat == HIGH)", desc: "Edge-detection: alleen +1 bij de OVERGANG van los → ingedrukt." },
+          { term: "vorigeStaat = huidig", desc: "Sla de huidige stand op voor de volgende loop." },
+          { term: "delay(20)", desc: "Simpele debounce — knoppen 'stuiteren' bij indrukken; 20 ms wachten filtert dat weg." },
+        ],
+        assignment: "Sluit een knop aan tussen pin 7 en GND. Upload, druk een paar keer en kijk of de teller exact even vaak omhoog gaat als jij drukt — niet meer.",
+        challenge: "Voeg een tweede knop toe (op pin 8) die de teller weer op 0 zet. Toon ook het huidige aantal op rij 1 als 'Score: 5' en bewaar de hoogste score in een aparte variabele.",
+        reflection: "Wat zou er gebeuren zonder de edge-detection (zonder de `vorigeStaat`-check)? Probeer het uit door de check tijdelijk te verwijderen.",
+        optionalCodeTitle: "Snippet: combineer een knop met een sensor (start/stop een meting)",
+        optionalCode: `// Druk op de knop om een meting te bevriezen of weer door te laten lopen
+bool bevroren = false;
+int huidig, vorigeStaat = HIGH;
+
+void loop() {
+  huidig = digitalRead(buttonPin);
+  if (huidig == LOW && vorigeStaat == HIGH) {
+    bevroren = !bevroren;   // toggle
+  }
+  vorigeStaat = huidig;
+
+  if (!bevroren) {
+    int waarde = analogRead(A0);
+    lcd.setCursor(0, 1);
+    lcd.print("                ");
+    lcd.setCursor(0, 1);
+    lcd.print(waarde);
+  }
+  // Als bevroren: niks doen → de oude waarde blijft staan
+  delay(20);
+}`
       }
     ]
   }

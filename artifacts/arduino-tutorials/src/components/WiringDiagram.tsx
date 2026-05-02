@@ -17,6 +17,7 @@ type ComponentType =
   | "stepper"
   | "encoder"
   | "lcd_i2c"
+  | "matrix8x8"
   | "relay"
   | "reed";
 
@@ -156,6 +157,19 @@ function buildDiagram(code: string): DiagramData {
       signalRows.push({ from: "Pin A4 (SDA)", to: "LCD SDA", color: "blue", direction: "out" });
       signalRows.push({ from: "Pin A5 (SCL)", to: "LCD SCL", color: "blue", direction: "out" });
     }
+  }
+
+  // Detect MAX7219 8x8 LED matrix via the LedControl library.
+  // Constructor signature: LedControl name(DIN, CLK, CS, NUM_DEVICES);
+  const ledCtrlMatch = /LedControl\s+\w+\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,/.exec(code);
+  if (ledCtrlMatch || /#include\s*[<"]LedControl\.h[>"]/.test(code)) {
+    detectedComponents.add("matrix8x8");
+    const dinPin = ledCtrlMatch ? ledCtrlMatch[1] : "12";
+    const clkPin = ledCtrlMatch ? ledCtrlMatch[2] : "11";
+    const csPin  = ledCtrlMatch ? ledCtrlMatch[3] : "10";
+    signalRows.push({ from: pinLabel(dinPin, esp32), to: "MAX7219 DIN (Data In)", color: "teal", direction: "out" });
+    signalRows.push({ from: pinLabel(clkPin, esp32), to: "MAX7219 CLK (Clock)",  color: "teal", direction: "out" });
+    signalRows.push({ from: pinLabel(csPin,  esp32), to: "MAX7219 CS (Load)",    color: "teal", direction: "out" });
   }
 
   for (const { name, pin } of pins) {
@@ -298,6 +312,10 @@ function buildDiagram(code: string): DiagramData {
       case "lcd_i2c":
         powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "LCD VCC (op I2C-backpack)", color: "rose" });
         gndRows.push({ arduinoPin: "GND", componentPin: "LCD GND (op I2C-backpack)", color: "slate" });
+        break;
+      case "matrix8x8":
+        powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "MAX7219 VCC (5V)", color: "rose" });
+        gndRows.push({ arduinoPin: "GND", componentPin: "MAX7219 GND", color: "slate" });
         break;
       case "relay":
         powerRows.push({ arduinoPin: BOARD_VCC(esp32), componentPin: "Relais-module VCC (5V)", color: "rose" });

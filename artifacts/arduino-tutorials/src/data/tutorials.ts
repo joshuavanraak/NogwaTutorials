@@ -2856,6 +2856,1382 @@ void loop() {
 }`;
 
 // ─────────────────────────────────────────────
+// TUTORIAL 23: Simon Says
+// ─────────────────────────────────────────────
+
+const sim_s1 = `// 4 LEDs op pin 8..11, 4 knoppen op pin 2..5, buzzer op pin 12.
+int ledRood   = 8;
+int ledGroen  = 9;
+int ledBlauw  = 10;
+int ledGeel   = 11;
+
+int knopRood  = 2;
+int knopGroen = 3;
+int knopBlauw = 4;
+int knopGeel  = 5;
+
+int buzzerPin = 12;
+
+void setup() {
+  pinMode(ledRood,  OUTPUT);
+  pinMode(ledGroen, OUTPUT);
+  pinMode(ledBlauw, OUTPUT);
+  pinMode(ledGeel,  OUTPUT);
+
+  pinMode(knopRood,  INPUT_PULLUP);
+  pinMode(knopGroen, INPUT_PULLUP);
+  pinMode(knopBlauw, INPUT_PULLUP);
+  pinMode(knopGeel,  INPUT_PULLUP);
+
+  pinMode(buzzerPin, OUTPUT);
+
+  // Korte test: alle LEDs even aan zodat je weet dat alles werkt.
+  digitalWrite(ledRood,  HIGH);
+  digitalWrite(ledGroen, HIGH);
+  digitalWrite(ledBlauw, HIGH);
+  digitalWrite(ledGeel,  HIGH);
+  delay(500);
+  digitalWrite(ledRood,  LOW);
+  digitalWrite(ledGroen, LOW);
+  digitalWrite(ledBlauw, LOW);
+  digitalWrite(ledGeel,  LOW);
+}
+
+void loop() {
+  // Volgende stappen vullen dit aan.
+}`;
+
+const sim_s2 = `int ledRood = 8, ledGroen = 9, ledBlauw = 10, ledGeel = 11;
+int knopRood = 2, knopGroen = 3, knopBlauw = 4, knopGeel = 5;
+int buzzerPin = 12;
+
+// Maximale lengte van de reeks die we ooit zullen onthouden.
+const int MAX_REEKS = 50;
+
+// De reeks slaat per stap een kleur op: 0=rood, 1=groen, 2=blauw, 3=geel.
+int reeks[MAX_REEKS];
+int reeksLengte = 0;   // hoeveel stappen zitten er nu in de reeks
+
+void setup() {
+  pinMode(ledRood, OUTPUT); pinMode(ledGroen, OUTPUT);
+  pinMode(ledBlauw, OUTPUT); pinMode(ledGeel, OUTPUT);
+  pinMode(knopRood, INPUT_PULLUP); pinMode(knopGroen, INPUT_PULLUP);
+  pinMode(knopBlauw, INPUT_PULLUP); pinMode(knopGeel, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+
+  // Belangrijk: zaai de random-generator met ruis op een open analoge pin.
+  // Zonder dit krijg je elke keer dezelfde "willekeurige" reeks.
+  randomSeed(analogRead(A0));
+
+  Serial.begin(9600);
+}
+
+void volgendeKleurToevoegen() {
+  // Voeg één willekeurige nieuwe kleur (0..3) toe aan de reeks.
+  reeks[reeksLengte] = random(0, 4);
+  reeksLengte++;
+  Serial.print("Reeks is nu ");
+  Serial.print(reeksLengte);
+  Serial.println(" stappen lang.");
+}
+
+void loop() {
+  volgendeKleurToevoegen();
+  delay(1000);   // even pauzeren zodat we de Serial Monitor kunnen lezen
+}`;
+
+const sim_s3 = `int ledRood = 8, ledGroen = 9, ledBlauw = 10, ledGeel = 11;
+int knopRood = 2, knopGroen = 3, knopBlauw = 4, knopGeel = 5;
+int buzzerPin = 12;
+
+const int MAX_REEKS = 50;
+int reeks[MAX_REEKS];
+int reeksLengte = 0;
+
+// Per kleur (0..3): de bijbehorende LED-pin en de toonhoogte voor de buzzer.
+int ledVan(int kleur) {
+  if (kleur == 0) return ledRood;
+  if (kleur == 1) return ledGroen;
+  if (kleur == 2) return ledBlauw;
+  return ledGeel;
+}
+int toonVan(int kleur) {
+  // Vier verschillende toonhoogtes - net zoals bij de échte Simon Says.
+  if (kleur == 0) return 262;   // C
+  if (kleur == 1) return 330;   // E
+  if (kleur == 2) return 392;   // G
+  return 523;                   // C (octaaf hoger)
+}
+
+void speelKleur(int kleur, int duur) {
+  digitalWrite(ledVan(kleur), HIGH);
+  tone(buzzerPin, toonVan(kleur), duur);
+  delay(duur);
+  digitalWrite(ledVan(kleur), LOW);
+  delay(100);   // korte pauze tussen kleuren zodat ze duidelijk te onderscheiden zijn
+}
+
+void speelReeksAf() {
+  // Tempo wordt iets sneller naarmate de reeks groeit (max ~150ms).
+  int duur = max(150, 500 - reeksLengte * 20);
+  for (int i = 0; i < reeksLengte; i++) {
+    speelKleur(reeks[i], duur);
+  }
+}
+
+void setup() {
+  pinMode(ledRood, OUTPUT); pinMode(ledGroen, OUTPUT);
+  pinMode(ledBlauw, OUTPUT); pinMode(ledGeel, OUTPUT);
+  pinMode(knopRood, INPUT_PULLUP); pinMode(knopGroen, INPUT_PULLUP);
+  pinMode(knopBlauw, INPUT_PULLUP); pinMode(knopGeel, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+  randomSeed(analogRead(A0));
+}
+
+void loop() {
+  // Voeg een kleur toe en speel de hele reeks af.
+  reeks[reeksLengte] = random(0, 4);
+  reeksLengte++;
+  speelReeksAf();
+  delay(800);
+}`;
+
+const sim_s4 = `int ledRood = 8, ledGroen = 9, ledBlauw = 10, ledGeel = 11;
+int knopRood = 2, knopGroen = 3, knopBlauw = 4, knopGeel = 5;
+int buzzerPin = 12;
+
+const int MAX_REEKS = 50;
+int reeks[MAX_REEKS];
+int reeksLengte = 0;
+
+int ledVan(int kleur) {
+  if (kleur == 0) return ledRood;
+  if (kleur == 1) return ledGroen;
+  if (kleur == 2) return ledBlauw;
+  return ledGeel;
+}
+int toonVan(int kleur) {
+  if (kleur == 0) return 262;
+  if (kleur == 1) return 330;
+  if (kleur == 2) return 392;
+  return 523;
+}
+
+void speelKleur(int kleur, int duur) {
+  digitalWrite(ledVan(kleur), HIGH);
+  tone(buzzerPin, toonVan(kleur), duur);
+  delay(duur);
+  digitalWrite(ledVan(kleur), LOW);
+  delay(100);
+}
+
+void speelReeksAf() {
+  int duur = max(150, 500 - reeksLengte * 20);
+  for (int i = 0; i < reeksLengte; i++) {
+    speelKleur(reeks[i], duur);
+  }
+}
+
+// Wacht (blokkerend) op een knopdruk en geef terug welke kleur (0..3) of -1 bij time-out.
+int wachtOpKnop(unsigned long timeoutMs) {
+  unsigned long start = millis();
+  while (millis() - start < timeoutMs) {
+    if (digitalRead(knopRood)  == LOW) { while (digitalRead(knopRood)  == LOW); delay(20); return 0; }
+    if (digitalRead(knopGroen) == LOW) { while (digitalRead(knopGroen) == LOW); delay(20); return 1; }
+    if (digitalRead(knopBlauw) == LOW) { while (digitalRead(knopBlauw) == LOW); delay(20); return 2; }
+    if (digitalRead(knopGeel)  == LOW) { while (digitalRead(knopGeel)  == LOW); delay(20); return 3; }
+  }
+  return -1;
+}
+
+void gameOver() {
+  // Trieste toon + alle LEDs even knipperen.
+  tone(buzzerPin, 110, 600);
+  for (int n = 0; n < 3; n++) {
+    digitalWrite(ledRood,  HIGH); digitalWrite(ledGroen, HIGH);
+    digitalWrite(ledBlauw, HIGH); digitalWrite(ledGeel,  HIGH);
+    delay(200);
+    digitalWrite(ledRood,  LOW);  digitalWrite(ledGroen, LOW);
+    digitalWrite(ledBlauw, LOW);  digitalWrite(ledGeel,  LOW);
+    delay(200);
+  }
+  reeksLengte = 0;   // start opnieuw vanaf 0
+  delay(1000);
+}
+
+void setup() {
+  pinMode(ledRood, OUTPUT); pinMode(ledGroen, OUTPUT);
+  pinMode(ledBlauw, OUTPUT); pinMode(ledGeel, OUTPUT);
+  pinMode(knopRood, INPUT_PULLUP); pinMode(knopGroen, INPUT_PULLUP);
+  pinMode(knopBlauw, INPUT_PULLUP); pinMode(knopGeel, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+  randomSeed(analogRead(A0));
+}
+
+void loop() {
+  // 1. Voeg een nieuwe kleur toe en toon de hele reeks.
+  reeks[reeksLengte] = random(0, 4);
+  reeksLengte++;
+  speelReeksAf();
+
+  // 2. Laat de speler de reeks naspelen.
+  for (int i = 0; i < reeksLengte; i++) {
+    int gedrukt = wachtOpKnop(5000);   // 5 sec bedenktijd per kleur
+    if (gedrukt != reeks[i]) {
+      gameOver();
+      return;
+    }
+    // Korte feedback bij correcte druk.
+    speelKleur(gedrukt, 150);
+  }
+
+  // 3. Hele reeks goed → korte juich-toon en volgende ronde.
+  tone(buzzerPin, 880, 100); delay(120);
+  tone(buzzerPin, 1320, 150);
+  delay(800);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 24: Whack-a-mole
+// ─────────────────────────────────────────────
+
+const wam_s1 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// 5 LEDs (de "molshopen") en 5 knoppen ernaast.
+int ledPin1 = 8;
+int ledPin2 = 9;
+int ledPin3 = 10;
+int ledPin4 = 11;
+int ledPin5 = 12;
+
+int knopPin1 = 2;
+int knopPin2 = 3;
+int knopPin3 = 4;
+int knopPin4 = 5;
+int knopPin5 = 6;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Whack-a-mole!");
+
+  pinMode(ledPin1, OUTPUT); pinMode(ledPin2, OUTPUT);
+  pinMode(ledPin3, OUTPUT); pinMode(ledPin4, OUTPUT);
+  pinMode(ledPin5, OUTPUT);
+
+  pinMode(knopPin1, INPUT_PULLUP); pinMode(knopPin2, INPUT_PULLUP);
+  pinMode(knopPin3, INPUT_PULLUP); pinMode(knopPin4, INPUT_PULLUP);
+  pinMode(knopPin5, INPUT_PULLUP);
+
+  // Sanity-check: knoppen sturen direct hun LED aan.
+}
+
+void loop() {
+  digitalWrite(ledPin1, digitalRead(knopPin1) == LOW ? HIGH : LOW);
+  digitalWrite(ledPin2, digitalRead(knopPin2) == LOW ? HIGH : LOW);
+  digitalWrite(ledPin3, digitalRead(knopPin3) == LOW ? HIGH : LOW);
+  digitalWrite(ledPin4, digitalRead(knopPin4) == LOW ? HIGH : LOW);
+  digitalWrite(ledPin5, digitalRead(knopPin5) == LOW ? HIGH : LOW);
+}`;
+
+const wam_s2 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int ledPin1 = 8, ledPin2 = 9, ledPin3 = 10, ledPin4 = 11, ledPin5 = 12;
+int knopPin1 = 2, knopPin2 = 3, knopPin3 = 4, knopPin4 = 5, knopPin5 = 6;
+
+// Handig: arrays gebruiken om met "mol-nummer" 0..4 in plaats van losse pins te werken.
+int leds[5];
+int knoppen[5];
+
+int actieveMol = -1;            // welke LED brandt nu (-1 = geen)
+unsigned long molTotMillis = 0; // tijdstip waarop de mol weer onderduikt
+int molDuurMs = 1000;           // hoe lang een mol blijft staan
+
+void zetAlleLedsUit() {
+  for (int i = 0; i < 5; i++) digitalWrite(leds[i], LOW);
+}
+
+void nieuweMol() {
+  zetAlleLedsUit();
+  actieveMol = random(0, 5);                 // kies een random LED
+  digitalWrite(leds[actieveMol], HIGH);
+  molTotMillis = millis() + molDuurMs;       // deadline
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Klaar...");
+
+  leds[0] = ledPin1; leds[1] = ledPin2; leds[2] = ledPin3;
+  leds[3] = ledPin4; leds[4] = ledPin5;
+  knoppen[0] = knopPin1; knoppen[1] = knopPin2; knoppen[2] = knopPin3;
+  knoppen[3] = knopPin4; knoppen[4] = knopPin5;
+
+  for (int i = 0; i < 5; i++) {
+    pinMode(leds[i], OUTPUT);
+    pinMode(knoppen[i], INPUT_PULLUP);
+  }
+
+  randomSeed(analogRead(A0));
+  delay(1500);
+  lcd.clear();
+  lcd.print("Mep de mol!");
+  nieuweMol();
+}
+
+void loop() {
+  // Non-blocking: als de tijd voor deze mol om is, kies een nieuwe.
+  if (millis() >= molTotMillis) {
+    nieuweMol();
+  }
+}`;
+
+const wam_s3 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int ledPin1 = 8, ledPin2 = 9, ledPin3 = 10, ledPin4 = 11, ledPin5 = 12;
+int knopPin1 = 2, knopPin2 = 3, knopPin3 = 4, knopPin4 = 5, knopPin5 = 6;
+
+int leds[5], knoppen[5];
+
+int actieveMol = -1;
+unsigned long molTotMillis = 0;
+int molDuurMs = 1000;
+
+int score = 0;
+int gemist = 0;
+
+// Onthoud per knop de vorige stand, voor edge-detectie.
+int vorigeKnop[5] = {HIGH, HIGH, HIGH, HIGH, HIGH};
+
+void toonScore() {
+  lcd.setCursor(0, 1);
+  lcd.print("Punt:");
+  lcd.print(score);
+  lcd.print(" Mis:");
+  lcd.print(gemist);
+  lcd.print("   ");   // overschrijft eventuele oude tekens
+}
+
+void zetAlleLedsUit() {
+  for (int i = 0; i < 5; i++) digitalWrite(leds[i], LOW);
+}
+
+void nieuweMol() {
+  zetAlleLedsUit();
+  actieveMol = random(0, 5);
+  digitalWrite(leds[actieveMol], HIGH);
+  molTotMillis = millis() + molDuurMs;
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Mep de mol!");
+  toonScore();
+
+  leds[0] = ledPin1; leds[1] = ledPin2; leds[2] = ledPin3;
+  leds[3] = ledPin4; leds[4] = ledPin5;
+  knoppen[0] = knopPin1; knoppen[1] = knopPin2; knoppen[2] = knopPin3;
+  knoppen[3] = knopPin4; knoppen[4] = knopPin5;
+  for (int i = 0; i < 5; i++) {
+    pinMode(leds[i], OUTPUT);
+    pinMode(knoppen[i], INPUT_PULLUP);
+  }
+
+  randomSeed(analogRead(A0));
+  nieuweMol();
+}
+
+void loop() {
+  // 1. Te laat? Telt als gemist.
+  if (millis() >= molTotMillis) {
+    gemist++;
+    toonScore();
+    nieuweMol();
+  }
+
+  // 2. Lees alle knoppen, edge-detectie (HIGH→LOW = nieuwe druk).
+  for (int i = 0; i < 5; i++) {
+    int huidig = digitalRead(knoppen[i]);
+    if (vorigeKnop[i] == HIGH && huidig == LOW) {
+      if (i == actieveMol) {
+        score++;            // juiste knop → punt!
+        nieuweMol();        // direct volgende ronde
+      } else {
+        gemist++;           // verkeerde knop telt als miss
+      }
+      toonScore();
+    }
+    vorigeKnop[i] = huidig;
+  }
+}`;
+
+const wam_s4 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int ledPin1 = 8, ledPin2 = 9, ledPin3 = 10, ledPin4 = 11, ledPin5 = 12;
+int knopPin1 = 2, knopPin2 = 3, knopPin3 = 4, knopPin4 = 5, knopPin5 = 6;
+
+int leds[5], knoppen[5];
+
+int actieveMol = -1;
+unsigned long molTotMillis = 0;
+int molDuurMs = 1200;          // start-duur (per ronde 5 punten 100ms sneller)
+const int MIN_DUUR = 250;      // hieronder wordt het bijna onspeelbaar
+
+int score = 0;
+int gemist = 0;
+const int MAX_GEMIST = 5;       // game over na 5 missers
+int vorigeKnop[5] = {HIGH, HIGH, HIGH, HIGH, HIGH};
+
+void toonScore() {
+  lcd.setCursor(0, 1);
+  lcd.print("Punt:");
+  lcd.print(score);
+  lcd.print(" Mis:");
+  lcd.print(gemist);
+  lcd.print("   ");
+}
+
+void zetAlleLedsUit() {
+  for (int i = 0; i < 5; i++) digitalWrite(leds[i], LOW);
+}
+
+void nieuweMol() {
+  zetAlleLedsUit();
+  actieveMol = random(0, 5);
+  digitalWrite(leds[actieveMol], HIGH);
+  molTotMillis = millis() + molDuurMs;
+}
+
+void pasTempoAan() {
+  // Per 5 punten: 100ms sneller (tot een ondergrens).
+  molDuurMs = max(MIN_DUUR, 1200 - (score / 5) * 100);
+}
+
+void gameOver() {
+  zetAlleLedsUit();
+  lcd.clear();
+  lcd.print("GAME OVER");
+  lcd.setCursor(0, 1);
+  lcd.print("Score: ");
+  lcd.print(score);
+  while (true) {
+    // Knipper alle LEDs als eindstand.
+    for (int i = 0; i < 5; i++) digitalWrite(leds[i], HIGH);
+    delay(300);
+    zetAlleLedsUit();
+    delay(300);
+  }
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.print("Mep de mol!");
+
+  leds[0] = ledPin1; leds[1] = ledPin2; leds[2] = ledPin3;
+  leds[3] = ledPin4; leds[4] = ledPin5;
+  knoppen[0] = knopPin1; knoppen[1] = knopPin2; knoppen[2] = knopPin3;
+  knoppen[3] = knopPin4; knoppen[4] = knopPin5;
+  for (int i = 0; i < 5; i++) {
+    pinMode(leds[i], OUTPUT);
+    pinMode(knoppen[i], INPUT_PULLUP);
+  }
+  toonScore();
+  randomSeed(analogRead(A0));
+  nieuweMol();
+}
+
+void loop() {
+  if (gemist >= MAX_GEMIST) gameOver();
+
+  if (millis() >= molTotMillis) {
+    gemist++;
+    toonScore();
+    nieuweMol();
+  }
+
+  for (int i = 0; i < 5; i++) {
+    int huidig = digitalRead(knoppen[i]);
+    if (vorigeKnop[i] == HIGH && huidig == LOW) {
+      if (i == actieveMol) {
+        score++;
+        pasTempoAan();
+        nieuweMol();
+      } else {
+        gemist++;
+      }
+      toonScore();
+    }
+    vorigeKnop[i] = huidig;
+  }
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 25: Elektronische dobbelsteen-roller
+// ─────────────────────────────────────────────
+
+const dice_s1 = `// 7 LEDs in dobbelsteen-patroon:
+//   1 . 2
+//   3 7 4    (LED 7 = midden)
+//   5 . 6
+int ledPin1 = 2;   // links-boven
+int ledPin2 = 3;   // rechts-boven
+int ledPin3 = 4;   // links-midden
+int ledPin4 = 5;   // rechts-midden
+int ledPin5 = 6;   // links-onder
+int ledPin6 = 7;   // rechts-onder
+int ledPin7 = 8;   // midden
+
+int leds[7];
+
+void zetAlleLedsUit() {
+  for (int i = 0; i < 7; i++) digitalWrite(leds[i], LOW);
+}
+
+// Welke LEDs branden bij worp 1..6 (true = aan).
+// LED-index 0..6 komt overeen met ledPin1..ledPin7.
+bool patroon[7][7] = {
+  // L1 L2 L3 L4 L5 L6 L7
+  {  0, 0, 0, 0, 0, 0, 1 },   // 1: alleen midden
+  {  1, 0, 0, 0, 0, 1, 0 },   // 2: linksboven + rechtsonder
+  {  1, 0, 0, 0, 0, 1, 1 },   // 3: 2 + midden
+  {  1, 1, 0, 0, 1, 1, 0 },   // 4: 4 hoeken
+  {  1, 1, 0, 0, 1, 1, 1 },   // 5: 4 hoeken + midden
+  {  1, 1, 1, 1, 1, 1, 0 },   // 6: alles behalve midden
+  {  1, 1, 1, 1, 1, 1, 1 }    // index 6: testpatroon - alles aan
+};
+
+void toonGetal(int n) {
+  // n = 1..6, of 7 voor "alles aan" (test).
+  int rij = n - 1;
+  zetAlleLedsUit();
+  for (int i = 0; i < 7; i++) {
+    if (patroon[rij][i]) digitalWrite(leds[i], HIGH);
+  }
+}
+
+void setup() {
+  leds[0] = ledPin1; leds[1] = ledPin2; leds[2] = ledPin3;
+  leds[3] = ledPin4; leds[4] = ledPin5; leds[5] = ledPin6;
+  leds[6] = ledPin7;
+  for (int i = 0; i < 7; i++) pinMode(leds[i], OUTPUT);
+
+  // Loop alle 6 worpen 1x langs, zodat je de patronen kunt herkennen.
+}
+
+void loop() {
+  for (int n = 1; n <= 6; n++) {
+    toonGetal(n);
+    delay(800);
+  }
+}`;
+
+const dice_s2 = `int ledPin1 = 2, ledPin2 = 3, ledPin3 = 4, ledPin4 = 5;
+int ledPin5 = 6, ledPin6 = 7, ledPin7 = 8;
+int knopPin = 9;
+
+int leds[7];
+
+bool patroon[7][7] = {
+  { 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 0, 1, 0 },
+  { 1, 0, 0, 0, 0, 1, 1 },
+  { 1, 1, 0, 0, 1, 1, 0 },
+  { 1, 1, 0, 0, 1, 1, 1 },
+  { 1, 1, 1, 1, 1, 1, 0 },
+  { 1, 1, 1, 1, 1, 1, 1 }
+};
+
+void toonGetal(int n) {
+  int rij = n - 1;
+  for (int i = 0; i < 7; i++) {
+    digitalWrite(leds[i], patroon[rij][i] ? HIGH : LOW);
+  }
+}
+
+int vorigeKnop = HIGH;
+
+void setup() {
+  leds[0] = ledPin1; leds[1] = ledPin2; leds[2] = ledPin3;
+  leds[3] = ledPin4; leds[4] = ledPin5; leds[5] = ledPin6;
+  leds[6] = ledPin7;
+  for (int i = 0; i < 7; i++) pinMode(leds[i], OUTPUT);
+
+  pinMode(knopPin, INPUT_PULLUP);
+  randomSeed(analogRead(A0));
+  toonGetal(1);   // begin met 1 op het scherm
+}
+
+void loop() {
+  int huidig = digitalRead(knopPin);
+
+  // Edge-detectie: alleen op het exacte moment van indrukken.
+  if (vorigeKnop == HIGH && huidig == LOW) {
+    int worp = random(1, 7);   // 1..6 (7 is exclusief)
+    toonGetal(worp);
+  }
+  vorigeKnop = huidig;
+
+  delay(20);   // simpele debounce
+}`;
+
+const dice_s3 = `int ledPin1 = 2, ledPin2 = 3, ledPin3 = 4, ledPin4 = 5;
+int ledPin5 = 6, ledPin6 = 7, ledPin7 = 8;
+int knopPin = 9;
+
+int leds[7];
+
+bool patroon[7][7] = {
+  { 0, 0, 0, 0, 0, 0, 1 },
+  { 1, 0, 0, 0, 0, 1, 0 },
+  { 1, 0, 0, 0, 0, 1, 1 },
+  { 1, 1, 0, 0, 1, 1, 0 },
+  { 1, 1, 0, 0, 1, 1, 1 },
+  { 1, 1, 1, 1, 1, 1, 0 },
+  { 1, 1, 1, 1, 1, 1, 1 }
+};
+
+void toonGetal(int n) {
+  int rij = n - 1;
+  for (int i = 0; i < 7; i++) {
+    digitalWrite(leds[i], patroon[rij][i] ? HIGH : LOW);
+  }
+}
+
+void shuffleAnimatie(int totaalMs) {
+  // Toon een snel wisselend getal voor totaalMs milliseconden.
+  unsigned long stop = millis() + totaalMs;
+  while (millis() < stop) {
+    toonGetal(random(1, 7));
+    delay(60);
+  }
+}
+
+int vorigeKnop = HIGH;
+
+void setup() {
+  leds[0] = ledPin1; leds[1] = ledPin2; leds[2] = ledPin3;
+  leds[3] = ledPin4; leds[4] = ledPin5; leds[5] = ledPin6;
+  leds[6] = ledPin7;
+  for (int i = 0; i < 7; i++) pinMode(leds[i], OUTPUT);
+  pinMode(knopPin, INPUT_PULLUP);
+  randomSeed(analogRead(A0));
+  toonGetal(1);
+}
+
+void loop() {
+  int huidig = digitalRead(knopPin);
+  if (vorigeKnop == HIGH && huidig == LOW) {
+    shuffleAnimatie(500);          // 0,5 sec "rollen"
+    int worp = random(1, 7);
+    toonGetal(worp);               // toon de echte worp
+  }
+  vorigeKnop = huidig;
+  delay(20);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 26: Schaakklok
+// ─────────────────────────────────────────────
+
+const chess_s1 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int knopSpeler1 = 2;
+int knopSpeler2 = 3;
+int buzzerPin   = 8;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+
+  pinMode(knopSpeler1, INPUT_PULLUP);
+  pinMode(knopSpeler2, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+
+  // Toon 5 minuten voor beide spelers als startwaarde.
+  lcd.setCursor(0, 0);
+  lcd.print("Speler 1: 05:00");
+  lcd.setCursor(0, 1);
+  lcd.print("Speler 2: 05:00");
+}
+
+void loop() {
+  // Volgende stappen vullen dit aan.
+}`;
+
+const chess_s2 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int knopSpeler1 = 2;
+int knopSpeler2 = 3;
+int buzzerPin   = 8;
+
+// Resterende tijd per speler in milliseconden. Start bij 5 min = 300000 ms.
+unsigned long tijd1 = 5UL * 60UL * 1000UL;
+unsigned long tijd2 = 5UL * 60UL * 1000UL;
+
+// Welke speler is aan zet? 0 = stopped, 1 = speler1, 2 = speler2.
+int actieveSpeler = 0;
+
+// Tijdstip van de laatste loop-iteratie, om delta-tijd te berekenen.
+unsigned long vorigeMillis = 0;
+
+void toonTijd(int rij, const char* label, unsigned long ms) {
+  // Reken ms om naar minuten:seconden.
+  unsigned long sec = ms / 1000UL;
+  unsigned int minuten = sec / 60;
+  unsigned int seconden = sec % 60;
+
+  lcd.setCursor(0, rij);
+  lcd.print(label);
+
+  // mm:ss met voorloop-nul indien nodig.
+  if (minuten < 10) lcd.print('0');
+  lcd.print(minuten);
+  lcd.print(':');
+  if (seconden < 10) lcd.print('0');
+  lcd.print(seconden);
+  lcd.print(' ');
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  pinMode(knopSpeler1, INPUT_PULLUP);
+  pinMode(knopSpeler2, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+  vorigeMillis = millis();
+}
+
+void loop() {
+  unsigned long nu = millis();
+  unsigned long delta = nu - vorigeMillis;
+  vorigeMillis = nu;
+
+  // Trek de verstreken tijd af van de actieve speler.
+  if (actieveSpeler == 1) {
+    if (tijd1 > delta) tijd1 -= delta; else tijd1 = 0;
+  } else if (actieveSpeler == 2) {
+    if (tijd2 > delta) tijd2 -= delta; else tijd2 = 0;
+  }
+
+  toonTijd(0, "S1: ", tijd1);
+  toonTijd(1, "S2: ", tijd2);
+
+  delay(50);   // voldoende vaak om mm:ss soepel bij te werken
+}`;
+
+const chess_s3 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int knopSpeler1 = 2;
+int knopSpeler2 = 3;
+int buzzerPin   = 8;
+
+unsigned long tijd1 = 5UL * 60UL * 1000UL;
+unsigned long tijd2 = 5UL * 60UL * 1000UL;
+
+int actieveSpeler = 0;
+unsigned long vorigeMillis = 0;
+
+int vorigeKnop1 = HIGH;
+int vorigeKnop2 = HIGH;
+
+void toonTijd(int rij, const char* label, unsigned long ms) {
+  unsigned long sec = ms / 1000UL;
+  unsigned int minuten = sec / 60;
+  unsigned int seconden = sec % 60;
+  lcd.setCursor(0, rij);
+  lcd.print(label);
+  if (minuten < 10) lcd.print('0');
+  lcd.print(minuten);
+  lcd.print(':');
+  if (seconden < 10) lcd.print('0');
+  lcd.print(seconden);
+  lcd.print(' ');
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  pinMode(knopSpeler1, INPUT_PULLUP);
+  pinMode(knopSpeler2, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+  vorigeMillis = millis();
+  lcd.setCursor(0, 0); lcd.print("Klaar - druk!");
+}
+
+void loop() {
+  unsigned long nu = millis();
+  unsigned long delta = nu - vorigeMillis;
+  vorigeMillis = nu;
+
+  if (actieveSpeler == 1 && tijd1 > delta) tijd1 -= delta;
+  else if (actieveSpeler == 1) tijd1 = 0;
+  if (actieveSpeler == 2 && tijd2 > delta) tijd2 -= delta;
+  else if (actieveSpeler == 2) tijd2 = 0;
+
+  // Knop speler 1: jouw eigen knop indrukken stopt jouw klok en start de tegenstander.
+  int huidig1 = digitalRead(knopSpeler1);
+  if (vorigeKnop1 == HIGH && huidig1 == LOW) {
+    if (actieveSpeler == 0)      actieveSpeler = 2;   // start de tegenstander
+    else if (actieveSpeler == 1) actieveSpeler = 2;   // wissel
+    tone(buzzerPin, 1200, 50);
+  }
+  vorigeKnop1 = huidig1;
+
+  int huidig2 = digitalRead(knopSpeler2);
+  if (vorigeKnop2 == HIGH && huidig2 == LOW) {
+    if (actieveSpeler == 0)      actieveSpeler = 1;
+    else if (actieveSpeler == 2) actieveSpeler = 1;
+    tone(buzzerPin, 1200, 50);
+  }
+  vorigeKnop2 = huidig2;
+
+  toonTijd(0, "S1: ", tijd1);
+  toonTijd(1, "S2: ", tijd2);
+
+  delay(50);
+}`;
+
+const chess_s4 = `#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int knopSpeler1 = 2;
+int knopSpeler2 = 3;
+int knopReset   = 4;          // 3e knop om de wedstrijd te resetten
+int buzzerPin   = 8;
+
+const unsigned long START_TIJD = 5UL * 60UL * 1000UL;   // 5 min per speler
+
+unsigned long tijd1 = START_TIJD;
+unsigned long tijd2 = START_TIJD;
+int actieveSpeler = 0;        // 0 = stopped, 1 = speler1, 2 = speler2
+bool gameOver = false;        // klok is op 0 → alarm
+unsigned long vorigeMillis = 0;
+
+int vorigeKnop1 = HIGH, vorigeKnop2 = HIGH, vorigeReset = HIGH;
+
+void toonTijd(int rij, const char* label, unsigned long ms, bool actief) {
+  unsigned long sec = ms / 1000UL;
+  unsigned int minuten = sec / 60;
+  unsigned int seconden = sec % 60;
+  lcd.setCursor(0, rij);
+  lcd.print(actief ? '>' : ' ');   // pijltje voor de actieve speler
+  lcd.print(label);
+  if (minuten < 10) lcd.print('0');
+  lcd.print(minuten);
+  lcd.print(':');
+  if (seconden < 10) lcd.print('0');
+  lcd.print(seconden);
+  lcd.print("    ");
+}
+
+void resetGame() {
+  tijd1 = START_TIJD;
+  tijd2 = START_TIJD;
+  actieveSpeler = 0;
+  gameOver = false;
+  noTone(buzzerPin);
+}
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  pinMode(knopSpeler1, INPUT_PULLUP);
+  pinMode(knopSpeler2, INPUT_PULLUP);
+  pinMode(knopReset,   INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+  vorigeMillis = millis();
+}
+
+void loop() {
+  unsigned long nu = millis();
+  unsigned long delta = nu - vorigeMillis;
+  vorigeMillis = nu;
+
+  // 1. Klok van de actieve speler aftellen.
+  if (!gameOver) {
+    if (actieveSpeler == 1) {
+      if (tijd1 > delta) tijd1 -= delta; else { tijd1 = 0; gameOver = true; }
+    } else if (actieveSpeler == 2) {
+      if (tijd2 > delta) tijd2 -= delta; else { tijd2 = 0; gameOver = true; }
+    }
+  }
+
+  // 2. Speler-knoppen (alleen wisselen tijdens een lopende partij).
+  int h1 = digitalRead(knopSpeler1);
+  if (vorigeKnop1 == HIGH && h1 == LOW && !gameOver) {
+    if (actieveSpeler != 2) { actieveSpeler = 2; tone(buzzerPin, 1200, 40); }
+  }
+  vorigeKnop1 = h1;
+
+  int h2 = digitalRead(knopSpeler2);
+  if (vorigeKnop2 == HIGH && h2 == LOW && !gameOver) {
+    if (actieveSpeler != 1) { actieveSpeler = 1; tone(buzzerPin, 1200, 40); }
+  }
+  vorigeKnop2 = h2;
+
+  // 3. Reset-knop werkt altijd.
+  int hR = digitalRead(knopReset);
+  if (vorigeReset == HIGH && hR == LOW) resetGame();
+  vorigeReset = hR;
+
+  // 4. Display + alarm.
+  toonTijd(0, "S1 ", tijd1, actieveSpeler == 1);
+  toonTijd(1, "S2 ", tijd2, actieveSpeler == 2);
+
+  if (gameOver) {
+    // Lange pieptoon: speler met 0:00 heeft verloren op tijd.
+    tone(buzzerPin, 880);
+  }
+
+  delay(50);
+}`;
+
+// ─────────────────────────────────────────────
+// TUTORIAL 27: Battleship op 8x8 LED-matrix
+// ─────────────────────────────────────────────
+
+const bs_s1 = `#include <LedControl.h>
+
+// LedControl(DIN, CLK, CS, aantal_modules).
+// DIN = pin 12, CLK = pin 11, CS = pin 10, 1 matrix.
+LedControl matrix = LedControl(12, 11, 10, 1);
+
+void setup() {
+  // De MAX7219 start in spaarstand → wakker maken, helderheid laag, scherm leeg.
+  matrix.shutdown(0, false);
+  matrix.setIntensity(0, 4);   // 0 (zwak) .. 15 (max). 4 = comfortabel voor de ogen.
+  matrix.clearDisplay(0);
+}
+
+void loop() {
+  // Loop diagonaal van linksboven naar rechtsonder, dan weer terug.
+  for (int i = 0; i < 8; i++) {
+    matrix.setLed(0, i, i, true);   // (matrix-index, rij, kolom, aan/uit)
+    delay(80);
+  }
+  delay(300);
+  matrix.clearDisplay(0);
+  delay(300);
+}`;
+
+const bs_s2 = `#include <LedControl.h>
+
+LedControl matrix = LedControl(12, 11, 10, 1);
+
+const int VELD = 8;           // 8x8 grid
+const int AANTAL_SCHEPEN = 4; // 4 losse cellen als "schepen"
+
+// Speel-data: per cel of er een schip ligt en of er al op geschoten is.
+bool schip[VELD][VELD];
+bool getroffen[VELD][VELD];
+
+void plaatsSchepen() {
+  // Maak alles leeg.
+  for (int r = 0; r < VELD; r++) {
+    for (int k = 0; k < VELD; k++) {
+      schip[r][k] = false;
+      getroffen[r][k] = false;
+    }
+  }
+  // Plaats AANTAL_SCHEPEN cellen op willekeurige posities (geen overlap).
+  int geplaatst = 0;
+  while (geplaatst < AANTAL_SCHEPEN) {
+    int r = random(0, VELD);
+    int k = random(0, VELD);
+    if (!schip[r][k]) {
+      schip[r][k] = true;
+      geplaatst++;
+    }
+  }
+}
+
+void tekenVeld() {
+  // Toon alleen de getroffen schepen (HIT). De overige cellen blijven uit
+  // - de speler ziet de schepen pas als hij raak schiet.
+  for (int r = 0; r < VELD; r++) {
+    for (int k = 0; k < VELD; k++) {
+      bool aan = (schip[r][k] && getroffen[r][k]);
+      matrix.setLed(0, r, k, aan);
+    }
+  }
+}
+
+void setup() {
+  matrix.shutdown(0, false);
+  matrix.setIntensity(0, 4);
+  matrix.clearDisplay(0);
+
+  randomSeed(analogRead(A2));    // A2 = ongebruikte pin → ruis voor random
+  plaatsSchepen();
+
+  // Maak voor de uitleg zichtbaar waar ze liggen door alles op "geraakt" te zetten.
+  for (int r = 0; r < VELD; r++)
+    for (int k = 0; k < VELD; k++)
+      getroffen[r][k] = true;
+
+  tekenVeld();
+}
+
+void loop() {
+  // Volgende stappen voegen joystick + schiet-knop toe.
+}`;
+
+const bs_s3 = `#include <LedControl.h>
+
+LedControl matrix = LedControl(12, 11, 10, 1);
+
+const int VELD = 8;
+const int AANTAL_SCHEPEN = 4;
+
+bool schip[VELD][VELD];
+bool getroffen[VELD][VELD];
+
+// Joystick: VRX op A0, VRY op A1.
+int joystickX = A0;
+int joystickY = A1;
+
+// Cursor-positie waar de speler "richt".
+int cursorRij = 0;
+int cursorKol = 0;
+
+void plaatsSchepen() {
+  for (int r = 0; r < VELD; r++)
+    for (int k = 0; k < VELD; k++) { schip[r][k] = false; getroffen[r][k] = false; }
+  int geplaatst = 0;
+  while (geplaatst < AANTAL_SCHEPEN) {
+    int r = random(0, VELD), k = random(0, VELD);
+    if (!schip[r][k]) { schip[r][k] = true; geplaatst++; }
+  }
+}
+
+void tekenVeld(bool cursorAan) {
+  for (int r = 0; r < VELD; r++) {
+    for (int k = 0; k < VELD; k++) {
+      bool aan = (schip[r][k] && getroffen[r][k]);
+      matrix.setLed(0, r, k, aan);
+    }
+  }
+  // Knipperende cursor: tekent over de inhoud heen.
+  matrix.setLed(0, cursorRij, cursorKol, cursorAan);
+}
+
+unsigned long laatsteBeweging = 0;
+const int BEWEEG_DELAY = 200;   // hoe vaak de cursor maximaal verspringt
+
+void leesJoystick() {
+  // Niet vaker dan elke BEWEEG_DELAY ms verspringen, anders schiet je voorbij.
+  if (millis() - laatsteBeweging < BEWEEG_DELAY) return;
+
+  int x = analogRead(joystickX);    // 0..1023, midden ~512
+  int y = analogRead(joystickY);
+
+  bool bewogen = false;
+  if (x < 300 && cursorKol > 0)         { cursorKol--; bewogen = true; }
+  else if (x > 700 && cursorKol < VELD - 1) { cursorKol++; bewogen = true; }
+  if (y < 300 && cursorRij > 0)         { cursorRij--; bewogen = true; }
+  else if (y > 700 && cursorRij < VELD - 1) { cursorRij++; bewogen = true; }
+
+  if (bewogen) laatsteBeweging = millis();
+}
+
+unsigned long laatsteKnipper = 0;
+bool cursorZichtbaar = true;
+
+void setup() {
+  matrix.shutdown(0, false);
+  matrix.setIntensity(0, 4);
+  matrix.clearDisplay(0);
+  randomSeed(analogRead(A2));
+  plaatsSchepen();
+}
+
+void loop() {
+  leesJoystick();
+
+  // Laat de cursor 2x per seconde knipperen.
+  if (millis() - laatsteKnipper > 250) {
+    cursorZichtbaar = !cursorZichtbaar;
+    laatsteKnipper = millis();
+  }
+  tekenVeld(cursorZichtbaar);
+}`;
+
+const bs_s4 = `#include <LedControl.h>
+
+LedControl matrix = LedControl(12, 11, 10, 1);
+
+const int VELD = 8;
+const int AANTAL_SCHEPEN = 4;
+
+bool schip[VELD][VELD];
+bool getroffen[VELD][VELD];
+bool beschoten[VELD][VELD];   // welke cellen al een schot kregen (raak of mis)
+
+int joystickX = A0;
+int joystickY = A1;
+int knopVuur  = 4;
+
+int cursorRij = 0, cursorKol = 0;
+int vorigeKnop = HIGH;
+int treffers = 0;
+
+void plaatsSchepen() {
+  for (int r = 0; r < VELD; r++)
+    for (int k = 0; k < VELD; k++) {
+      schip[r][k] = false; getroffen[r][k] = false; beschoten[r][k] = false;
+    }
+  int geplaatst = 0;
+  while (geplaatst < AANTAL_SCHEPEN) {
+    int r = random(0, VELD), k = random(0, VELD);
+    if (!schip[r][k]) { schip[r][k] = true; geplaatst++; }
+  }
+}
+
+void tekenVeld(bool cursorAan) {
+  for (int r = 0; r < VELD; r++) {
+    for (int k = 0; k < VELD; k++) {
+      // Een raak schot blijft permanent zichtbaar; missen tonen we niet.
+      bool aan = (schip[r][k] && getroffen[r][k]);
+      matrix.setLed(0, r, k, aan);
+    }
+  }
+  matrix.setLed(0, cursorRij, cursorKol, cursorAan);
+}
+
+unsigned long laatsteBeweging = 0;
+const int BEWEEG_DELAY = 200;
+
+void leesJoystick() {
+  if (millis() - laatsteBeweging < BEWEEG_DELAY) return;
+  int x = analogRead(joystickX);
+  int y = analogRead(joystickY);
+  bool bewogen = false;
+  if      (x < 300 && cursorKol > 0)            { cursorKol--; bewogen = true; }
+  else if (x > 700 && cursorKol < VELD - 1)     { cursorKol++; bewogen = true; }
+  if      (y < 300 && cursorRij > 0)            { cursorRij--; bewogen = true; }
+  else if (y > 700 && cursorRij < VELD - 1)     { cursorRij++; bewogen = true; }
+  if (bewogen) laatsteBeweging = millis();
+}
+
+void hitFeedback() {
+  // 3x snel knipperen: alle LEDs op die cel knipperen.
+  for (int n = 0; n < 3; n++) {
+    matrix.setLed(0, cursorRij, cursorKol, true);  delay(120);
+    matrix.setLed(0, cursorRij, cursorKol, false); delay(120);
+  }
+  matrix.setLed(0, cursorRij, cursorKol, true);    // raak = blijft aan
+}
+
+void missFeedback() {
+  // Twee korte knipperen op de hele rij om "plons" aan te geven.
+  for (int n = 0; n < 2; n++) {
+    for (int k = 0; k < VELD; k++) matrix.setLed(0, cursorRij, k, true);
+    delay(80);
+    for (int k = 0; k < VELD; k++) matrix.setLed(0, cursorRij, k, false);
+    delay(80);
+  }
+}
+
+void schiet() {
+  if (beschoten[cursorRij][cursorKol]) return;     // niet 2x op dezelfde cel
+  beschoten[cursorRij][cursorKol] = true;
+  if (schip[cursorRij][cursorKol]) {
+    getroffen[cursorRij][cursorKol] = true;
+    treffers++;
+    hitFeedback();
+  } else {
+    missFeedback();
+  }
+}
+
+unsigned long laatsteKnipper = 0;
+bool cursorZichtbaar = true;
+
+void setup() {
+  matrix.shutdown(0, false);
+  matrix.setIntensity(0, 4);
+  matrix.clearDisplay(0);
+
+  pinMode(knopVuur, INPUT_PULLUP);
+  randomSeed(analogRead(A2));
+  plaatsSchepen();
+}
+
+void loop() {
+  leesJoystick();
+
+  // Vuur-knop met edge-detectie.
+  int huidig = digitalRead(knopVuur);
+  if (vorigeKnop == HIGH && huidig == LOW) schiet();
+  vorigeKnop = huidig;
+
+  if (millis() - laatsteKnipper > 250) {
+    cursorZichtbaar = !cursorZichtbaar;
+    laatsteKnipper = millis();
+  }
+  tekenVeld(cursorZichtbaar);
+}`;
+
+const bs_s5 = `#include <LedControl.h>
+
+LedControl matrix = LedControl(12, 11, 10, 1);
+
+const int VELD = 8;
+const int AANTAL_SCHEPEN = 4;
+
+bool schip[VELD][VELD];
+bool getroffen[VELD][VELD];
+bool beschoten[VELD][VELD];
+
+int joystickX = A0, joystickY = A1, knopVuur = 4;
+
+int cursorRij = 0, cursorKol = 0;
+int vorigeKnop = HIGH;
+int treffers = 0;
+int schoten  = 0;
+bool gewonnen = false;
+
+void plaatsSchepen() {
+  for (int r = 0; r < VELD; r++)
+    for (int k = 0; k < VELD; k++) {
+      schip[r][k] = false; getroffen[r][k] = false; beschoten[r][k] = false;
+    }
+  int geplaatst = 0;
+  while (geplaatst < AANTAL_SCHEPEN) {
+    int r = random(0, VELD), k = random(0, VELD);
+    if (!schip[r][k]) { schip[r][k] = true; geplaatst++; }
+  }
+}
+
+void tekenVeld(bool cursorAan) {
+  for (int r = 0; r < VELD; r++) {
+    for (int k = 0; k < VELD; k++) {
+      matrix.setLed(0, r, k, schip[r][k] && getroffen[r][k]);
+    }
+  }
+  if (!gewonnen) matrix.setLed(0, cursorRij, cursorKol, cursorAan);
+}
+
+unsigned long laatsteBeweging = 0;
+const int BEWEEG_DELAY = 200;
+
+void leesJoystick() {
+  if (millis() - laatsteBeweging < BEWEEG_DELAY) return;
+  int x = analogRead(joystickX), y = analogRead(joystickY);
+  bool bewogen = false;
+  if      (x < 300 && cursorKol > 0)        { cursorKol--; bewogen = true; }
+  else if (x > 700 && cursorKol < VELD - 1) { cursorKol++; bewogen = true; }
+  if      (y < 300 && cursorRij > 0)        { cursorRij--; bewogen = true; }
+  else if (y > 700 && cursorRij < VELD - 1) { cursorRij++; bewogen = true; }
+  if (bewogen) laatsteBeweging = millis();
+}
+
+void hitFeedback() {
+  for (int n = 0; n < 3; n++) {
+    matrix.setLed(0, cursorRij, cursorKol, true);  delay(120);
+    matrix.setLed(0, cursorRij, cursorKol, false); delay(120);
+  }
+  matrix.setLed(0, cursorRij, cursorKol, true);
+}
+
+void missFeedback() {
+  for (int n = 0; n < 2; n++) {
+    for (int k = 0; k < VELD; k++) matrix.setLed(0, cursorRij, k, true);
+    delay(80);
+    for (int k = 0; k < VELD; k++) matrix.setLed(0, cursorRij, k, false);
+    delay(80);
+  }
+}
+
+void winAnimatie() {
+  // Vul het scherm spiraalsgewijs vanuit het midden naar buiten.
+  for (int n = 0; n < 8; n++) {
+    for (int r = 0; r < VELD; r++)
+      for (int k = 0; k < VELD; k++)
+        matrix.setLed(0, r, k, ((r + k + n) % 2) == 0);
+    delay(150);
+  }
+  matrix.clearDisplay(0);
+  delay(200);
+  // Toon alle schepen aan het einde.
+  for (int r = 0; r < VELD; r++)
+    for (int k = 0; k < VELD; k++)
+      matrix.setLed(0, r, k, schip[r][k]);
+}
+
+void schiet() {
+  if (beschoten[cursorRij][cursorKol]) return;
+  beschoten[cursorRij][cursorKol] = true;
+  schoten++;
+  if (schip[cursorRij][cursorKol]) {
+    getroffen[cursorRij][cursorKol] = true;
+    treffers++;
+    hitFeedback();
+    if (treffers == AANTAL_SCHEPEN) {
+      gewonnen = true;
+      winAnimatie();
+    }
+  } else {
+    missFeedback();
+  }
+}
+
+unsigned long laatsteKnipper = 0;
+bool cursorZichtbaar = true;
+
+void setup() {
+  matrix.shutdown(0, false);
+  matrix.setIntensity(0, 4);
+  matrix.clearDisplay(0);
+  pinMode(knopVuur, INPUT_PULLUP);
+  randomSeed(analogRead(A2));
+  plaatsSchepen();
+  Serial.begin(9600);
+}
+
+void loop() {
+  if (gewonnen) {
+    // Wacht stil tot de speler RESET drukt - of laat winAnimatie blijven branden.
+    return;
+  }
+  leesJoystick();
+  int huidig = digitalRead(knopVuur);
+  if (vorigeKnop == HIGH && huidig == LOW) schiet();
+  vorigeKnop = huidig;
+  if (millis() - laatsteKnipper > 250) {
+    cursorZichtbaar = !cursorZichtbaar;
+    laatsteKnipper = millis();
+  }
+  tekenVeld(cursorZichtbaar);
+}`;
+
+// ─────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────
 
@@ -4393,6 +5769,453 @@ void loop() {
         assignment: "Upload. Speel een aantal rondes. Bij verbetering: 'NIEUW RECORD!' op regel 2. Druk eens vroeg op de knop (vóór de LED aangaat) en check de 'Te vroeg!'-melding.",
         challenge: "Sla `besteTijd` op in EEPROM zodat de score een uitschakeling overleeft. Hint: `#include <EEPROM.h>`, `EEPROM.put(0, besteTijd)` om te schrijven, `EEPROM.get(0, besteTijd)` in `setup()` om te lezen.",
         reflection: "Welke andere games kun je met deze setup (LCD + LED + knop + Arduino) bouwen? Bedenk er drie. (Voorbeelden: Simon Says, Snake op tekst-scherm, ...)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 23: Simon Says (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "simon-says",
+    title: "Simon Says — onthoud de reeks",
+    description: "Een echte arcade-klassieker: 4 gekleurde LEDs lichten op in een reeks die elke ronde langer wordt — kan jij hem foutloos naspelen? Met buzzer-tonen per kleur en oplopende moeilijkheid.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, breadboard + jumpers, 4× LED (rood, groen, blauw, geel), 4× 220Ω weerstand, 4× drukknop, 1× passieve buzzer.",
+    learningGoal: "Werken met arrays om een reeks op te slaan, `random()` met `randomSeed()` correct gebruiken, herbruikbare helper-functies schrijven, en spelers-input vergelijken met een verwachte sequentie.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "sim-s1",
+        title: "Hardware-test: 4 LEDs, 4 knoppen en een buzzer",
+        content: "We bouwen Simon Says volledig op. Eerst alle hardware aansluiten en testen. Sluit 4 LEDs aan op pin 8..11 (elk met een 220Ω weerstand naar GND), 4 drukknoppen op pin 2..5 (de andere kant van elke knop naar GND — we gebruiken `INPUT_PULLUP`, geen externe weerstand nodig), en een passieve buzzer op pin 12. De `setup()` knippert eenmalig alle LEDs zodat je weet dat alles goed zit.",
+        diagram: true,
+        code: sim_s1,
+        legend: [
+          { term: "INPUT_PULLUP", desc: "Interne pull-up: pin leest standaard HIGH, wordt LOW als de knop ingedrukt is. Geen extra weerstand nodig." },
+          { term: "passieve buzzer", desc: "Heeft GEEN eigen oscillator — je moet zelf de frequentie aansturen met `tone()`. Een actieve buzzer maakt altijd dezelfde toon." },
+          { term: "pinMode(..., OUTPUT)", desc: "Vertel de Arduino dat deze pin stroom levert (voor de LEDs en buzzer)." },
+          { term: "delay(500)", desc: "Korte pauze zodat je het knipperen ook echt ziet als hardware-test." },
+        ],
+        assignment: "Sluit alles aan zoals het schema laat zien. Upload. Bij opstart moeten alle 4 LEDs een halve seconde tegelijk branden. Werkt er een niet? Check: weerstand verkeerd om, LED kant verkeerd (lange poot = +), of pin verkeerd.",
+        challenge: "Pas `setup()` zo aan dat hij de LEDs één voor één aanknippert (rood → groen → blauw → geel) in plaats van allemaal tegelijk. Hint: je hebt 4× `digitalWrite` + `delay()` nodig.",
+        reflection: "Waarom is het zo handig dat we elke knop een naam (`knopRood` etc.) geven in plaats van overal het pinnummer te typen?",
+      },
+      {
+        id: "sim-s2",
+        title: "Een willekeurige reeks opbouwen met een array",
+        content: "De kern van Simon Says is een **groeiende reeks van kleuren**. We slaan deze op in een array `reeks[]` waarin elke positie een kleurnummer (0..3) bevat. Elke ronde voegen we een willekeurige kleur toe met `random(0, 4)`. **Cruciaal**: `randomSeed(analogRead(A0))` — zonder dit zaadje krijg je elke keer dezelfde 'willekeurige' getallen omdat de Arduino bij start altijd in dezelfde toestand zit.",
+        code: sim_s2,
+        legend: [
+          { term: "const int MAX_REEKS = 50", desc: "Maximale reekslengte. Een array moet bij compileren al een vaste grootte hebben." },
+          { term: "int reeks[MAX_REEKS]", desc: "De array zelf: 50 plekken, één per stap in de reeks." },
+          { term: "int reeksLengte = 0", desc: "Hoeveel plekken zijn op dit moment écht gevuld. Niet hetzelfde als de array-grootte!" },
+          { term: "random(0, 4)", desc: "Een random getal: 0, 1, 2 of 3 (4 is exclusief). Past perfect bij onze 4 kleuren." },
+          { term: "randomSeed(analogRead(A0))", desc: "Lees ruis van een ongebruikte analoge pin als 'zaadje' voor random-getallen." },
+        ],
+        assignment: "Upload, open Serial Monitor (9600 baud). Elke seconde verschijnt 'Reeks is nu N stappen lang.' De Arduino bouwt nu een interne reeks op — alleen kunnen we hem nog niet zien.",
+        challenge: "Print óók de hele reeks: voeg een for-loop toe die `Serial.print(reeks[i])` voor elke stap doet. Zo zie je dat de reeks elke ronde groeit met één random kleur.",
+        reflection: "Wat zou er gebeuren als je `randomSeed(...)` weg laat? Probeer het: reset de Arduino een paar keer en kijk of de reeks (in de Serial Monitor) elke keer hetzelfde is.",
+      },
+      {
+        id: "sim-s3",
+        title: "Reeks afspelen: LED + toon per kleur",
+        content: "Tijd om de reeks ook *zichtbaar* te maken. We schrijven twee helper-functies: `ledVan(kleur)` geeft de juiste pin terug, `toonVan(kleur)` de bijbehorende toonhoogte (4 noten zoals bij de échte Simon). Dan combineert `speelKleur()` LED + `tone()` voor één korte 'flash'. Bonus: we maken het tempo iets sneller naarmate de reeks groeit — moeilijker dus.",
+        diagram: true,
+        code: sim_s3,
+        legend: [
+          { term: "int ledVan(int kleur)", desc: "Helper-functie: geef een kleurnummer en krijg de bijbehorende LED-pin terug." },
+          { term: "tone(buzzerPin, freq, duur)", desc: "Speel een toon van `freq` Hz gedurende `duur` ms op de buzzer. Werkt alleen met passieve buzzer." },
+          { term: "max(150, 500 - reeksLengte * 20)", desc: "Tempo wordt sneller per ronde, maar nooit korter dan 150 ms — anders wordt het onspeelbaar." },
+          { term: "262, 330, 392, 523", desc: "Frequenties van C, E, G, hoge C — een open mineur-akkoord, klinkt aangenaam." },
+        ],
+        assignment: "Upload. Bij elke ronde wordt een nieuwe kleur toegevoegd en de hele reeks wordt gespeeld (LED + toon). Tel mee: ronde 5 = 5 kleuren in een rij.",
+        challenge: "Maak een **'attentie'-tone** vóór elke nieuwe ronde: speel een korte hoge piep (`tone(buzzerPin, 1000, 80)`) zodat de speler weet dat het zo begint.",
+        reflection: "We hergebruiken `ledVan()` en `toonVan()` straks bij het uitlezen van knoppen. Waarom is het slim om dit nu al als losse functies te schrijven, in plaats van overal `if/else if`-ketens?",
+      },
+      {
+        id: "sim-s4",
+        title: "Speler-input vergelijken & game over",
+        content: "De laatste stap maakt het écht een spel. Na het afspelen van de reeks moet de speler hem naspelen. We schrijven `wachtOpKnop()` die blocking wacht tot een knop ingedrukt wordt (of een time-out van 5 sec). Dan vergelijken we elke knopdruk met `reeks[i]`. Eén foutje of te lang nadenken → `gameOver()`: trieste lage toon, alle LEDs knipperen, en de reeks reset naar 0.",
+        code: sim_s4,
+        legend: [
+          { term: "while (digitalRead(knopRood) == LOW);", desc: "Wacht tot de knop weer LOSGELATEN is. Voorkomt dat één lange druk telt als 5 drukken." },
+          { term: "wachtOpKnop(5000)", desc: "Time-out van 5 sec. Geeft -1 terug bij niets — wat we als 'fout' interpreteren." },
+          { term: "if (gedrukt != reeks[i]) gameOver();", desc: "Vergelijk wat de speler doet met wat de reeks zegt. Bij verschil: einde." },
+          { term: "tone(buzzerPin, 110, 600)", desc: "Lage toon (110 Hz = A2) als 'sad trombone' bij verlies. Korte hoge piepjes bij winst." },
+          { term: "reeksLengte = 0", desc: "Reset het spel zodat de volgende ronde weer met 1 kleur begint." },
+        ],
+        assignment: "Upload en speel! Hoe ver kom je? Tip: kleuren in groepjes onthouden helpt veel. Foutmoment? De LEDs knipperen 3x en je begint opnieuw.",
+        challenge: "Sla je hoogste score op in een variabele `besteScore` en geef bij verbetering een speciale 'fanfare' (3 oplopende tonen) in plaats van de gewone juich-tonen.",
+        reflection: "Een echte Simon Says houdt de scores bij ook na uitschakelen. Hoe zou je dat hier doen? (Hint: `EEPROM.put()`/`EEPROM.get()` — net als bij de reactietijd-tester.) Waarom is EEPROM een logische keuze en flash-geheugen niet?",
+        optionalCodeTitle: "Snippet: een 'startsignaal' voordat de speler aan de beurt is",
+        optionalCode: `// Een korte cue zodat de speler weet: nu mag jij!
+void speler_aan_de_beurt() {
+  digitalWrite(ledRood,  HIGH); digitalWrite(ledGroen, HIGH);
+  digitalWrite(ledBlauw, HIGH); digitalWrite(ledGeel,  HIGH);
+  tone(buzzerPin, 1500, 80);
+  delay(120);
+  digitalWrite(ledRood,  LOW); digitalWrite(ledGroen, LOW);
+  digitalWrite(ledBlauw, LOW); digitalWrite(ledGeel,  LOW);
+}
+
+// Roep speler_aan_de_beurt() aan vlak voor de for-loop met wachtOpKnop().`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 24: Whack-a-mole (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "whack-a-mole",
+    title: "Whack-a-mole — mep de mol",
+    description: "Een willekeurige LED licht op — druk de juiste knop voordat hij uit gaat. Score loopt op, tempo neemt toe, en na 5 missers ben je af. Klassiek kermis-spel met 5 LEDs en een LCD-scherm.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, breadboard + jumpers, 5× LED + 5× 220Ω weerstand, 5× drukknop, 1× I2C 16x2 LCD-display.",
+    learningGoal: "Arrays gebruiken om identieke pinnen samen te beheren, een non-blocking timer met `millis()` toepassen, edge-detectie op meerdere knoppen tegelijk doen, en moeilijkheidsgraad dynamisch aanpassen.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "wam-s1",
+        title: "Hardware-test: knop stuurt eigen LED",
+        content: "Voor we begint met spel-logica: even alles testen. Sluit 5 LEDs aan op pin 8..12 (elk met 220Ω weerstand) en 5 knoppen op pin 2..6. Het I2C-LCD heeft maar 4 draadjes (VCC, GND, SDA→A4, SCL→A5). Deze test-sketch maakt elke knop direct zijn eigen LED aan/uit — handige sanity-check zodat je weet dat álles correct zit voordat we het spel bouwen.",
+        diagram: true,
+        code: wam_s1,
+        legend: [
+          { term: "LiquidCrystal_I2C lcd(0x27, 16, 2)", desc: "Maak een LCD-object op I2C-adres 0x27 (vaak), 16 kolommen × 2 rijen. Werkt het niet? Probeer 0x3F." },
+          { term: "lcd.init() / lcd.backlight()", desc: "Initialiseer + zet de blauwe achtergrondverlichting aan." },
+          { term: "digitalRead(knopPin1) == LOW ? HIGH : LOW", desc: "Ternary: als de knop ingedrukt is, schrijf HIGH naar de LED, anders LOW. In één regel." },
+          { term: "INPUT_PULLUP", desc: "Pin standaard HIGH. Knop ingedrukt = LOW. Geen externe weerstand nodig." },
+        ],
+        assignment: "Sluit alles aan, upload. Het LCD toont 'Whack-a-mole!' en elke knopdruk maakt de bijbehorende LED aan/uit. Werkt LED 3 niet? Check zijn weerstand en oriëntatie. Werkt knop 4 niet? Controleer of beide pootjes goed in het breadboard zitten.",
+        challenge: "Pas de test aan zodat elke knop een toon op een buzzer (pin 13) afspeelt — gebruik `tone(13, 500 + i * 100, 50)` voor 5 verschillende toonhoogtes.",
+        reflection: "Wat is het voordeel van pin 8..12 voor LEDs en pin 2..6 voor knoppen, in plaats van alles door elkaar te gebruiken? (Hint: denk aan structuur en arrays.)",
+      },
+      {
+        id: "wam-s2",
+        title: "Random mol + non-blocking timer",
+        content: "Nu de spel-logica. Eerst: één random LED brandt 1 seconde lang, dan springt hij naar een nieuwe positie. **Belangrijk**: we gebruiken `millis()` in plaats van `delay()` zodat we tegelijk de knoppen kunnen blijven uitlezen (in de volgende stap). We zetten ook alle pins netjes in arrays `leds[]` en `knoppen[]` — dan kunnen we gewoon `leds[3]` typen in plaats van `ledPin4`.",
+        code: wam_s2,
+        legend: [
+          { term: "int leds[5]", desc: "Array van 5 pin-nummers. We vullen 'em in setup() met de losse `ledPinN`-variabelen." },
+          { term: "actieveMol", desc: "Index (0..4) van welke mol nu omhoog steekt. -1 = geen." },
+          { term: "molTotMillis = millis() + molDuurMs", desc: "Deadline: het tijdstip waarop de mol weer onderduikt. Sla op, vergelijk later." },
+          { term: "if (millis() >= molTotMillis)", desc: "Non-blocking check: pas iets doen als de tijd voorbij is, zonder de loop te blokkeren." },
+          { term: "random(0, 5)", desc: "Random getal 0..4 (5 is exclusief) — kies een van de 5 LEDs." },
+        ],
+        assignment: "Upload. Een random LED brandt 1 sec, dan springt hij naar een ander. Lijkt op een ouderwetse pinball-flipper-show.",
+        challenge: "Pas `molDuurMs` aan in `setup()`: probeer 300 (heel snel) en 2000 (heel relaxed). Wat is een leuk tempo om mee te starten?",
+        reflection: "Waarom gebruiken we `millis()` met `if`-checks in plaats van `delay()`? Wat zou er gebeuren als we `delay(1000)` hier zouden gebruiken? (Hint: probeer eens een knop in te drukken tijdens een delay — er gebeurt niks.)",
+      },
+      {
+        id: "wam-s3",
+        title: "Scoring: juiste knop = +1, anders = miss",
+        content: "Nu maken we het spel echt. Elke loop checken we **alle 5 knoppen** met edge-detectie (alleen op het moment van indrukken — niet zolang hij ingedrukt blijft). Drukt de speler de knop die bij `actieveMol` hoort? +1 punt en direct nieuwe mol. Anders → +1 mis. Een te late reactie (timer afgelopen zonder druk) telt óók als mis. De score komt live op het LCD.",
+        code: wam_s3,
+        legend: [
+          { term: "int vorigeKnop[5] = {HIGH, ...}", desc: "Array met de vorige stand van elke knop. Begint allemaal op HIGH (los)." },
+          { term: "vorigeKnop[i] == HIGH && huidig == LOW", desc: "Edge-detectie: alleen +1 op de OVERGANG van los → ingedrukt. Anders zou 1 lange druk = 100 punten worden." },
+          { term: "if (i == actieveMol)", desc: "De speler drukte de knop die bij de actieve mol hoort → punt!" },
+          { term: "else { gemist++; }", desc: "Verkeerde knop → miss. Zo straffen we wild op alles drukken af." },
+          { term: "lcd.print(\"   \")", desc: "Spaties achter het getal overschrijven oude tekens (anders wordt 10 → 19 → 100 een puinhoop)." },
+        ],
+        assignment: "Upload, speel! Probeer 30 punten te halen zonder meer dan 5 missers. De score wordt live bijgewerkt op de tweede regel.",
+        challenge: "Voeg een **combo-systeem** toe: bij 3 punten op rij zonder mis krijg je een bonus van +2. Bij een mis reset de combo-teller weer naar 0.",
+        reflection: "Waarom moeten we `vorigeKnop[i] = huidig;` BUITEN de if-statement zetten — dus altijd, niet alleen bij een match? Probeer het te verplaatsen en kijk wat er gebeurt.",
+      },
+      {
+        id: "wam-s4",
+        title: "Tempo dat versnelt + game over",
+        content: "Laatste stap: dynamische moeilijkheid. Per 5 punten wordt de mol-duur 100 ms korter (van 1200 → minimum 250 ms). Na 5 missers: game over. Het scherm toont je eindscore en alle LEDs knipperen oneindig — pas na een Arduino-reset begin je opnieuw. Dit is de complete arcade-versie.",
+        code: wam_s4,
+        legend: [
+          { term: "molDuurMs = max(MIN_DUUR, 1200 - (score / 5) * 100)", desc: "Per 5 punten: 100ms korter. `max(...)` zorgt dat we nooit onder 250 ms gaan." },
+          { term: "const int MAX_GEMIST = 5", desc: "Stel de gameover-drempel in op één plek — makkelijk te tweaken." },
+          { term: "while (true)", desc: "Oneindige lus: knipperen tot de Arduino wordt gereset. Het programma zit hier voor altijd vast." },
+          { term: "lcd.clear()", desc: "Wis het volledige scherm. Veiliger dan met spaties overschrijven als je een nieuwe layout wilt tonen." },
+        ],
+        assignment: "Upload, speel een paar potjes. Hoe ver kom je voor de mol te snel wordt? Schrijf je hoogste score op het bord met krijt — klassentoernooi.",
+        challenge: "Maak een **'level up'-melding** wanneer je een nieuwe snelheid bereikt. Toon 'Level 2!' op rij 1 voor 1 seconde wanneer score 5, 10, 15... bereikt. Tip: check of `score % 5 == 0 && score > 0`.",
+        reflection: "Een echte arcade-machine slaat de top-10 scores op. Hoe zou je dat hier doen? (Hint: array van `int topScores[10]` + EEPROM voor persistentie. Bij nieuwe score: vergelijk met de hele lijst, schuif lager-scorende plekken op.)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 25: Elektronische dobbelsteen (Beginner)
+  // ─────────────────────────────────────────────
+  {
+    id: "dobbelsteen-roller",
+    title: "Elektronische dobbelsteen-roller",
+    description: "Een dobbelsteen die je nooit kwijtraakt: druk op de knop, 7 LEDs in dobbelsteen-patroon 'rollen' kort en stoppen op een willekeurig getal van 1 t/m 6. Perfect voor bordspellen.",
+    difficulty: "Beginner",
+    materials: "Arduino Uno, breadboard + jumpers, 7× LED + 7× 220Ω weerstand, 1× drukknop.",
+    learningGoal: "Een 2D-array gebruiken om patronen op te slaan, `random()` voor onvoorspelbare uitkomsten, knop-debounce met edge-detectie, en een 'shuffle'-animatie schrijven met `millis()`.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "dice-s1",
+        title: "7 LEDs als dobbelsteen-patroon",
+        content: "Een echte dobbelsteen heeft maximaal 7 stippen-posities (4 hoeken + 2 zijkanten + 1 midden). We bouwen die fysiek na met 7 LEDs in dit patroon:\n```\n1 . 2     ← linksboven & rechtsboven\n3 7 4     ← links & rechts midden, en LED 7 in het midden\n5 . 6     ← linksonder & rechtsonder\n```\nVoor elke worp 1..6 weten we welke combinatie LEDs aan moet. Dat slaan we op in een **2D-array**: `patroon[worp][led]`. De sketch loopt alle 6 worpen langs zodat je kunt zien dat je layout klopt.",
+        diagram: true,
+        code: dice_s1,
+        legend: [
+          { term: "int leds[7]", desc: "Array van pin-nummers. Index 0 = LED 1, index 6 = LED 7 (de middelste)." },
+          { term: "bool patroon[7][7]", desc: "2D-array: 7 rijen (één per worp), elk 7 booleans (welke LEDs aan). De 7e rij is een test-patroon: alles aan." },
+          { term: "{ 1, 1, 0, 0, 1, 1, 0 }", desc: "Worp 4: 4 hoeken aan, midden uit. De positie in deze rij komt overeen met `leds[]`." },
+          { term: "rij = n - 1", desc: "Vertaal worp (1..6) naar array-index (0..5). Arrays zijn 0-indexed." },
+        ],
+        assignment: "Bouw het patroon volgens het schema: ledPin1 = linksboven, ledPin7 = midden, etc. Upload. Elke 800 ms zie je een nieuwe worp 1 → 6 → 1 → 6 ... Check of elke worp het juiste dobbelsteen-patroon vormt.",
+        challenge: "Voeg een 7e bedoelde 'worp' toe: bij worp 0 (of een speciale waarde 7) gaan ALLEEN de twee diagonale midden-LEDs aan. Komt niet voor in echte dobbelstenen, maar leuk om te bedenken.",
+        reflection: "Waarom is een 2D-array hier zo handig? Bedenk hoe je dit zou doen met alleen losse `if`-statements — hoeveel regels code zou dat zijn?",
+      },
+      {
+        id: "dice-s2",
+        title: "Knop-druk = random worp",
+        content: "Nu maken we hem échte interactief. Knop op pin 9 (andere pootje → GND). Elke keer dat je drukt, kiest `random(1, 7)` een nieuw getal 1..6 en tonen we het patroon. Cruciaal is **edge-detectie**: zonder die check zou een vasthouden van de knop honderden worpen per seconde genereren. We onthouden `vorigeKnop` en triggeren alleen op de OVERGANG van HIGH naar LOW.",
+        diagram: true,
+        code: dice_s2,
+        legend: [
+          { term: "random(1, 7)", desc: "Random getal: 1, 2, 3, 4, 5 of 6 (7 is exclusief). Precies het bereik van een dobbelsteen." },
+          { term: "vorigeKnop == HIGH && huidig == LOW", desc: "Edge-detectie: alleen op het exacte moment van indrukken. Niet terwijl hij ingedrukt blijft." },
+          { term: "delay(20)", desc: "Simpele debounce: knoppen 'stuiteren' bij indrukken (5–10 ms ruis), 20 ms wachten filtert dat weg." },
+          { term: "randomSeed(analogRead(A0))", desc: "Lees ruis van een ongebruikte analoge pin als 'zaadje'. Zonder dit altijd dezelfde reeks worpen na opstart." },
+        ],
+        assignment: "Upload. Druk op de knop. Het patroon springt naar een nieuwe worp. Druk 20x — krijg je een mooie verdeling 1..6? Of valt hij vaak op hetzelfde getal? (Bij ~3 keer per getal = goed.)",
+        challenge: "Geef de knop een leuke feedback: laat alle 7 LEDs heel kort tegelijk flitsen (50 ms) net vóór de nieuwe worp verschijnt — een soort 'click'-animatie.",
+        reflection: "Waarom geeft `random()` zonder `randomSeed()` elke keer dezelfde reeks na een Arduino-reset? Wat is het kernprobleem van computers en 'echt willekeurig'?",
+      },
+      {
+        id: "dice-s3",
+        title: "Shuffle-animatie maakt het écht een dobbelsteen",
+        content: "Een echte dobbelsteen rolt eerst en stopt dan. Onze digitale versie krijgt nu hetzelfde gevoel: bij een knopdruk tonen we een halve seconde lang **snel wisselende random getallen** (met `millis()`-loop), pas dan komt de definitieve worp. Dit voelt veel bevredigender dan 'instant uitkomst' en geeft de speler tijd om te bouwen op spanning. Optioneel: voeg een buzzer-tic toe per shuffle.",
+        code: dice_s3,
+        legend: [
+          { term: "void shuffleAnimatie(int totaalMs)", desc: "Helper-functie: toon `totaalMs` lang snel-wisselende random getallen. Herbruikbaar." },
+          { term: "unsigned long stop = millis() + totaalMs", desc: "Bereken de eind-tijd. `unsigned long` voorkomt overflow-gedoe bij grote getallen." },
+          { term: "while (millis() < stop)", desc: "Loop tot de tijd voorbij is. Niet-blokkerend van buiten gezien." },
+          { term: "delay(60)", desc: "60 ms tussen frames = ~16 frames per seconde. Snel genoeg dat het 'rolt', langzaam genoeg dat je elk getal ziet." },
+        ],
+        assignment: "Upload. Druk op de knop. Je ziet nu een halve seconde 'rollende' getallen, dan stopt het op de definitieve worp. Voelt veel beter, toch?",
+        challenge: "Voeg een buzzer (pin 13) toe en speel een korte `tone(13, 1000, 30)` per frame in de shuffle-loop. Klinkt als een echte digitale dobbelsteen-machine.",
+        reflection: "Waarom is de shuffle-animatie pure 'show' — de uitkomst wordt pas ná de animatie bepaald? Wat zou er veranderen als we de uitkomst tijdens de shuffle al berekenden? (Hint: niets, behalve dat `random()` extra werk doet.)",
+        optionalCodeTitle: "Snippet: 2 dobbelstenen op een LCD",
+        optionalCode: `// Voor bordspellen waar je 2 dobbelstenen nodig hebt (Mens-erger-je-niet, Monopoly).
+// Sluit een I2C LCD aan en vervang de toonGetal()-aanroep door:
+
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void toon2Dobbelstenen() {
+  int d1 = random(1, 7);
+  int d2 = random(1, 7);
+  lcd.clear();
+  lcd.print("Worp: ");
+  lcd.print(d1);
+  lcd.print(" + ");
+  lcd.print(d2);
+  lcd.setCursor(0, 1);
+  lcd.print("Totaal: ");
+  lcd.print(d1 + d2);
+}`
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 26: Schaakklok (Gemiddeld)
+  // ─────────────────────────────────────────────
+  {
+    id: "schaakklok",
+    title: "Schaakklok voor 2 spelers",
+    description: "Bouw een werkende schaakklok: 2 knoppen, 2 timers, mm:ss-display en alarm bij 0:00. Na de les meteen bruikbaar voor échte schaakpartijen — of voor andere bordspellen waar tijd telt.",
+    difficulty: "Gemiddeld",
+    materials: "Arduino Uno, breadboard + jumpers, 1× I2C 16x2 LCD-display, 3× drukknop (2 spelers + reset), 1× passieve buzzer.",
+    learningGoal: "`millis()` gebruiken voor non-blocking countdown, `unsigned long` correct hanteren tegen overflow, een state-machine bouwen (stopped/speler1/speler2/gameover), en delta-tijd correct aftrekken.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "chess-s1",
+        title: "Hardware-test: LCD + 2 knoppen",
+        content: "Sluit aan: I2C LCD (4 draadjes — VCC, GND, SDA→A4, SCL→A5), drukknop speler 1 op pin 2 (andere kant naar GND), drukknop speler 2 op pin 3, en een passieve buzzer op pin 8. Deze test-sketch toont '5:00' voor beide spelers — nog niet aftellen, gewoon zorgen dat het scherm werkt en de pinnen kloppen.",
+        diagram: true,
+        code: chess_s1,
+        legend: [
+          { term: "LiquidCrystal_I2C lcd(0x27, 16, 2)", desc: "I2C-adres 0x27 (vaak), 16 kolommen × 2 rijen. Werkt het niet? Probeer 0x3F." },
+          { term: "lcd.setCursor(0, 0)", desc: "Spring naar kolom 0, rij 0 (eerste regel). Coördinaten zijn 0-indexed." },
+          { term: "INPUT_PULLUP", desc: "Geen extra weerstand nodig. Knop los = HIGH, ingedrukt = LOW." },
+          { term: "passieve buzzer", desc: "Heeft géén eigen oscillator — gebruikt straks `tone()` voor het alarm." },
+        ],
+        assignment: "Sluit alles aan, upload. Het LCD moet 'Speler 1: 05:00' op rij 1 en 'Speler 2: 05:00' op rij 2 tonen. Geen reactie? Check de I2C-adres of zie de aansluit-instructies in de I2C LCD tutorial.",
+        challenge: "Maak de tekst korter: 'P1 05:00' en 'P2 05:00'. Bedenk waarom dat handig kan zijn als we straks ook seconden-aftellen tonen — meer ruimte voor extra info.",
+        reflection: "Waarom 5 minuten per speler? In Blitz-schaak is 3 of 5 min standaard. Welke andere bordspellen kennen jij waar tijd-druk belangrijk is?",
+      },
+      {
+        id: "chess-s2",
+        title: "Aftellen met millis() — non-blocking",
+        content: "Het hart van een schaakklok: tijd correct aftellen zonder de loop te blokkeren. We gebruiken `unsigned long` om milliseconden bij te houden (groot genoeg voor 49 dagen — overflow geen probleem voor één partij). De truc is **delta-tijd**: we onthouden `vorigeMillis`, berekenen elke loop hoeveel tijd er verstreken is, en trekken dat af van de actieve speler. Voor nu staat `actieveSpeler` standaard op 1 — speler 1's klok loopt automatisch.",
+        code: chess_s2,
+        legend: [
+          { term: "unsigned long tijd1 = 5UL * 60UL * 1000UL", desc: "5 min in ms. `UL` = unsigned long literal — anders berekent Arduino dit als 16-bit `int` en krijg je overflow." },
+          { term: "unsigned long delta = nu - vorigeMillis", desc: "Verstreken tijd sinds de vorige loop. Werkt zelfs over de millis()-overflow heen, mits beide unsigned long zijn." },
+          { term: "if (tijd1 > delta) tijd1 -= delta;", desc: "Veilig aftrekken: voorkom dat we onder 0 zakken (unsigned wraparound = enorm groot getal!)." },
+          { term: "minuten = sec / 60; seconden = sec % 60", desc: "Klassieke deling + modulo: 137 sec = 2 min 17 sec." },
+          { term: "if (seconden < 10) lcd.print('0')", desc: "Voorloop-nul: '02' i.p.v. '2'. Zonder dit krijg je '5:7' i.p.v. '05:07'." },
+        ],
+        assignment: "Pas in de code `actieveSpeler = 1;` toe (in setup, of gewoon hardcoderen). Upload. Speler 1's tijd telt af van 05:00. Bij 04:59, 04:58... soepel. Speler 2 blijft op 05:00.",
+        challenge: "Verander de starttijd naar 3 min en geef speler 2 4 min (handicap-modus voor een sterkere tegenstander). Tip: pas alleen de twee initialisaties van `tijd1` en `tijd2` aan.",
+        reflection: "Waarom werkt `nu - vorigeMillis` ook correct ná ~49 dagen wanneer `millis()` overflowt? Antwoord: omdat `unsigned long`-aftrekken modulo werkt — het verschil blijft kloppen.",
+      },
+      {
+        id: "chess-s3",
+        title: "Knoppen wisselen de actieve speler",
+        content: "Nu de magie: druk je eigen knop = jouw klok stopt, tegenstander start. Dit is hét principe van een schaakklok. Bij eerste druk start de partij (vanuit `stopped`-state). Knop indrukken = klein 'klik'-toontje voor feedback. We gebruiken edge-detectie zodat één lange druk niet 100x wisselt. Reset-knop volgt in de laatste stap.",
+        diagram: true,
+        code: chess_s3,
+        legend: [
+          { term: "actieveSpeler = 0/1/2", desc: "State machine: 0 = klok niet gestart, 1 = speler 1 aan zet, 2 = speler 2 aan zet." },
+          { term: "vorigeKnop1 == HIGH && huidig1 == LOW", desc: "Edge-detectie: trigger alleen op de OVERGANG van los → ingedrukt." },
+          { term: "if (actieveSpeler == 0) actieveSpeler = 2;", desc: "Bij eerste druk op P1's knop: P1 is klaar, dus P2 begint. Klassiek schaak-protocol." },
+          { term: "tone(buzzerPin, 1200, 50)", desc: "Korte hoge piep van 50 ms — auditieve feedback bij elke druk." },
+          { term: "delay(50)", desc: "Soepele update zonder CPU te slopen. mm:ss verandert maar 1x per seconde." },
+        ],
+        assignment: "Upload. Druk knop 1 → speler 2's klok loopt. Druk knop 2 → speler 1's klok loopt. Druk knop 1 weer → terug naar speler 2. Test of de tijd niet sprongsgewijs verandert maar soepel doortikt.",
+        challenge: "Voeg **anti-double-click** toe: als de andere speler vlak na zijn drukbeurt nóg eens drukt op zijn eigen knop, gebeurt er niks (alleen de tegenstander mag wisselen). Hint: check `if (actieveSpeler != 1)` voordat je iets doet bij knop 1.",
+        reflection: "Waarom is edge-detectie hier essentieel? Probeer eens een knop ingedrukt te houden — wat zou er gebeuren zonder de `vorigeKnop`-check? (Antwoord: 100x per seconde wisselen → klok lijkt te stilstaan.)",
+      },
+      {
+        id: "chess-s4",
+        title: "Reset-knop, alarm bij 0:00, en pijl-indicator",
+        content: "Drie laatste verbeteringen voor een **complete** schaakklok:\n\n1. **Reset-knop op pin 4** — altijd bruikbaar om opnieuw te beginnen (5 min, alle klokken op stop).\n2. **Alarm bij 0:00** — `gameOver`-state: pieptoon blijft aan, geen knop-wisselen meer mogelijk. Pas reset-knop maakt het stil.\n3. **Pijl-indicator** — een '>' op de regel van de actieve speler. Veel duidelijker dan alleen de tijden vergelijken.\n\nDit is de versie die je écht naast je schaakbord kunt leggen.",
+        code: chess_s4,
+        legend: [
+          { term: "const unsigned long START_TIJD", desc: "Centraal de starttijd. Aanpassen voor blitz (3 min), bullet (1 min), klassiek (10 min) — één plek." },
+          { term: "bool gameOver = false", desc: "Status-flag. Eenmaal true: knoppen werken niet meer voor de partij, alleen reset." },
+          { term: "if (tijd1 > delta) ... else { tijd1 = 0; gameOver = true; }", desc: "Bij verstrijken van de tijd: zet exact op 0 én markeer game over. Voorkomt negatieve restwaarde." },
+          { term: "lcd.print(actief ? '>' : ' ')", desc: "Pijl-indicator: ternary geeft '>' bij actieve speler, anders een spatie zodat de layout intact blijft." },
+          { term: "tone(buzzerPin, 880)", desc: "Continue toon (geen duur opgegeven). Stopt pas met `noTone()` — wat de reset-functie doet." },
+        ],
+        assignment: "Upload. Speel een 'snelle test-partij' van 30 sec per kant (pas `START_TIJD` tijdelijk aan naar 30000UL). Druk je eigen knop = wisselen. Loopt jouw tijd op 0 → continu alarm + 'GAME OVER'-indicatie. Druk reset → opnieuw 5 min.",
+        challenge: "Voeg **byo-yomi** toe (Japans schaak-/go-format): als je tijd op 0 dreigt te raken (< 10 sec) krijg je elke keer 5 sec extra na een drukbeurt. Tip: `if (actieveSpeler == 1) tijd1 += 5000;` bij wisselen, alleen onder bepaalde voorwaarde.",
+        reflection: "Waarom sla je `START_TIJD` op als `const unsigned long` en niet als `int`? (Hint: 5 min = 300.000 ms — past niet in een 16-bit `int` van Arduino Uno, max 32.767.)",
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // TUTORIAL 27: Battleship op 8x8 LED-matrix (Gevorderd)
+  // ─────────────────────────────────────────────
+  {
+    id: "battleship-matrix",
+    title: "Battleship op 8x8 LED-matrix",
+    description: "Het klassieke 'Zeeslag' op een echte 8x8 LED-matrix. Joystick beweegt je richtkruis, knopdruk schiet, hit/miss-feedback met blink-patronen, en een win-animatie als alle schepen tot zinken zijn gebracht.",
+    difficulty: "Gevorderd",
+    materials: "Arduino Uno, breadboard + jumpers, 1× MAX7219 8x8 LED-matrix module, 1× analoge joystick-module (X+Y+SW), 1× extra drukknop (vuur), USB-voeding (matrix kan veel stroom trekken bij volle helderheid). Bibliotheek: 'LedControl' van Eberhard Fahle (via Bibliotheekbeheer).",
+    learningGoal: "Werken met de LedControl-bibliotheek voor een MAX7219, een 2D-game-state in arrays beheren, joystick-input vertalen naar een rooster-cursor, en een complete spel-loop met state, feedback en win-conditie bouwen.",
+    dateAdded: "2026-05-02",
+    steps: [
+      {
+        id: "bs-s1",
+        title: "MAX7219 8x8 matrix opzetten",
+        content: "De MAX7219 is een chip die 64 LEDs aanstuurt via slechts 3 pinnen (DIN/CLK/CS). De **LedControl**-bibliotheek (installeren via Bibliotheekbeheer) doet alle SPI-communicatie voor je. Je hoeft alleen `setLed(matrix-index, rij, kolom, aan)` aan te roepen. Belangrijk: bij opstart staat de chip in spaarstand → eerst `shutdown(0, false)` om hem wakker te maken, daarna helderheid laag zetten (anders trekt hij véél stroom van je USB).",
+        diagram: true,
+        code: bs_s1,
+        legend: [
+          { term: "#include <LedControl.h>", desc: "Externe bibliotheek 'LedControl' — installeer via Schets → Bibliotheek beheren." },
+          { term: "LedControl(12, 11, 10, 1)", desc: "Constructor: DIN=12, CLK=11, CS=10, en 1 matrix in serie." },
+          { term: "matrix.shutdown(0, false)", desc: "Wakker maken: false = uit spaarstand. Standaard staat de MAX7219 namelijk uit." },
+          { term: "matrix.setIntensity(0, 4)", desc: "Helderheid 0..15. **Pas op**: bij 15 trekt de matrix 600+ mA — meer dan een USB-poort kan leveren bij alle LEDs aan." },
+          { term: "matrix.setLed(0, rij, kolom, true)", desc: "Zet één LED aan. Eerste 0 = matrix-index (we hebben er maar één)." },
+        ],
+        assignment: "Sluit aan: VCC → 5V, GND → GND, DIN → pin 12, CLK → pin 11, CS → pin 10. Installeer de LedControl-bibliotheek. Upload. Een diagonale 'streep' loopt van linksboven naar rechtsonder, dan terug. Werkt het niet? Check de bedrading — DIN/CLK/CS verwisselen is een héél vaak gemaakte fout.",
+        challenge: "Pas de loop aan zodat hij in plaats van een diagonaal een **vierkant** tekent (rand van 8x8). Tip: 4 nested for-loops, elk voor één zijde.",
+        reflection: "Waarom is de MAX7219 zo populair voor LED-matrices? (Hint: 64 LEDs zonder MAX7219 = 64 GPIOs nodig + 64 weerstanden + multiplexing-code. Met MAX7219 = 3 pinnen + 1 weerstand op de chip zelf.)",
+      },
+      {
+        id: "bs-s2",
+        title: "Schepen plaatsen + game-data structuren",
+        content: "Een spel heeft **state** nodig: data die bewaard wordt tussen loops. We maken twee 8x8 booleaanse arrays: `schip[r][k]` zegt of er een schip ligt, `getroffen[r][k]` of die cel al geraakt is. In `setup()` plaatsen we 4 random scheeps-cellen (geen overlap). Voor uitleg-doeleinden zetten we hier ALLES op 'getroffen' zodat je op het scherm ziet waar de schepen liggen — in stap 4 verwijderen we dat zodat de speler ze écht moet zoeken.",
+        code: bs_s2,
+        legend: [
+          { term: "const int VELD = 8", desc: "Grid-grootte. Door dit als constante te definiëren kun je later makkelijk naar 16x16 schalen." },
+          { term: "bool schip[VELD][VELD]", desc: "2D-array van 64 booleans. true = schip-cel, false = water." },
+          { term: "while (geplaatst < AANTAL_SCHEPEN)", desc: "Probeer-en-test: pak een random cel; als hij vrij is, plaats het schip; herhaal tot er genoeg geplaatst zijn." },
+          { term: "randomSeed(analogRead(A2))", desc: "A2 ligt los → ruis als zaadje. Cruciaal: anders elke partij dezelfde scheeps-locaties." },
+          { term: "matrix.setLed(0, r, k, aan)", desc: "Eén cel aan/uit. Hier tonen we alleen schepen die ook geraakt zijn." },
+        ],
+        assignment: "Upload. De matrix toont 4 random brandende LEDs — dat zijn de schepen. Reset de Arduino een paar keer; door `randomSeed` zou de positie elke keer anders moeten zijn.",
+        challenge: "Verander naar **3 schepen van 2 cellen** (totaal 6 cellen). Tip: kies een random startcel + random richting (horizontaal/verticaal), check of beide cellen nog vrij zijn. Veel echter Battleship-gevoel.",
+        reflection: "Waarom hebben we drie aparte arrays nodig (`schip`, `getroffen`, en straks `beschoten`)? Wat zou er fout gaan als we alleen één 'getroffen'-array hadden?",
+      },
+      {
+        id: "bs-s3",
+        title: "Joystick → knipperend richtkruis",
+        content: "Nu komt het leven in het spel: een **richtkruis** dat je met de joystick beweegt. De joystick geeft 0..1023 op X (A0) en Y (A1), met midden ~512. We checken of de stick ver genoeg uit het midden geduwd is (<300 of >700) en passen `cursorRij`/`cursorKol` aan. Belangrijk: niet vaker dan 1x per 200 ms verspringen, anders schiet de cursor voorbij. De cursor knippert (250 ms aan/uit) zodat hij zichtbaar blijft *óver* getroffen schepen heen.",
+        diagram: true,
+        code: bs_s3,
+        legend: [
+          { term: "int joystickX = A0; int joystickY = A1", desc: "Joystick X- en Y-as op de twee analoge pinnen." },
+          { term: "x < 300 / x > 700", desc: "Dood-zone: alleen reageren als de stick duidelijk uit het midden is — kleine ruis negeren." },
+          { term: "millis() - laatsteBeweging < BEWEEG_DELAY", desc: "Throttling: 1 cursor-stap per 200 ms maximum, ongeacht hoe lang je de stick vasthoudt." },
+          { term: "matrix.setLed(0, cursorRij, cursorKol, cursorAan)", desc: "Teken de cursor *over* de inhoud heen. Knipperen maakt hem zichtbaar zelfs op een geraakte schip-cel." },
+          { term: "if (millis() - laatsteKnipper > 250)", desc: "Toggle de cursor elke 250 ms: 2x per seconde knipperen." },
+        ],
+        assignment: "Sluit de joystick aan: VCC→5V, GND→GND, VRX→A0, VRY→A1. Upload. Beweeg de stick — de knipperende LED moet 4 kanten op te bewegen zijn. Lukt het niet of beweegt hij verkeerd? Wissel `joystickX` en `joystickY`, of inverteer de check (`<` ↔ `>`).",
+        challenge: "Voeg **wrap-around** toe: als de cursor de rechterrand bereikt, verschijnt hij links. Vervang `cursorKol < VELD - 1` door een modulo-truc: `cursorKol = (cursorKol + 1) % VELD`. Voor links: `cursorKol = (cursorKol + VELD - 1) % VELD`.",
+        reflection: "Waarom hebben we de knipperende cursor zo gemaakt dat hij over de inhoud heen wordt getekend, in plaats van eronder? (Hint: anders zie je hem niet meer zodra je over een geraakte schip-cel beweegt.)",
+      },
+      {
+        id: "bs-s4",
+        title: "Vuur-knop met hit/miss-feedback",
+        content: "De vuur-knop op pin 4 (andere kant naar GND) gebruikt edge-detectie zodat één druk = één schot. Bij een treffer (`schip[][]` is true): 3x snel knipperen op de cel, dan blijft hij branden. Bij een mis: korte 'plons'-animatie waarbij de hele rij even oplicht. We onthouden ook welke cellen al beschoten zijn, zodat je niet 2x op dezelfde plek kunt klikken (zou onbedoelde 'cheat' kunnen zijn).",
+        diagram: true,
+        code: bs_s4,
+        legend: [
+          { term: "int knopVuur = 4", desc: "Vuur-knop op digitale pin 4. Andere kant naar GND. INPUT_PULLUP voor stabiele input." },
+          { term: "bool beschoten[VELD][VELD]", desc: "Derde 2D-array: welke cellen al een schot kregen, om dubbel-schieten te voorkomen." },
+          { term: "if (vorigeKnop == HIGH && huidig == LOW) schiet();", desc: "Edge-detectie: één schot per knop-OVERGANG, niet zolang ingedrukt." },
+          { term: "hitFeedback() / missFeedback()", desc: "Aparte animaties — voelt heel verschillend aan voor de speler. Hits 'flashen' op de cel; misses tonen 'plons' op de hele rij." },
+          { term: "if (beschoten[...]) return;", desc: "Vroeg-terug-patroon: voorkom 2x op dezelfde cel schieten." },
+        ],
+        assignment: "Sluit de vuur-knop aan op pin 4. Upload. Beweeg met joystick + druk vuur. Een raak schot blijft permanent branden, een mis flikkert kort de hele rij. Probeer een schip te vinden — gebruik de mis-rijen als hint om in te zoomen.",
+        challenge: "Voeg een **buzzer** (pin 5) toe: korte hoge piep bij hit (`tone(5, 1500, 100)`), lage 'plons' bij mis (`tone(5, 200, 200)`). Ook al heel arcadig.",
+        reflection: "Waarom is de mis-feedback de hele rij in plaats van alleen die ene cel? (Hint: een single-cel mis-flash zou amper te zien zijn naast de knipperende cursor — een hele rij is duidelijk anders.)",
+      },
+      {
+        id: "bs-s5",
+        title: "Win-conditie + complete game",
+        content: "Laatste stap: de overwinning. Een teller `treffers` houdt bij hoeveel schepen geraakt zijn. Zodra dat `AANTAL_SCHEPEN` is, triggert `winAnimatie()` — een schaakbord-patroon dat 8x toggle-t voor een 'feest'-effect. Daarna toont de matrix permanent ALLE schepen-locaties als trofee. De speler kan de Arduino resetten voor een nieuwe partij. Dit is de complete, speelbare versie.",
+        code: bs_s5,
+        legend: [
+          { term: "int treffers = 0", desc: "Teller die bij elk raak schot omhoog gaat. Vergelijkbaar met de score in andere games." },
+          { term: "if (treffers == AANTAL_SCHEPEN)", desc: "Win-conditie: alle schepen vernietigd. Trigger animatie + zet `gewonnen = true`." },
+          { term: "((r + k + n) % 2) == 0", desc: "Schaakbord-pattern: even cellen aan, oneven uit. Door `n` te verhogen flipt het patroon = 'flicker'-effect." },
+          { term: "if (gewonnen) return;", desc: "Eenmaal gewonnen: niets meer doen in de loop — het win-scherm blijft staan tot reset." },
+          { term: "schoten++ vs treffers++", desc: "Twee aparte tellers: `schoten` = totaal aantal pogingen, `treffers` = raak. Verschil = aantal missers — handig voor een 'efficiency'-score." },
+        ],
+        assignment: "Upload. Speel een complete partij: zoek alle 4 schepen tot de win-animatie komt. Hoe veel schoten had je nodig? Bij 4 = perfect (1-shot kills, geluk!). Bij 64 = je hebt het hele veld leeggeschoten.",
+        challenge: "Toon de **score** (totaal schoten) op een aparte LCD óf via Serial Monitor (`Serial.println(schoten)`) op het moment dat je wint. Dan kun je records tussen klasgenoten vergelijken.",
+        reflection: "Welke 3 dingen zou je nog kunnen toevoegen om dit een **complete commercial game** te maken? (Voorbeelden: 2-spelers met 2 matrices, schepen langer dan 1 cel, een 'sonar'-functie waarbij de joystick-druk een schip in de buurt verraadt, geluid via DFPlayer, ...)",
+        optionalCodeTitle: "Snippet: een 'sonar' die schepen in de buurt verraadt",
+        optionalCode: `// Druk op een tweede knop = sonar-puls: alle cellen rondom een schip lichten kort op.
+// Voeg een 'sonarKnop' op pin 6 toe en deze functie:
+
+void sonarPuls() {
+  for (int r = 0; r < VELD; r++) {
+    for (int k = 0; k < VELD; k++) {
+      bool dichtbij = false;
+      // Check 3x3 buren rond deze cel
+      for (int dr = -1; dr <= 1; dr++) {
+        for (int dk = -1; dk <= 1; dk++) {
+          int nr = r + dr, nk = k + dk;
+          if (nr >= 0 && nr < VELD && nk >= 0 && nk < VELD) {
+            if (schip[nr][nk]) dichtbij = true;
+          }
+        }
+      }
+      if (dichtbij) matrix.setLed(0, r, k, true);
+    }
+  }
+  delay(500);          // toon de sonar-cellen 0,5 sec
+  // Daarna: tekenVeld() in volgende loop herstelt de echte stand.
+}`
       }
     ]
   }

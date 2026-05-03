@@ -391,6 +391,47 @@ export default function Home() {
                             Nieuw
                           </motion.span>
                         )}
+                        {(tutorial.tags ?? []).map((tag) => {
+                          const tc = themeConfig[tag];
+                          if (!tc) return null;
+                          const isActive = activeTheme === tag;
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveTheme(isActive ? "Alle" : tag);
+                              }}
+                              aria-pressed={isActive}
+                              aria-label={
+                                isActive
+                                  ? `Verwijder thema-filter ${tc.label}`
+                                  : `Filter op thema ${tc.label}`
+                              }
+                              title={
+                                isActive
+                                  ? `Verwijder thema-filter ${tc.label}`
+                                  : `Filter op thema ${tc.label}`
+                              }
+                              className={cn(
+                                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer",
+                                isActive
+                                  ? "bg-violet-600 text-white border-violet-600 hover:bg-violet-700"
+                                  : "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  isActive ? "bg-white" : "bg-violet-500"
+                                )}
+                              />
+                              {tc.label}
+                            </button>
+                          );
+                        })}
                       </div>
 
                       <h3 className="text-2xl font-display font-bold text-slate-900 mb-3 group-hover:text-primary transition-colors">

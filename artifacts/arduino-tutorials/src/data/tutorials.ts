@@ -1891,64 +1891,69 @@ void loop() {
 // TUTORIAL 9: Stappenmotor Basis (A4988 / DRV8825)
 // ─────────────────────────────────────────────
 
-const stepper_s1 = `int stepPin = 3;
-int dirPin = 4;
+const stepper_s1 = `const int stepPin = 2;   // STEP-pin (puls per stap)
+const int dirPin  = 5;   // DIR-pin  (draairichting)
+const int enPin   = 8;   // EN-pin   (Enable, actief LOW)
 
 void setup() {
   pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(dirPin,  OUTPUT);
+  pinMode(enPin,   OUTPUT);
+
+  // Driver activeren: EN op LOW zetten is VERPLICHT.
+  // Zonder deze regel blijft de driver in slaap en doet de motor niets!
+  digitalWrite(enPin, LOW);
 }`;
 
-const stepper_s2 = `int stepPin = 3;
-int dirPin = 4;
-
-int stappenPerOmwenteling = 200;
+const stepper_s2 = `const int stepPin = 2;
+const int dirPin  = 5;
+const int enPin   = 8;
 
 void setup() {
   pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(dirPin,  OUTPUT);
+  pinMode(enPin,   OUTPUT);
+  digitalWrite(enPin, LOW);   // Driver activeren
 }
 
 void loop() {
-  // Met de klok mee
-  digitalWrite(dirPin, HIGH);
-
-  for (int i = 0; i < stappenPerOmwenteling; i++) {
+  digitalWrite(dirPin, HIGH);            // Richting: met de klok mee
+  for (int x = 0; x < 200; x++) {       // 200 stappen = 1 omwenteling
     digitalWrite(stepPin, HIGH);
-    delayMicroseconds(800);
+    delayMicroseconds(1000);             // Snelheid (µs per halve puls)
     digitalWrite(stepPin, LOW);
-    delayMicroseconds(800);
+    delayMicroseconds(1000);
   }
-
-  delay(1000);
+  delay(1000);                           // 1 seconde wachten
 }`;
 
-const stepper_s3 = `int stepPin = 3;
-int dirPin = 4;
-
-int stappenPerOmwenteling = 200;
+const stepper_s3 = `const int stepPin = 2;
+const int dirPin  = 5;
+const int enPin   = 8;
 
 void setup() {
   pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(dirPin,  OUTPUT);
+  pinMode(enPin,   OUTPUT);
+  digitalWrite(enPin, LOW);   // Driver activeren
 }
 
 void doeOmwenteling(int richting) {
   digitalWrite(dirPin, richting);
-  for (int i = 0; i < stappenPerOmwenteling; i++) {
+  for (int x = 0; x < 200; x++) {   // 200 stappen = 1 omwenteling
     digitalWrite(stepPin, HIGH);
-    delayMicroseconds(800);
+    delayMicroseconds(1000);
     digitalWrite(stepPin, LOW);
-    delayMicroseconds(800);
+    delayMicroseconds(1000);
   }
 }
 
 void loop() {
   doeOmwenteling(HIGH);   // met de klok mee
-  delay(500);
+  delay(1000);
 
   doeOmwenteling(LOW);    // tegen de klok in
-  delay(500);
+  delay(1000);
 }`;
 
 // ─────────────────────────────────────────────
@@ -1984,18 +1989,23 @@ void loop() {
   laatsteCLK = huidigeCLK;
 }`;
 
-const enc_s2 = `int clkPin = 2;
-int dtPin = 3;
-int stepPin = 5;
-int dirPin = 6;
+const enc_s2 = `int clkPin = 2;    // Encoder CLK (interrupt-pin)
+int dtPin  = 3;    // Encoder DT  (interrupt-pin)
+
+// Stepper op andere pinnen (2 en 3 zijn bezet door encoder)
+const int stepPin = 4;
+const int dirPin  = 5;
+const int enPin   = 8;   // Enable, actief LOW
 
 int laatsteCLK;
 
 void setup() {
   pinMode(clkPin, INPUT_PULLUP);
-  pinMode(dtPin, INPUT_PULLUP);
+  pinMode(dtPin,  INPUT_PULLUP);
   pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(dirPin,  OUTPUT);
+  pinMode(enPin,   OUTPUT);
+  digitalWrite(enPin, LOW);   // Driver activeren
 
   laatsteCLK = digitalRead(clkPin);
 }
@@ -2003,9 +2013,9 @@ void setup() {
 void doeStap(int richting) {
   digitalWrite(dirPin, richting);
   digitalWrite(stepPin, HIGH);
-  delayMicroseconds(800);
+  delayMicroseconds(1000);
   digitalWrite(stepPin, LOW);
-  delayMicroseconds(800);
+  delayMicroseconds(1000);
 }
 
 void loop() {
@@ -2023,18 +2033,22 @@ void loop() {
 }`;
 
 const enc_s3 = `int clkPin = 2;
-int dtPin = 3;
-int stepPin = 5;
-int dirPin = 6;
+int dtPin  = 3;
+
+const int stepPin = 4;
+const int dirPin  = 5;
+const int enPin   = 8;
 
 int laatsteCLK;
 int stappenPerKlik = 10;
 
 void setup() {
   pinMode(clkPin, INPUT_PULLUP);
-  pinMode(dtPin, INPUT_PULLUP);
+  pinMode(dtPin,  INPUT_PULLUP);
   pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+  pinMode(dirPin,  OUTPUT);
+  pinMode(enPin,   OUTPUT);
+  digitalWrite(enPin, LOW);   // Driver activeren
 
   laatsteCLK = digitalRead(clkPin);
 }
@@ -2043,9 +2057,9 @@ void doeStappen(int richting, int aantal) {
   digitalWrite(dirPin, richting);
   for (int i = 0; i < aantal; i++) {
     digitalWrite(stepPin, HIGH);
-    delayMicroseconds(800);
+    delayMicroseconds(1000);
     digitalWrite(stepPin, LOW);
-    delayMicroseconds(800);
+    delayMicroseconds(1000);
   }
 }
 
@@ -6601,49 +6615,49 @@ servo2.write(hoekY);`
     steps: [
       {
         id: "stepper-s1",
-        title: "Driver aansluiten & pinnen instellen",
-        content: "Een stappenmotor draait niet vrij rond zoals een gewone DC-motor: hij beweegt in vaste 'stappen' (meestal 200 per omwenteling = 1.8° per stap). Een driver zoals de A4988 of DRV8825 vertaalt twee simpele signalen — STEP (puls) en DIR (richting) — naar de spoel-stromen die de motor exact één stap verzetten. BELANGRIJK: sluit nooit een stappenmotor direct aan op de Arduino. Hij heeft 12V (of vergelijkbaar) externe voeding nodig via de VMOT-pin van de driver. Plaats een 100µF condensator over VMOT/GND om spanningspieken op te vangen.",
+        title: "Driver aansluiten & de EN-pin activeren",
+        content: "Een stappenmotor draait niet vrij rond zoals een gewone DC-motor: hij beweegt in vaste 'stappen' (200 per omwenteling bij een NEMA 17 = 1.8° per stap). Een driver zoals de A4988 of DRV8825 vertaalt drie simpele signalen — STEP, DIR en EN — naar de spoel-stromen die de motor precies één stap verzetten. Kritiek detail: de EN-pin (Enable) moet op LOW staan om de driver te activeren. Als je dit vergeet, reageert de driver nergens op en doet de motor niets. Sluit nooit een stappenmotor direct aan op de Arduino — hij heeft een externe 12V voeding nodig via de VMOT-pin van de driver. Zet altijd een 100µF condensator over VMOT/GND om spanningspieken bij het aanzetten op te vangen.",
         diagram: true,
         code: stepper_s1,
         legend: [
-          { term: "int stepPin = 3", desc: "STEP-pin van de driver. Elke HIGH-puls = 1 stap van de motor." },
-          { term: "int dirPin = 4", desc: "DIR-pin van de driver. HIGH = met de klok mee, LOW = tegen de klok in." },
-          { term: "pinMode(stepPin, OUTPUT)", desc: "Stel de STEP-pin in als uitgang." },
-          { term: "pinMode(dirPin, OUTPUT)", desc: "Stel de DIR-pin in als uitgang." },
+          { term: "const int stepPin = 2", desc: "STEP-pin van de driver. Elke HIGH→LOW puls = 1 stap van de motor." },
+          { term: "const int dirPin = 5", desc: "DIR-pin van de driver. HIGH = met de klok mee, LOW = tegen de klok in." },
+          { term: "const int enPin = 8", desc: "EN (Enable) pin. Moet op LOW gezet worden om de driver te activeren. Dit wordt veel vergeten!" },
+          { term: "digitalWrite(enPin, LOW)", desc: "Activeert de driver. Zonder deze regel blijft de driver in slaapstand en beweegt de motor niet." },
         ],
-        assignment: "Sluit de driver correct aan: VMOT + GND op je 12V voeding, VDD + GND op de Arduino, STEP op pin 3, DIR op pin 4. Verbind ook nSLEEP en nRESET met elkaar (anders slaapt de driver). De motor-spoelen sluit je aan op 1A/1B en 2A/2B.",
+        assignment: "Sluit de driver aan: VMOT + GND op 12V voeding (met 100µF condensator), VDD + GND op Arduino 5V/GND, STEP op pin 2, DIR op pin 5, EN op pin 8. De motor-spoelen op 1A/1B en 2A/2B. Upload de code — de driver is nu actief maar de motor staat nog stil (geen pulsen).",
+        challenge: "Wat gebeurt er als je digitalWrite(enPin, HIGH) doet in setup() in plaats van LOW? (Tip: de motor zal niet meer reageren.)",
         reflection: "Waarom heeft een stappenmotor een aparte voeding nodig en kan een servo wel rechtstreeks op de 5V van de Arduino?"
       },
       {
         id: "stepper-s2",
         title: "Eén volledige omwenteling",
-        content: "Om de motor één volledige omwenteling te laten maken, moeten we 200 keer een korte HIGH-puls naar de STEP-pin sturen (bij een standaard NEMA 17 zonder microstepping). De delayMicroseconds() bepaalt de snelheid: hoe korter de pauze, hoe sneller de motor draait. Te kort en de motor 'mist' stappen — probeer waarden tussen 500 en 2000 µs.",
+        content: "Om de motor één volledige omwenteling te laten maken, sturen we 200 keer een HIGH→LOW puls naar de STEP-pin. De delayMicroseconds(1000) geeft de timing van elke puls: 1000 µs aan + 1000 µs uit = 2000 µs per stap. 200 stappen × 2000 µs = 400 ms per omwenteling ≈ 2,5 toeren per seconde. Verlaag de waarde om sneller te draaien — maar ga niet te laag, anders mist de motor stappen.",
         code: stepper_s2,
         legend: [
-          { term: "int stappenPerOmwenteling = 200", desc: "Een NEMA 17 doet 200 stappen per volledige omwenteling (1.8° per stap). Bij microstepping vermenigvuldig je dit." },
-          { term: "digitalWrite(dirPin, HIGH)", desc: "Bepaal de draairichting voordat je begint met stappen." },
-          { term: "digitalWrite(stepPin, HIGH)", desc: "Start een puls op de STEP-pin." },
-          { term: "delayMicroseconds(800)", desc: "Wacht 800 microseconden (0.8 ms). Dit bepaalt de snelheid van de motor." },
-          { term: "digitalWrite(stepPin, LOW)", desc: "Beëindig de puls. Eén HIGH→LOW cyclus = 1 stap." },
+          { term: "200 stappen = 1 omwenteling", desc: "Een NEMA 17 heeft 200 stappen per omwenteling (1.8°/stap) zonder microstepping." },
+          { term: "digitalWrite(dirPin, HIGH)", desc: "Stel de richting in VOORDAT je de pulsen begint — de driver leest DIR elke puls." },
+          { term: "delayMicroseconds(1000)", desc: "Wacht 1000 µs (1 ms) tussen HIGH en LOW. Beide samen bepalen de stapsnelheid." },
+          { term: "for (int x = 0; x < 200; x++)", desc: "Loop 200× voor één volledige omwenteling. Aanpassen voor meer of minder rotatie." },
         ],
-        assignment: "Upload de code en kijk of de motor één omwenteling per seconde maakt. Verander delayMicroseconds(800) naar 400 — wat gebeurt er?",
-        challenge: "Probeer delayMicroseconds(200). Op een gegeven moment slaat de motor over (mist hij stappen). Wat is bij jou de minimale waarde?",
+        assignment: "Upload de code. Draait de motor één omwenteling per 0,4 seconde? Probeer delayMicroseconds(500) — hoe verandert de snelheid?",
+        challenge: "Probeer delayMicroseconds(100). Op een gegeven moment slaat de motor over (mist hij stappen). Wat is de minimale werkende waarde bij jouw opstelling?",
         reflection: "Waarom heeft een stappenmotor 'stappen' en geen vloeiende beweging zoals een DC-motor? Wat is hier het voordeel van?"
       },
       {
         id: "stepper-s3",
-        title: "Heen en terug in een loop",
-        content: "Nu maken we de code netter door de stap-logica in een aparte functie doeOmwenteling() te zetten. Die functie krijgt een parameter mee: HIGH (met de klok mee) of LOW (tegen de klok in). In de loop() roepen we hem twee keer aan met verschillende richtingen — dit is precies de basis die je later gebruikt voor een plotter of 3D-printer.",
+        title: "Heen en terug met een helper-functie",
+        content: "We halen de stap-logica uit loop() in een eigen functie doeOmwenteling(richting). Die functie krijgt HIGH of LOW mee als richting en voert alle 200 pulsen uit. In loop() roepen we hem twee keer aan met een seconde pauze ertussen. Dit is precies het patroon dat je later uitbreidt voor een plotter of CNC.",
         code: stepper_s3,
         legend: [
-          { term: "void doeOmwenteling(int richting)", desc: "Eigen functie die één omwenteling doet in de opgegeven richting." },
-          { term: "doeOmwenteling(HIGH)", desc: "Roep de functie aan met richting HIGH = met de klok mee." },
-          { term: "doeOmwenteling(LOW)", desc: "Tegen de klok in." },
-          { term: "delay(500)", desc: "Korte pauze tussen de richtingswisselingen zodat je het verschil ziet." },
+          { term: "void doeOmwenteling(int richting)", desc: "Helper-functie die één complete omwenteling uitvoert in de gegeven richting." },
+          { term: "doeOmwenteling(HIGH)", desc: "Met de klok mee: 200 stappen in HIGH-richting." },
+          { term: "doeOmwenteling(LOW)", desc: "Tegen de klok in: 200 stappen in LOW-richting." },
+          { term: "delay(1000)", desc: "Eén seconde pauze tussen de richtingswisselingen — geeft tijd om het verschil te zien." },
         ],
-        assignment: "Upload de code. Draait de motor netjes heen en terug?",
-        challenge: "Voeg een derde aanroep toe die slechts een halve omwenteling doet (100 stappen). Of: laat hem 5 keer een halve draai doen voor hij terugdraait.",
-        reflection: "Hoe zou je dit gebruiken voor een echt project? Denk aan een automatische zonwering of een rolluik."
+        assignment: "Upload de code. Draait de motor netjes heen en terug met een seconde pauze ertussen?",
+        challenge: "Maak een functie doeHalveOmwenteling() die 100 stappen doet. Roep hem afwisselend met doeOmwenteling() aan.",
+        reflection: "Hoe zou je dit gebruiken voor een echt project? Denk aan een automatische zonwering, een rolluik of een automatische camera-slider."
       }
     ]
   },
@@ -6678,30 +6692,30 @@ servo2.write(hoekY);`
       {
         id: "enc-s2",
         title: "Stepper koppelen aan de encoder",
-        content: "Nu koppelen we de encoder aan de stappenmotor. In plaats van een variabele op te tellen, sturen we direct één stap naar de motor zodra de encoder klikt. We hergebruiken de doeStap()-functie uit de basis-tutorial. Belangrijk: omdat we elke klik direct vertalen naar één stap, draait de motor maar heel langzaam — daar lossen we straks iets aan op.",
+        content: "Nu koppelen we de encoder aan de stappenmotor. Zodra de encoder één klik geeft, sturen we één stap naar de motor in de bijbehorende richting. Let op de pin-keuze: de encoder heeft de interrupt-pinnen 2 en 3 nodig, dus de stepper krijgt andere pinnen (4 voor STEP, 5 voor DIR). De EN-pin op 8 activeren we opnieuw met LOW — dat is niet optioneel.",
         diagram: true,
         code: enc_s2,
         legend: [
-          { term: "int stepPin = 5", desc: "STEP-pin van de driver. We kiezen pin 5 zodat 2 en 3 vrij zijn voor de encoder." },
-          { term: "int dirPin = 6", desc: "DIR-pin van de driver." },
-          { term: "void doeStap(int richting)", desc: "Functie die één enkele stap doet in de gegeven richting." },
-          { term: "doeStap(HIGH)", desc: "Eén stap met de klok mee — gekoppeld aan een klik rechtsom." },
-          { term: "doeStap(LOW)", desc: "Eén stap tegen de klok in — gekoppeld aan een klik linksom." },
+          { term: "const int stepPin = 4", desc: "STEP-pin van de driver op pin 4. Pins 2 en 3 zijn bezet door de encoder." },
+          { term: "const int dirPin = 5", desc: "DIR-pin van de driver op pin 5." },
+          { term: "const int enPin = 8", desc: "EN-pin — opnieuw op LOW zetten om de driver te activeren." },
+          { term: "void doeStap(int richting)", desc: "Functie die één enkele stap doet: richting instellen, puls geven." },
+          { term: "doeStap(HIGH) / doeStap(LOW)", desc: "Eén stap met of tegen de klok in, afhankelijk van de encoder-draairichting." },
         ],
-        assignment: "Upload de code. Draai aan de encoder en kijk of de motor mee beweegt.",
-        challenge: "De motor beweegt maar heel weinig per klik (1 stap = 1.8°). Hoe los je dat in de volgende stap op?",
+        assignment: "Upload de code. Draai aan de encoder en kijk of de motor mee beweegt. Eén klik = 1.8° draaiing.",
+        challenge: "De motor beweegt maar heel weinig per klik. Hoe zou je dat oplossen? (Hint: stap 3.)",
         reflection: "Waarom is het slim om de stap-logica in een aparte functie te zetten in plaats van alles in loop()?"
       },
       {
         id: "enc-s3",
         title: "Versnellen: meerdere stappen per klik",
-        content: "Nu maken we de motor sneller door bij elke encoder-klik niet 1, maar 10 stappen tegelijk te doen. We veranderen doeStap() naar doeStappen() met een parameter 'aantal'. Met 10 stappen per klik (= 18° per klik) voelt het meteen veel responsiever. Probeer ook eens 50 of 100 — dan heb je een echte 'jog'-functie zoals op een CNC.",
+        content: "Eén stap per klik is maar 1.8° — dat voelt traag aan. We vervangen doeStap() door doeStappen(richting, aantal) en voegen een variabele stappenPerKlik toe. Met 10 stappen per klik (= 18° per klik) voelt het al responsiever. Op 50 of 100 heb je een echte 'jog'-functie zoals op een CNC-machine. De EN-pin en de rest van de setup blijven identiek aan stap 2.",
         code: enc_s3,
         legend: [
           { term: "int stappenPerKlik = 10", desc: "Hoeveel stappen de motor per encoder-klik doet. Verhoog voor snellere beweging." },
-          { term: "void doeStappen(int richting, int aantal)", desc: "Aangepaste functie die meerdere stappen per aanroep doet." },
-          { term: "for (int i = 0; i < aantal; i++)", desc: "Lus die het opgegeven aantal stappen uitvoert." },
-          { term: "doeStappen(HIGH, stappenPerKlik)", desc: "Doe stappenPerKlik stappen met de klok mee." },
+          { term: "void doeStappen(int richting, int aantal)", desc: "Voert meerdere stappen in één aanroep uit. Flexibeler dan doeStap()." },
+          { term: "for (int i = 0; i < aantal; i++)", desc: "Herhaalt de puls stappenPerKlik keer." },
+          { term: "doeStappen(HIGH, stappenPerKlik)", desc: "Doe stappenPerKlik stappen met de klok mee — gekoppeld aan rechtsom draaien." },
         ],
         assignment: "Test met stappenPerKlik = 10, dan = 50, dan = 200 (een hele omwenteling per klik). Welk getal voelt het natuurlijkst?",
         challenge: "Voeg een drukknop toe die 'stappenPerKlik' wisselt tussen 1 (precisie) en 50 (snel). Zo heb je een fijn-instelling én een grof-instelling.",

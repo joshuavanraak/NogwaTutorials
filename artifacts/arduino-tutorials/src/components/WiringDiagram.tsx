@@ -154,6 +154,7 @@ function classifyName(name: string): ComponentType | null {
   if (n.startsWith("servo")) return "servo";
   if (n.includes("joystick") || n.includes("joy")) return "joystick";
   if (n.startsWith("step") || n.startsWith("dir")) return "stepper";
+  if (n === "enpin" || n === "enablepin" || (n.startsWith("en") && n.includes("pin"))) return "stepper";
   if (n.startsWith("clk") || n.startsWith("dt") || n.includes("encoder")) return "encoder";
   return null;
 }
@@ -307,9 +308,12 @@ function buildDiagram(code: string): DiagramData {
       }
       case "stepper": {
         const n = name.toLowerCase();
-        const isStep = n.startsWith("step");
         const axis = n.includes("x") ? " (X-as)" : n.includes("y") ? " (Y-as)" : n.includes("z") ? " (Z-as)" : "";
-        const lbl = isStep
+        const isStep = n.startsWith("step");
+        const isEn = n === "enpin" || n === "enablepin" || (n.startsWith("en") && n.includes("pin"));
+        const lbl = isEn
+          ? `A4988/DRV8825 EN (Enable, actief LOW${axis})`
+          : isStep
           ? `A4988/DRV8825 STEP${axis}`
           : `A4988/DRV8825 DIR${axis}`;
         signalRows.push({ from: label, to: lbl, color: "blue", direction: "out" });

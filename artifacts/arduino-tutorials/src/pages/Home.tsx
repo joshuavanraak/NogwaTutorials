@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { tutorials } from "../data/tutorials";
 import type { Board, TutorialTag } from "../data/tutorials";
@@ -21,6 +21,50 @@ function normalize(s: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+// Highlight all occurrences of `query` in `text` (case- + accent-insensitive),
+// preserving the original text (casing, diacritics) inside <mark>.
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const normQuery = normalize(query);
+  if (!normQuery) return <>{text}</>;
+
+  // Build normalized string + mapping from normalized index -> original index range.
+  let normStr = "";
+  const normToOrigStart: number[] = [];
+  const normToOrigEnd: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const n = normalize(text[i]);
+    for (let j = 0; j < n.length; j++) {
+      normToOrigStart.push(i);
+      normToOrigEnd.push(i + 1);
+    }
+    normStr += n;
+  }
+
+  const parts: ReactNode[] = [];
+  let searchFrom = 0;
+  let lastOrigEnd = 0;
+  let key = 0;
+  while (searchFrom <= normStr.length) {
+    const idx = normStr.indexOf(normQuery, searchFrom);
+    if (idx === -1) break;
+    const lastNormIdx = idx + normQuery.length - 1;
+    if (lastNormIdx >= normToOrigEnd.length) break;
+    const origStart = normToOrigStart[idx];
+    const origEnd = normToOrigEnd[lastNormIdx];
+    if (origStart > lastOrigEnd) parts.push(text.slice(lastOrigEnd, origStart));
+    parts.push(
+      <mark key={key++} className="bg-yellow-200 text-slate-900 rounded px-0.5">
+        {text.slice(origStart, origEnd)}
+      </mark>
+    );
+    lastOrigEnd = origEnd;
+    searchFrom = idx + normQuery.length;
+  }
+  if (lastOrigEnd < text.length) parts.push(text.slice(lastOrigEnd));
+  return parts.length > 0 ? <>{parts}</> : <>{text}</>;
 }
 
 type Difficulty = "Alle" | "Beginner" | "Gemiddeld" | "Gevorderd" | "Expert";
@@ -435,10 +479,10 @@ export default function Home() {
                       </div>
 
                       <h3 className="text-2xl font-display font-bold text-slate-900 mb-3 group-hover:text-primary transition-colors">
-                        {tutorial.title}
+                        <Highlight text={tutorial.title} query={trimmedSearch} />
                       </h3>
                       <p className="text-slate-600 mb-8 line-clamp-3">
-                        {tutorial.description}
+                        <Highlight text={tutorial.description} query={trimmedSearch} />
                       </p>
 
                       <div className="flex items-center text-primary font-semibold text-sm">

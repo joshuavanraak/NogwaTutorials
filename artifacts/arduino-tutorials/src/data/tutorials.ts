@@ -1927,33 +1927,35 @@ void loop() {
   delay(1000);                           // 1 seconde wachten
 }`;
 
-const stepper_s3 = `const int stepPin = 2;
-const int dirPin  = 5;
-const int enPin   = 8;
+const stepper_s3 = `const int stepPin = 2;  // X-STEP
+const int dirPin = 5;   // X-DIR
+const int enPin = 8;    // EN (Enable)
 
 void setup() {
   pinMode(stepPin, OUTPUT);
-  pinMode(dirPin,  OUTPUT);
-  pinMode(enPin,   OUTPUT);
-  digitalWrite(enPin, LOW);   // Driver activeren
+  pinMode(dirPin, OUTPUT);
+  pinMode(enPin, OUTPUT);
+  digitalWrite(enPin, LOW); // Activate driver
 }
 
-void doeOmwenteling(int richting) {
-  digitalWrite(dirPin, richting);
-  for (int x = 0; x < 200; x++) {   // 200 stappen = 1 omwenteling
+void loop() {
+  digitalWrite(dirPin, HIGH); // Set direction
+  for(int x = 0; x < 200; x++) { // 200 steps = 1 rev
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(1000); // Speed
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(1000);
+  }
+  delay(1000); // Wait 1s
+
+  digitalWrite(dirPin, LOW); // Change direction
+  for(int x = 0; x < 200; x++) {
     digitalWrite(stepPin, HIGH);
     delayMicroseconds(1000);
     digitalWrite(stepPin, LOW);
     delayMicroseconds(1000);
   }
-}
-
-void loop() {
-  doeOmwenteling(HIGH);   // met de klok mee
-  delay(1000);
-
-  doeOmwenteling(LOW);    // tegen de klok in
-  delay(1000);
+  delay(1000); // Wait 1s
 }`;
 
 // ─────────────────────────────────────────────
@@ -6646,17 +6648,18 @@ servo2.write(hoekY);`
       },
       {
         id: "stepper-s3",
-        title: "Heen en terug met een helper-functie",
-        content: "We halen de stap-logica uit loop() in een eigen functie doeOmwenteling(richting). Die functie krijgt HIGH of LOW mee als richting en voert alle 200 pulsen uit. In loop() roepen we hem twee keer aan met een seconde pauze ertussen. Dit is precies het patroon dat je later uitbreidt voor een plotter of CNC.",
+        title: "Heen en terug in één loop",
+        content: "Nu maken we de motor afwisselend met de klok mee en tegen de klok in draaien. We zetten in loop() twee for-loops achter elkaar: eerst dirPin HIGH + 200 stappen, dan delay(1000) als pauze, dan dirPin LOW + 200 stappen, en weer delay(1000). Dit is de complete, geteste basiscode die werkt op een echte Arduino met A4988/DRV8825 driver — exact het patroon dat je later uitbreidt voor een plotter, CNC of 3D-printer.",
         code: stepper_s3,
         legend: [
-          { term: "void doeOmwenteling(int richting)", desc: "Helper-functie die één complete omwenteling uitvoert in de gegeven richting." },
-          { term: "doeOmwenteling(HIGH)", desc: "Met de klok mee: 200 stappen in HIGH-richting." },
-          { term: "doeOmwenteling(LOW)", desc: "Tegen de klok in: 200 stappen in LOW-richting." },
-          { term: "delay(1000)", desc: "Eén seconde pauze tussen de richtingswisselingen — geeft tijd om het verschil te zien." },
+          { term: "digitalWrite(dirPin, HIGH)", desc: "Zet de richting op 'met de klok mee' vóór de eerste for-loop." },
+          { term: "for(int x = 0; x < 200; x++)", desc: "Loop 200 keer = één volledige omwenteling (NEMA 17 zonder microstepping)." },
+          { term: "delayMicroseconds(1000)", desc: "Snelheid: 1 ms HIGH + 1 ms LOW = 2 ms per stap. 200 stappen × 2 ms = 0,4 s per omwenteling." },
+          { term: "delay(1000)", desc: "Eén seconde pauze tussen de twee richtingen — geeft tijd om het verschil te zien." },
+          { term: "digitalWrite(dirPin, LOW)", desc: "Wissel de richting voor de tweede for-loop: nu draait hij tegen de klok in." },
         ],
-        assignment: "Upload de code. Draait de motor netjes heen en terug met een seconde pauze ertussen?",
-        challenge: "Maak een functie doeHalveOmwenteling() die 100 stappen doet. Roep hem afwisselend met doeOmwenteling() aan.",
+        assignment: "Upload de code naar je Arduino. De motor moet één omwenteling met de klok mee doen, één seconde wachten, dan één omwenteling tegen de klok in, en weer één seconde wachten — daarna herhaalt het.",
+        challenge: "Verander 200 naar 400 in beide for-loops zodat de motor twee volledige omwentelingen per richting doet. Of verlaag delayMicroseconds(1000) naar 500 voor dubbele snelheid.",
         reflection: "Hoe zou je dit gebruiken voor een echt project? Denk aan een automatische zonwering, een rolluik of een automatische camera-slider."
       }
     ]
